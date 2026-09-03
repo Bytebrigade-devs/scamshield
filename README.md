@@ -28,6 +28,8 @@ IS2901 Software Development Project · Group **Byte Brigade** · University of M
 ## Workflow Rules (all members)
 
 - `main` is protected — never push directly; work on feature branches (`feat/m3-vault-crud`)
-- Every PR needs at least one teammate's review before merge
+- Every change reaches `main` through a Pull Request. **@Svishwa2004 reviews and merges** — no teammate approval is required, and the merge button is disabled for everyone else
 - Commit small and often **from your own GitHub account** — commit history is your individual-contribution evidence at code review and viva
 - Shared schema changes: update the schema doc and flag affected module owners in the PR description
+
+See [GITHUB-GUIDE.md](GITHUB-GUIDE.md) for the full beginner walkthrough.
