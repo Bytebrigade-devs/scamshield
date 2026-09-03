@@ -8,7 +8,7 @@ Read this once before your first contribution. If anything confuses you, ask in 
 ## 1. What are Git and GitHub?
 
 - **Git** = a program on your computer that tracks every change you make to files, so nothing is ever lost and everyone's work can be combined safely.
-- **GitHub** = a website (`github.com`) that stores copies of the project online, so all six of us work on the same copy and review each other's changes.
+- **GitHub** = a website (`github.com`) that stores copies of the project online, so all five of us work on the same copy and can see each other's changes.
 
 Our repository ("repo") lives at:
 **https://github.com/Bytebrigade-devs/scamshield**
@@ -42,10 +42,10 @@ Our repository ("repo") lives at:
 
 ## 3. The daily workflow (every time you write code)
 
-The golden rule: **you never edit `main` directly.** You make your own branch, and your work reaches `main` only through a Pull Request that a teammate approves.
+The golden rule: **you never edit `main` directly.** You make your own branch, open a Pull Request, and **@Svishwa2004 reviews it and merges it.** You do not need a teammate's approval, and you will not be able to merge it yourself — the button is deliberately disabled for everyone else
 
 ```
-main ──► feat/m3-vault-crud (your branch) ──► Pull Request ──► teammate approves ──► merged into main
+main ──► feat/m3-vault-crud (your branch) ──► Pull Request ──► @Svishwa2004 reviews & merges ──► main
 ```
 
 ### Step-by-step
@@ -71,9 +71,12 @@ git push -u origin feat/m3-vault-login-form
 #    Go to the repo page → click "Compare & pull request"
 #    Write a clear title + short description of WHAT you did and WHY
 
-# 7. Ask a teammate to review. They click "Approve".
+# 7. Tell @Svishwa2004 in the group chat that the PR is ready.
+#    An automated Copilot review runs on every PR — read its comments and
+#    push fixes to the same branch if it spots something real.
 
-# 8. Merge the PR (green button). Then delete the branch if GitHub offers.
+# 8. @Svishwa2004 reviews and merges. Nothing more for you to do.
+#    Don't look for a merge button — you won't have one.
 ```
 
 ### After each coding session
@@ -171,8 +174,8 @@ Settings → General → Repository name. **Only do this as a coordinated team d
 
 These come from the project brief and the protection settings already applied to `main`:
 
-1. **`main` is protected.** Direct pushes are rejected by GitHub. Everything goes through a branch + Pull Request.
-2. **Every PR needs at least 1 teammate's approval** before the merge button unlocks. Review honestly — read the code, don't just approve.
+1. **`main` is protected.** Direct pushes are rejected by GitHub — for everyone, including the team lead. Everything goes through a branch + Pull Request.
+2. **@Svishwa2004 reviews and merges every PR.** No teammate approval is required, and only @Svishwa2004 can complete a merge to `main`. You are still welcome to read and comment on each other's PRs — it is good practice and it helps at code review — but nothing is blocked waiting on you.
 3. **Force pushes (`--force`) and deleting `main` are blocked** for everyone. If a push is rejected, never try to force it — see §7.
 4. **Commit from your own account only.** Your commit history is your individual-contribution evidence at code review and viva.
 5. **Shared database schema changes:** update the schema doc and mention affected module owners in your PR description.
@@ -187,6 +190,7 @@ These come from the project brief and the protection settings already applied to
 |---------|---------------|-----|
 | `push` rejected: "fetch first" | Someone pushed newer code than you have | `git pull`, resolve if asked, then `git push` again |
 | Push rejected on `main` directly | Protection rule working correctly | Make a branch and use a PR (§3) |
+| Merge button greyed out on your PR | Working as intended — only @Svishwa2004 can merge to `main` | Nothing to fix. Tell @Svishwa2004 the PR is ready |
 | "Merge conflict" during pull/merge | You and someone else edited the same lines | Git marks conflict spots in the file with `<<<<<<<` / `=======` / `>>>>>>>` — edit the file to keep the correct code, delete the markers, then `git add .` and `git commit` |
 | Committed to the wrong branch | Happens to everyone | Don't panic, don't force-push — post in the group chat and we'll fix it together |
 | Accidentally committed a secret | Urgent | Tell team lead immediately, do not push again |
@@ -208,6 +212,6 @@ git push -u origin BRANCH  # upload branch to GitHub
 git pull                   # sync before continuing later
 ```
 
-Then on github.com: **Pull Request → teammate review → merge → delete branch.**
+Then on github.com: **Pull Request → tell @Svishwa2004 → they review and merge.**
 
 *Questions? Ask in the group chat before guessing. Nobody was born knowing Git.* 🙂
