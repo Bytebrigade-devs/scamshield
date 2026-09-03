@@ -76,8 +76,9 @@ git push -u origin feat/m3-vault-login-form
 #    push fixes to the same branch if it spots something real.
 
 # 8. @Svishwa2004 reviews it. If they ask for changes, commit and push to the
-#    SAME branch — the PR updates itself, you never open a second one.
-#    When it looks right they merge it. Don't look for a merge button.
+#    SAME branch — your existing PR updates itself, so you never open a
+#    second pull request. When it looks right, they merge it. You will not
+#    see a merge button, and that is normal.
 ```
 
 ### After each coding session
