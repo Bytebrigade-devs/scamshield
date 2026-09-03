@@ -42,7 +42,7 @@ Our repository ("repo") lives at:
 
 ## 3. The daily workflow (every time you write code)
 
-The golden rule: **you never edit `main` directly.** You make your own branch, open a Pull Request, and **@Svishwa2004 reviews it and merges it.** You do not need anyone's approval, and you will not be able to merge it yourself — the button is deliberately disabled for everyone else.
+The golden rule: **you never edit `main` directly.** You make your own branch, open a Pull Request, and **@Svishwa2004 reviews it and merges it.** You do not need a teammate's approval, and you will not be able to merge it yourself — the button is deliberately disabled for everyone else
 
 ```
 main ──► feat/m3-vault-crud (your branch) ──► Pull Request ──► @Svishwa2004 reviews & merges ──► main
