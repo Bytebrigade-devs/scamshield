@@ -42,7 +42,7 @@ Our repository ("repo") lives at:
 
 ## 3. The daily workflow (every time you write code)
 
-The golden rule: **you never edit `main` directly.** You make your own branch, open a Pull Request, and **@Svishwa2004 reviews it and merges it.** You do not need a teammate's approval, and you will not be able to merge it yourself — the button is deliberately disabled for everyone else
+The golden rule: **you never edit `main` directly.** You make your own branch, open a Pull Request, and **@Svishwa2004 reviews it and merges it.** You do not need a teammate's approval, and you will not be able to merge it yourself — the button is deliberately disabled for everyone else.
 
 ```
 main ──► feat/m3-vault-crud (your branch) ──► Pull Request ──► @Svishwa2004 reviews & merges ──► main
@@ -75,8 +75,9 @@ git push -u origin feat/m3-vault-login-form
 #    An automated Copilot review runs on every PR — read its comments and
 #    push fixes to the same branch if it spots something real.
 
-# 8. @Svishwa2004 reviews and merges. Nothing more for you to do.
-#    Don't look for a merge button — you won't have one.
+# 8. @Svishwa2004 reviews it. If they ask for changes, commit and push to the
+#    SAME branch — the PR updates itself, you never open a second one.
+#    When it looks right they merge it. Don't look for a merge button.
 ```
 
 ### After each coding session
