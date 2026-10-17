@@ -19,11 +19,13 @@ IS2901 Software Development Project · Group **Byte Brigade** · University of M
 | # | Module | Owner |
 |---|--------|-------|
 | 1 | Landing Page, Onboarding & Growth | TBD |
-| 2 | Signup, Paywall & Subscription | TBD |
+| 2 | Signup, Paywall & Subscription | Lahiru Achintha (@lahiruachintha23-bit) |
 | 3 | Password Vault | TBD |
-| 4 | AI Scam Checker | TBD |
+| 4 | AI Scam Checker | Svishwa (@Svishwa2004) |
 | 5 | Admin Dashboard, Analytics & Operations | TBD |
-| 6 | Digital Safety Score | flexible (own / share / split) |
+| 6 | Digital Safety Score | shared across modules (coordinator TBD) |
+
+*M2 and M4 assigned 17 Oct 2026. M1, M3, M5 and the M6 coordinator are decided at the ownership meeting.*
 
 ## Workflow Rules (all members)
 
