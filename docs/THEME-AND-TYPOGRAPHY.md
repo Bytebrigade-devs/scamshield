@@ -1,27 +1,29 @@
 # ScamShield — Theme, Typography & UI Styling Guide
 
 **Project:** IS2901 Software Development Project · Byte Brigade  
-**Version:** 1.1 · 17 October 2026 · **Approved by team decision, 16 October 2026**  
-**Status:** Team-approved specification; every module follows this system. The user's requirement for smooth, non-brick-like buttons is confirmed. No application styling has been implemented or visually verified yet — approval is not implementation evidence.  
+**Version:** 1.2 · 18 October 2026 · **Light specification approved by team decision, 16 October 2026; dark-mode extension requested by the project manager, 18 October 2026**  
+**Status:** Shared light-default specification with a manager-requested dark-mode extension. The user's requirement for smooth, non-brick-like buttons is unchanged. This revision documents tokens and states only; it does not implement application styling or verify rendered dark-mode UI. The earlier team approval is not extended to new dark-mode mockups or implementation.  
 **Design steward:** Module 1 owner (proposed); to be named and recorded at the ownership meeting. All module owners follow the same approved system.
 
 ## 1. Purpose and direction
 
 Give the landing page, onboarding, subscription screens, password vault, scam checker, admin dashboard and Digital Safety Score one coherent identity.
 
-**Direction: light-first, navy–teal, clear and reassuring.** Use generous whitespace, readable typography, softly rounded controls and restrained shadows. The product should feel like an approachable digital-safety companion, not a neon hacker terminal.
+**Direction: light-default with a coordinated dark mode, navy–teal, clear and reassuring.** Use generous whitespace, readable typography, softly rounded controls and restrained shadows. Dark mode uses navy backgrounds, slate surfaces, light text and brighter teal actions—not a neon hacker terminal.
 
-- Navy anchors the identity and text hierarchy.
+- Navy anchors the identity: headings in light mode, backgrounds in dark mode.
 - Teal identifies actions and selected controls.
 - Neutral backgrounds carry most of the interface.
 - Green, amber and red communicate meaningful states, not decorative module identities.
 - Smoothness comes from proportions, rounded edges and subtle feedback—not excessive gradients, blur or animation.
 
-This is the approved ScamShield visual specification; every module follows it. A value can still be refined through the change process in §7 (propose with reason, affected components and examples; record the decision here and in the changelog). Dark mode is not specified in this version and must not be improvised independently by a module owner.
+Every module follows this shared ScamShield visual specification. A value can still be refined through the change process in §7 (propose with reason, affected components and examples; record the decision here and in the changelog). Dark mode is specified below as a coordinated extension; module owners must not invent separate dark palettes. Light remains the default. Adding these specifications does not implement a theme switcher or persistence behaviour.
 
 ## 2. Colour palette
 
 The semantic names below are the contract between design and implementation. Exact values live in shared tokens, not individual components.
+
+### Light palette (default; existing values unchanged)
 
 | Semantic token | Value | Purpose |
 |---|---|---|
@@ -43,16 +45,52 @@ The semantic names below are the contract between design and implementation. Exa
 | `--color-disabled-bg` | `#E2E8F0` | Disabled button background |
 | `--color-disabled-text` | `#64748B` | Disabled button text/icons |
 
+### Dark palette
+
+Override the same semantic names at the application root for dark mode; components keep their existing aliases. A light brand asset must be reviewed separately rather than placing an unchanged navy wordmark on navy.
+
+| Semantic token | Dark value | Purpose |
+|---|---|---|
+| `--color-brand` | `#F8FAFC` | Brand text and prominent headings on dark surfaces |
+| `--color-primary` | `#2DD4BF` | Primary buttons, links and selected controls |
+| `--color-on-primary` | `#0F172A` | Dark text/icons on bright teal buttons; never reuse white labels here |
+| `--color-primary-hover` | `#5EEAD4` | Hover fill for primary buttons |
+| `--color-primary-active` | `#14B8A6` | Pressed fill for primary buttons |
+| `--color-primary-subtle` | `#134E4A` | Quiet teal supporting surface and secondary hover/pressed fill |
+| `--color-background` | `#0F172A` | Default page background |
+| `--color-surface` | `#1E293B` | Cards, forms, menus and elevated panels |
+| `--color-text` | `#F8FAFC` | Main text |
+| `--color-text-muted` | `#CBD5E1` | Supporting text, descriptions and placeholders; not a replacement for labels |
+| `--color-border-subtle` | `#334155` | Decorative card edges and separators only |
+| `--color-border-control` | `#94A3B8` | Identifiable input/control boundaries |
+| `--color-success` | `#4ADE80` | Low-risk indicators and successful operations, with contextual labels |
+| `--color-warning` | `#FBBF24` | Caution and suspicious-result indicators |
+| `--color-danger` | `#F87171` | High-risk indicators, errors and destructive actions |
+| `--color-disabled-bg` | `#334155` | Disabled button background |
+| `--color-disabled-text` | `#94A3B8` | Disabled button text/icons |
+
+### Additional shared state and elevation tokens
+
+These additions complete focus and destructive-button states in both modes without changing existing light palette values. Status text uses `--color-danger`; filled destructive controls use it with `--color-on-danger`.
+
+| Semantic token | Light value | Dark value | Purpose |
+|---|---|---|---|
+| `--color-on-danger` | `#FFFFFF` | `#0F172A` | Text/icons on destructive fills in every state |
+| `--color-danger-hover` | `#991B1B` | `#FCA5A5` | Destructive-button hover fill |
+| `--color-danger-active` | `#7F1D1D` | `#EF4444` | Destructive-button pressed fill |
+| `--color-focus` | `#0F766E` | `#2DD4BF` | Keyboard-focus outline on the mode's page, surface and subtle teal fill |
+| `--shadow-surface` | `0 4px 16px rgb(15 23 42 / 0.06)` | `0 4px 16px rgb(0 0 0 / 0.20)` | Optional restrained elevation; never the only dark-surface boundary |
+
 ### Usage rules
 
-1. Keep most surfaces white or soft white; use teal selectively so primary actions remain obvious.
+1. Keep most surfaces neutral: white/soft white in light mode, navy/slate in dark mode. Use teal selectively so primary actions remain obvious.
 2. Do not give each module a separate theme. The multicolour module map in `project-overview.html` is a management visualisation, not the product palette.
 3. Pair status colours with readable text and an icon. Never communicate risk through colour alone.
 4. A green result means a limited assessment such as **“Low risk detected”**, not **“Guaranteed safe.”** Final verdict/category wording must follow the shared taxonomy agreed under X-13; this guide does not define new backend categories.
 5. Do not use the subtle separator colour as the sole visible boundary of an input that needs a contrasting outline.
 6. Charts must include labels/legends and additional distinctions where needed. Agree a shared chart palette rather than treating risk colours as arbitrary series colours.
 
-### Contrast checks
+### Light contrast checks
 
 Calculated from the specified sRGB hex values using WCAG relative luminance; ratios are rounded to two decimal places.
 
@@ -66,6 +104,32 @@ Calculated from the specified sRGB hex values using WCAG relative luminance; rat
 | Red `#B91C1C` / white `#FFFFFF` | 6.47:1 | Pass |
 
 These are checks of specific opaque colour pairs, not certification of a complete UI or the generated image. Recheck actual state/background combinations, including any tinted alerts, transparency and focus indicators. Disabled controls are not a model for ordinary text contrast.
+
+### Dark contrast checks
+
+Calculated from the specified opaque sRGB values using the same WCAG relative-luminance formula. Text must reach 4.5:1; identifying control boundaries and focus indicators must reach 3:1 against adjacent backgrounds. Use unrounded results for pass/fail decisions.
+
+| Foreground / background | Contrast | Threshold | Result |
+|---|---:|---|---|
+| Main text `#F8FAFC` / page `#0F172A` | 17.06:1 | 4.5:1 | Pass |
+| Main text `#F8FAFC` / surface `#1E293B` | 13.98:1 | 4.5:1 | Pass |
+| Muted text `#CBD5E1` / surface `#1E293B` | 9.85:1 | 4.5:1 | Pass |
+| Primary link/focus `#2DD4BF` / surface `#1E293B` | 7.86:1 | 4.5:1 text; 3:1 focus | Pass |
+| Primary label `#0F172A` / default fill `#2DD4BF` | 9.59:1 | 4.5:1 | Pass |
+| Primary label `#0F172A` / hover fill `#5EEAD4` | 12.07:1 | 4.5:1 | Pass |
+| Primary label `#0F172A` / pressed fill `#14B8A6` | 7.17:1 | 4.5:1 | Pass |
+| Secondary label/focus `#2DD4BF` / subtle fill `#134E4A` | 5.09:1 | 4.5:1 text; 3:1 focus | Pass |
+| Success `#4ADE80` / surface `#1E293B` | 8.40:1 | 4.5:1 | Pass |
+| Warning `#FBBF24` / surface `#1E293B` | 8.76:1 | 4.5:1 | Pass |
+| Danger `#F87171` / surface `#1E293B` | 5.29:1 | 4.5:1 | Pass |
+| Destructive label `#0F172A` / default fill `#F87171` | 6.45:1 | 4.5:1 | Pass |
+| Destructive label `#0F172A` / hover fill `#FCA5A5` | 9.41:1 | 4.5:1 | Pass |
+| Destructive label `#0F172A` / pressed fill `#EF4444` | 4.74:1 | 4.5:1 | Pass |
+| Control border `#94A3B8` / surface `#1E293B` | 5.71:1 | 3:1 | Pass |
+| Control border `#94A3B8` / page `#0F172A` | 6.96:1 | 3:1 | Pass |
+| Focus `#2DD4BF` / page `#0F172A` | 9.59:1 | 3:1 | Pass |
+
+The added light destructive hover/pressed fills also pass with white labels: `#991B1B` = **8.31:1**, `#7F1D1D` = **10.02:1**. In dark mode, white on the default primary fill would fail normal-text AA, so `--color-on-primary` must change with the theme. Risk badges use status-coloured text/icons on `--color-surface`; new tinted alert fills need separate shared tokens and contrast checks before use. These calculations do not certify rendered UI, transparency, focus geometry or chart accessibility.
 
 ## 3. Typography
 
@@ -107,16 +171,27 @@ Use softly rounded rectangles with balanced proportions. Do not interpret this a
 | Border | Thin, normally 1px where a visible border is needed |
 | Shadow | None by default or a subtle soft shadow; no hard offset/block shadow |
 | Feedback | 150–200ms, ease-out, limited to the properties that actually change |
-| Keyboard focus | Clear 3px teal outline with 2px offset on the approved light surfaces; verify contrast on other backgrounds |
+| Keyboard focus | Clear 3px `--color-focus` outline with 2px offset; the offset exposes the mode's page/surface, not the button fill; recheck other adjacent backgrounds |
 
-### Variants and states
+### Light variants and states
 
 | Variant | Default | Hover | Pressed |
 |---|---|---|---|
 | Primary | Teal fill, white label | Darker teal `--color-primary-hover` | Deep teal `--color-primary-active` |
 | Secondary | White fill, teal label and 1px teal border | Subtle teal background | Subtle teal background with a darker teal label/border |
 | Text / tertiary | Transparent surface, teal label | Underline for links; subtle tint for button controls | Darker teal label |
-| Destructive | Danger fill, white label | Shared, contrast-checked darker danger state to be defined before implementation | Same shared state system; never a module-local colour |
+| Destructive | `--color-danger` fill, `--color-on-danger` label | `--color-danger-hover` fill | `--color-danger-active` fill |
+
+### Dark variants and states
+
+| Variant | Default | Hover | Pressed |
+|---|---|---|---|
+| Primary | `--color-primary` fill, `--color-on-primary` label | `--color-primary-hover` fill; same label | `--color-primary-active` fill; same label |
+| Secondary | `--color-surface` fill, `--color-primary` label and 1px border | `--color-primary-subtle` fill; same label/border | Same subtle fill/label/border; optional reduced-motion-aware press feedback only |
+| Text / tertiary | Transparent, `--color-primary` label | Underline for links; subtle fill for button controls | Keep the primary label on the subtle fill; do not reuse light-mode pressed label colours |
+| Destructive | `--color-danger` fill, `--color-on-danger` label | `--color-danger-hover` fill; same label | `--color-danger-active` fill; same label |
+
+In both modes, primary labels consume `--color-on-primary`, not a hardcoded white. Loading indicators inherit the corresponding on-colour. Use `--color-focus` for keyboard focus rather than a status colour; keep its offset area opaque and unobscured.
 
 - Disabled: use the shared disabled tokens, disable activation and remove hover/press feedback. Do not simply reduce the whole component's opacity.
 - Loading: show a progress indicator and a meaningful label such as “Checking…”, prevent duplicate submission and retain the button's width where practical.
@@ -129,10 +204,10 @@ Use softly rounded rectangles with balanced proportions. Do not interpret this a
 
 ## 5. Supporting surfaces and icons
 
-- **Inputs:** approved 12px radius and at least 44px height for single-line controls; clear labels, legible placeholders, visible boundary/focus and field-specific error text.
-- **Cards/panels:** approved 16px radius, white surface, subtle edge and restrained shadow only when elevation helps. Nested radii should look coherent with their spacing, rather than blindly using the same radius everywhere.
+- **Inputs:** approved 12px radius and at least 44px height for single-line controls; use `--color-surface`, `--color-text`, muted placeholders, `--color-border-control` and `--color-focus` in the active mode. Preserve clear labels and field-specific error text; dark inputs must not retain white autofill backgrounds or unreadable browser-native states.
+- **Cards/panels:** approved 16px radius, `--color-surface`, subtle edge and restrained shadow only when elevation helps. Dark panels use the slate surface against the navy page; an identifying control still needs the stronger control border. Nested radii should look coherent with their spacing, rather than blindly using the same radius everywhere.
 - **Spacing:** use a shared 4px-based scale, commonly 8, 12, 16, 24 and 32px. Give controls breathing room without turning the dashboard into oversized empty cards.
-- **Shadows:** use the shared light-surface token `0 4px 16px rgb(15 23 42 / 0.06)`, validated in rendered context before marking the component done. Avoid stacking several heavy shadows.
+- **Shadows:** use `--shadow-surface` from the active mode, validated in rendered context before marking the component done. Keep the existing light shadow unchanged; dark elevation relies on surface contrast and edges rather than stacked heavy shadows or glowing borders.
 - **Icons:** use one consistent outline-icon style, consistent stroke weight and optical alignment. Do not mix unrelated icon styles or use emoji as functional icons.
 - **Background decoration:** faint teal shapes may support the landing page; they must not reduce legibility or become a mandatory treatment on every dashboard screen.
 
@@ -168,6 +243,13 @@ Use three layers:
 
 Components consume aliases rather than repeating raw hex values, font declarations or arbitrary radii. Configure Tailwind against the same token layer; do not maintain a second, divergent palette.
 
+### Theme application contract (for later implementation)
+
+- Light values are the root defaults. Apply dark semantic overrides once at the root using one agreed selector, such as `[data-theme="dark"]`; do not mix independent per-route palettes or a second Tailwind theme source.
+- Set the corresponding native `color-scheme` (`light` or `dark`) with that root selection so built-in controls follow the mode. Inspect autofill, menus and browser-native states in the real application.
+- Keep Plus Jakarta Sans, font weights/sizes, spacing, 12px controls, 16px cards, touch targets and motion timings identical across modes. Do not apply a global invert filter or lower whole-component opacity.
+- Any future user/system preference, persistence or switcher must be agreed and implemented centrally. Until then, this guide defines dark styling without claiming a working toggle, automatic system-mode selection or flash-free initial rendering.
+
 ### Ownership and change process
 
 - The Module 1 design steward maintains the specification and shared components; the named person is recorded at the ownership meeting.
@@ -179,7 +261,9 @@ Components consume aliases rather than repeating raw hex values, font declaratio
 
 ### Review checklist
 
-- [x] Palette/font and detailed component values approved by team decision, 16 October 2026.
+- [x] Original light palette/font and detailed component values approved by team decision, 16 October 2026.
+- [x] Dark-mode specification added at the project manager's request, 18 October 2026; listed opaque contrast pairs calculated.
+- [ ] Representative dark landing, scam-result and vault/dashboard mockups reviewed; no retrospective extension of the 16 October light approval.
 - [ ] Design steward named and recorded (Module 1 owner slot; ownership meeting).
 - [ ] Landing, scam-result and vault/dashboard mockups compared before locking the visual system.
 - [ ] Shared tokens and components used across modules; no unexplained local overrides.
@@ -193,14 +277,15 @@ Components consume aliases rather than repeating raw hex values, font declaratio
 
 ## 8. Current verification and next step
 
-**Verified now:** the six listed colour-pair contrast calculations and the font's licence source. The supplied image supports visual discussion only.
+**Verified now:** the six original light contrast pairs, 17 listed dark pairs and two added light destructive-state pairs calculated from the specified sRGB values. The font's licence source was checked for the original guide. The supplied image supports visual discussion only.
 
-**Not yet verified:** rendered font appearance, responsive layout, component states, actual motion, full accessibility or consistency across implemented modules. This document is not evidence of working application UI.
+**Not yet verified by this revision:** rendered dark-mode appearance, theme switching/persistence, native-control/autofill behaviour, responsive layout, component states, focus geometry, actual motion, full accessibility or consistency across implemented modules. Existing light mockups do not verify dark rendering. This document is not evidence of working application UI.
 
-**Next step:** mirror the approved tokens into Figma and the application token layer, name the design steward at the ownership meeting, then review representative mockups using the specified tokens before shared component implementation. Record approval or requested changes rather than treating documentation creation as design sign-off.
+**Next step:** review representative light/dark mockups and confirm the dark extension through the shared design process, name the design steward at the ownership meeting, then mirror the reviewed mode-aware tokens into Figma and the application's shared token layer. Verify actual component states and before/after desktop/mobile captures during implementation; documentation and numerical contrast checks are not rendered-design sign-off.
 
 ### Revision history
 
+- **2026-10-18 · v1.2:** added the manager-requested navy/slate dark palette, mode-aware primary/destructive labels, focus/elevation tokens, dark component states and root-theme contract. Light remains the default; existing light palette, typography, spacing and geometry are unchanged. Added shared light destructive hover/pressed values and calculated contrast checks. Repository guide synchronised with its existing external-instructions reference adaptation. Documentation only; no application, Figma, diagram, switcher, commit or push change, and no new team/mockup approval claimed.
 - **2026-10-16 · v1.0:** theme approved by team decision. Status moved from proposal to approved specification; approval recorded, design-steward naming still pending at the ownership meeting. No application styling implemented.
 - **2026-10-17 · v1.1:** authorised a shared team copy in the `scamshield` repository so all members can follow this guide. The `Management\` original stays the source of truth; material future changes are re-copied into the repository and recorded in the changelog. No palette, typography or component values changed.
 - **2026-10-16 · v0.1:** recorded the proposed navy–teal light-first theme, Plus Jakarta Sans typography, the confirmed smooth/non-brick-like button requirement, generated-reference refinements and cross-module maintenance rules. Documentation only; no application code or approved product scope changed.
