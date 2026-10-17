@@ -33,3 +33,7 @@ IS2901 Software Development Project · Group **Byte Brigade** · University of M
 - Shared schema changes: update the schema doc and flag affected module owners in the PR description
 
 See [GITHUB-GUIDE.md](GITHUB-GUIDE.md) for the full beginner walkthrough.
+
+## Theme & Typography (all members)
+
+Every module's UI must follow the shared team spec: see [docs/THEME-AND-TYPOGRAPHY.md](docs/THEME-AND-TYPOGRAPHY.md) — colours, fonts, buttons and surfaces are defined there; don't invent module-local styling.
