@@ -23,9 +23,9 @@ IS2901 Software Development Project · Group **Byte Brigade** · University of M
 | 3 | Password Vault | Prashni (@Prasnida) |
 | 4 | AI Scam Checker | Svishwa (@Svishwa2004) |
 | 5 | Admin Dashboard, Analytics & Operations | Vishmi (@Vish-Himaya) |
-| 6 | Digital Safety Score | shared across modules (coordinator TBD) |
+| 6 | Digital Safety Score | shared across modules — coordinator: Vishmi (@Vish-Himaya) |
 
-*All five module owners assigned by 18 Oct 2026. The M6 coordinator and the second hats are confirmed at the ownership meeting.*
+*All five module owners assigned by 18 Oct 2026; the Module 6 coordinator and each member's score slice were confirmed the same day. The second hats are confirmed at the ownership meeting.*
 
 ## Workflow Rules (all members)
 
