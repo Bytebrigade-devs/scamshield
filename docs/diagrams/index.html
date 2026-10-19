@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScamShield Module 5 &amp; 6 — Draw.io Style UML &amp; Architecture Diagrams</title>
+  <title>Module 5: Admin Dashboard, Analytics &amp; Operations — UML &amp; Architecture Diagrams</title>
   <style>
     body {
       margin: 0;
@@ -142,95 +142,95 @@
   <header>
     <div>
       <div style="display: flex; align-items: center; gap: 10px;">
-        <h1>ScamShield · Draw.io Style UML &amp; Architecture Diagrams</h1>
-        <span class="badge">IS2901 Moratuwa FIT</span>
+        <h1>Module 5: Admin Dashboard, Analytics &amp; Operations</h1>
+        <span class="badge">IS2901 Individual Contribution</span>
       </div>
       <div class="meta">
         Author: Vishmi Himaya (Index: 245027T) · Group: Byte Brigade · Classic Draw.io Academic Palette
       </div>
     </div>
     <div>
-      <span style="font-size: 12px; color: #64748b;">Right-click any diagram to copy or save for PowerPoint / Report</span>
+      <span style="font-size: 12px; color: #64748b;">All diagrams exclusively focus on Module 5 specifications</span>
     </div>
   </header>
 
   <nav class="nav-tabs">
-    <button class="tab-btn active" onclick="scrollToSection('sec-arch')">1. Top Architecture</button>
-    <button class="tab-btn" onclick="scrollToSection('sec-usecase')">2. Use Case Diagram</button>
-    <button class="tab-btn" onclick="scrollToSection('sec-activity')">3. Activity Diagram</button>
-    <button class="tab-btn" onclick="scrollToSection('sec-sequence')">4. Sequence Diagram</button>
-    <button class="tab-btn" onclick="scrollToSection('sec-class')">5. Class &amp; Database Diagram</button>
+    <button class="tab-btn active" onclick="scrollToSection('sec-arch')">1. M5 Subsystem Architecture</button>
+    <button class="tab-btn" onclick="scrollToSection('sec-usecase')">2. M5 Use Case Diagram</button>
+    <button class="tab-btn" onclick="scrollToSection('sec-activity')">3. M5 Activity Diagram</button>
+    <button class="tab-btn" onclick="scrollToSection('sec-sequence')">4. M5 Sequence Diagram</button>
+    <button class="tab-btn" onclick="scrollToSection('sec-class')">5. M5 Class &amp; Database Diagram</button>
   </nav>
 
   <div class="container">
 
-    <!-- 1. Top Architecture -->
+    <!-- 1. M5 Architecture -->
     <div id="sec-arch" class="diagram-card">
       <div class="diagram-header">
         <div>
-          <h2 class="diagram-title">1. Top-Level System Architecture</h2>
-          <div class="diagram-desc">Draw.io style architecture showing all 6 modules and the M5/M6 Control Room.</div>
+          <h2 class="diagram-title">1. Module 5 Subsystem Architecture (3-Tier Layered)</h2>
+          <div class="diagram-desc">Presentation Layer (Next.js UI), Business Logic Layer (RBAC &amp; Metrics Controllers), and PostgreSQL Data Layer.</div>
         </div>
-        <a href="5-system-architecture.svg" download="ScamShield-Top-Architecture.svg" class="btn-download">Download SVG</a>
+        <a href="5-system-architecture.svg" download="M5-Subsystem-Architecture.svg" class="btn-download">Download SVG</a>
       </div>
       <div class="svg-wrapper">
-        <img src="5-system-architecture.svg" alt="Top-Level Architecture Diagram">
+        <img src="5-system-architecture.svg" alt="Module 5 Subsystem Architecture Diagram">
       </div>
     </div>
 
-    <!-- 2. Use Case Diagram -->
+    <!-- 2. M5 Use Case Diagram -->
     <div id="sec-usecase" class="diagram-card">
       <div class="diagram-header">
         <div>
-          <h2 class="diagram-title">2. Use Case Diagram (UML 2.5)</h2>
-          <div class="diagram-desc">Classic Draw.io stick figures, blue use case ovals (#dae8fc), and yellow boundary post-it note.</div>
+          <h2 class="diagram-title">2. Module 5 Use Case Diagram (UML 2.5)</h2>
+          <div class="diagram-desc">Actors (Administrator, Support Agent, Security Analyst), all 10 Module 5 functional use cases, and audit log include relations.</div>
         </div>
-        <a href="1-use-case-diagram.svg" download="ScamShield-Use-Case-Diagram.svg" class="btn-download">Download SVG</a>
+        <a href="1-use-case-diagram.svg" download="M5-Use-Case-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
       <div class="svg-wrapper">
-        <img src="1-use-case-diagram.svg" alt="Use Case Diagram">
+        <img src="1-use-case-diagram.svg" alt="Module 5 Use Case Diagram">
       </div>
     </div>
 
-    <!-- 3. Activity Diagram -->
+    <!-- 3. M5 Activity Diagram -->
     <div id="sec-activity" class="diagram-card">
       <div class="diagram-header">
         <div>
-          <h2 class="diagram-title">3. Activity Diagram: Moderation &amp; Audit Logging</h2>
-          <div class="diagram-desc">Classic Draw.io swimlane format with blue action rounded rectangles and yellow decision diamond.</div>
+          <h2 class="diagram-title">3. Module 5 Activity Diagram: Account Moderation &amp; Audit Trail</h2>
+          <div class="diagram-desc">Swimlane workflow showing user suspension, mandatory audit justification, RBAC error checking, and append-only database logging.</div>
         </div>
-        <a href="2-activity-diagram.svg" download="ScamShield-Activity-Diagram.svg" class="btn-download">Download SVG</a>
+        <a href="2-activity-diagram.svg" download="M5-Activity-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
       <div class="svg-wrapper">
-        <img src="2-activity-diagram.svg" alt="Activity Diagram">
+        <img src="2-activity-diagram.svg" alt="Module 5 Activity Diagram">
       </div>
     </div>
 
-    <!-- 4. Sequence Diagram -->
+    <!-- 4. M5 Sequence Diagram -->
     <div id="sec-sequence" class="diagram-card">
       <div class="diagram-header">
         <div>
-          <h2 class="diagram-title">4. Sequence Diagram: Analytics &amp; Privacy Sanitization</h2>
-          <div class="diagram-desc">Draw.io sequence notation with lifeline boxes, white activation bars, and [par] parallel frame.</div>
+          <h2 class="diagram-title">4. Module 5 Sequence Diagram: Analytics Telemetry &amp; Privacy Pipeline</h2>
+          <div class="diagram-desc">Internal chronological sequence showing RBAC verification, telemetry aggregation, audit logging, and chart rendering.</div>
         </div>
-        <a href="3-sequence-diagram.svg" download="ScamShield-Sequence-Diagram.svg" class="btn-download">Download SVG</a>
+        <a href="3-sequence-diagram.svg" download="M5-Sequence-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
       <div class="svg-wrapper">
-        <img src="3-sequence-diagram.svg" alt="Sequence Diagram">
+        <img src="3-sequence-diagram.svg" alt="Module 5 Sequence Diagram">
       </div>
     </div>
 
-    <!-- 5. Class & ER Diagram -->
+    <!-- 5. M5 Class & Database Diagram -->
     <div id="sec-class" class="diagram-card">
       <div class="diagram-header">
         <div>
-          <h2 class="diagram-title">5. Class &amp; Database Architecture Diagram</h2>
-          <div class="diagram-desc">Standard Draw.io 3-compartment UML class boxes with blue headers and orthogonal associations.</div>
+          <h2 class="diagram-title">5. Module 5 Class &amp; Database Architecture Diagram</h2>
+          <div class="diagram-desc">M5 Controller services, PostgreSQL tables (audit_logs, support_tickets, verdict_feedback, analytics_events), and RLS policies.</div>
         </div>
-        <a href="4-class-er-diagram.svg" download="ScamShield-Class-ER-Diagram.svg" class="btn-download">Download SVG</a>
+        <a href="4-class-er-diagram.svg" download="M5-Class-ER-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
       <div class="svg-wrapper">
-        <img src="4-class-er-diagram.svg" alt="Class and Database Diagram">
+        <img src="4-class-er-diagram.svg" alt="Module 5 Class and Database Diagram">
       </div>
     </div>
 
