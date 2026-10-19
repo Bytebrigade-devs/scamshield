@@ -10,8 +10,7 @@
   <rect width="100%" height="100%" fill="url(#grid)" />
 
   <!-- Diagram Title Banner -->
-  <text x="40" y="40" font-size="20" font-weight="bold" fill="#000000">Sequence Diagram — Module 5: Admin Analytics &amp; Telemetry Aggregation</text>
-  <text x="40" y="60" font-size="12" fill="#666666">IS2901 Software Development Project · Author: Vishmi Himaya (245027T) · Module 5 Internal Sequence</text>
+  <text x="40" y="45" font-size="20" font-weight="bold" fill="#000000">Sequence Diagram — Module 5: Admin Analytics &amp; Telemetry Aggregation</text>
 
   <!-- ================= LIFELINE HEADERS (CLASSIC DRAW.IO STYLE) ================= -->
 

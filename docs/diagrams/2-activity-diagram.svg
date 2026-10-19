@@ -10,8 +10,7 @@
   <rect width="100%" height="100%" fill="url(#grid)" />
 
   <!-- Diagram Title Banner -->
-  <text x="40" y="40" font-size="20" font-weight="bold" fill="#000000">Activity Diagram — Account Moderation &amp; Audit Trail</text>
-  <text x="40" y="60" font-size="12" fill="#666666">IS2901 Software Development Project · Swimlane Workflow (M5-09, M5-10, M5-11)</text>
+  <text x="40" y="45" font-size="20" font-weight="bold" fill="#000000">Activity Diagram — Account Moderation &amp; Audit Trail</text>
 
   <!-- ================= SWIMLANE HEADERS (CLASSIC DRAW.IO STYLE) ================= -->
   <rect x="50" y="90" width="340" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
