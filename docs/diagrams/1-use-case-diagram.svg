@@ -1,193 +1,191 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 820" width="100%" height="100%" style="background:#080e1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 820" width="100%" height="100%" style="background:#ffffff; font-family: Helvetica, Arial, sans-serif;">
+  <!-- Grid Background (Draw.io style) -->
   <defs>
-    <linearGradient id="grad-box" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0e1726" />
-      <stop offset="100%" stop-color="#13203a" />
-    </linearGradient>
-    <linearGradient id="grad-uc" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#13203a" />
-      <stop offset="100%" stop-color="#1e2e4a" />
-    </linearGradient>
-    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f0f0f0" stroke-width="1"/>
+    </pattern>
+    <filter id="drawio-shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.15"/>
     </filter>
   </defs>
+  <rect width="100%" height="100%" fill="url(#grid)" />
 
-  <!-- Title & Metadata -->
-  <text x="50" y="45" font-size="22" font-weight="700" fill="#eaf1f7">ScamShield · Module 5 &amp; Module 6 Use Case Diagram</text>
-  <text x="50" y="70" font-size="12" fill="#8ea0b3">UML 2.5 Specification · Owner: Vishmi Himaya (245027T) · Byte Brigade · IS2901 Software Development Project</text>
+  <!-- Diagram Title Banner -->
+  <text x="40" y="40" font-size="20" font-weight="bold" fill="#000000">Use Case Diagram — ScamShield (Module 5 &amp; Module 6)</text>
+  <text x="40" y="60" font-size="12" fill="#666666">IS2901 Software Development Project · Byte Brigade · Author: Vishmi Himaya (245027T)</text>
 
-  <!-- System Boundary Box -->
-  <rect x="260" y="100" width="630" height="690" rx="16" fill="url(#grad-box)" stroke="#1f2d45" stroke-width="2" filter="url(#shadow)"/>
-  <rect x="260" y="100" width="630" height="38" rx="16" fill="#13203a"/>
-  <rect x="260" y="122" width="630" height="16" fill="#13203a"/>
-  <text x="280" y="125" font-size="13" font-weight="700" fill="#2dd4bf" letter-spacing="0.5">SYSTEM BOUNDARY: MODULE 5 (ADMIN &amp; OPERATIONS) &amp; MODULE 6 (SAFETY SCORE COORDINATION)</text>
+  <!-- ================= SYSTEM BOUNDARY ================= -->
+  <rect x="250" y="90" width="640" height="700" fill="#ffffff" stroke="#666666" stroke-width="2" filter="url(#drawio-shadow)" rx="4"/>
+  <rect x="250" y="90" width="640" height="34" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+  <text x="570" y="113" font-size="13" font-weight="bold" fill="#333333" text-anchor="middle">System Boundary: ScamShield Admin &amp; Operations Subsystem</text>
 
-  <!-- ================= ACTORS (LEFT) ================= -->
+  <!-- ================= ACTORS (LEFT - CLASSIC DRAW.IO STYLE) ================= -->
 
   <!-- Actor 1: Administrator -->
-  <g transform="translate(60, 210)">
-    <circle cx="50" cy="25" r="16" fill="#13203a" stroke="#2dd4bf" stroke-width="2.5"/>
-    <line x1="50" y1="41" x2="50" y2="85" stroke="#2dd4bf" stroke-width="2.5"/>
-    <line x1="15" y1="58" x2="85" y2="58" stroke="#2dd4bf" stroke-width="2.5"/>
-    <line x1="50" y1="85" x2="25" y2="125" stroke="#2dd4bf" stroke-width="2.5"/>
-    <line x1="50" y1="85" x2="75" y2="125" stroke="#2dd4bf" stroke-width="2.5"/>
-    <text x="50" y="148" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">Administrator</text>
-    <text x="50" y="164" font-size="11" fill="#2dd4bf" text-anchor="middle">(Full Control / M5-10)</text>
+  <g transform="translate(60, 200)">
+    <circle cx="50" cy="20" r="14" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="50" y1="34" x2="50" y2="78" stroke="#000000" stroke-width="1.8"/>
+    <line x1="16" y1="50" x2="84" y2="50" stroke="#000000" stroke-width="1.8"/>
+    <line x1="50" y1="78" x2="24" y2="120" stroke="#000000" stroke-width="1.8"/>
+    <line x1="50" y1="78" x2="76" y2="120" stroke="#000000" stroke-width="1.8"/>
+    <text x="50" y="142" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Administrator</text>
+    <text x="50" y="158" font-size="11" fill="#666666" text-anchor="middle">(Full Moderation)</text>
   </g>
 
   <!-- Actor 2: Support Agent -->
   <g transform="translate(60, 440)">
-    <circle cx="50" cy="25" r="16" fill="#13203a" stroke="#f59e0b" stroke-width="2.5"/>
-    <line x1="50" y1="41" x2="50" y2="85" stroke="#f59e0b" stroke-width="2.5"/>
-    <line x1="15" y1="58" x2="85" y2="58" stroke="#f59e0b" stroke-width="2.5"/>
-    <line x1="50" y1="85" x2="25" y2="125" stroke="#f59e0b" stroke-width="2.5"/>
-    <line x1="50" y1="85" x2="75" y2="125" stroke="#f59e0b" stroke-width="2.5"/>
-    <text x="50" y="148" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">Support Agent</text>
-    <text x="50" y="164" font-size="11" fill="#f59e0b" text-anchor="middle">(User Support / Notes)</text>
+    <circle cx="50" cy="20" r="14" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="50" y1="34" x2="50" y2="78" stroke="#000000" stroke-width="1.8"/>
+    <line x1="16" y1="50" x2="84" y2="50" stroke="#000000" stroke-width="1.8"/>
+    <line x1="50" y1="78" x2="24" y2="120" stroke="#000000" stroke-width="1.8"/>
+    <line x1="50" y1="78" x2="76" y2="120" stroke="#000000" stroke-width="1.8"/>
+    <text x="50" y="142" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Support Agent</text>
+    <text x="50" y="158" font-size="11" fill="#666666" text-anchor="middle">(Notes &amp; Tickets)</text>
   </g>
 
   <!-- Actor 3: Security Analyst -->
   <g transform="translate(60, 630)">
-    <circle cx="50" cy="20" r="15" fill="#13203a" stroke="#38bdf8" stroke-width="2.5"/>
-    <line x1="50" y1="35" x2="50" y2="75" stroke="#38bdf8" stroke-width="2.5"/>
-    <line x1="20" y1="50" x2="80" y2="50" stroke="#38bdf8" stroke-width="2.5"/>
-    <line x1="50" y1="75" x2="30" y2="110" stroke="#38bdf8" stroke-width="2.5"/>
-    <line x1="50" y1="75" x2="70" y2="110" stroke="#38bdf8" stroke-width="2.5"/>
-    <text x="50" y="130" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">Security Analyst</text>
-    <text x="50" y="146" font-size="11" fill="#38bdf8" text-anchor="middle">(Telemetry &amp; Audit)</text>
+    <circle cx="50" cy="18" r="13" fill="#ffffff" stroke="#000000" stroke-width="1.8"/>
+    <line x1="50" y1="31" x2="50" y2="70" stroke="#000000" stroke-width="1.8"/>
+    <line x1="20" y1="46" x2="80" y2="46" stroke="#000000" stroke-width="1.8"/>
+    <line x1="50" y1="70" x2="28" y2="108" stroke="#000000" stroke-width="1.8"/>
+    <line x1="50" y1="70" x2="72" y2="108" stroke="#000000" stroke-width="1.8"/>
+    <text x="50" y="128" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Security Analyst</text>
+    <text x="50" y="144" font-size="11" fill="#666666" text-anchor="middle">(Read-Only Telemetry)</text>
   </g>
 
-  <!-- ================= SECONDARY ACTORS (RIGHT) ================= -->
-  <!-- Supabase DB Actor -->
-  <g transform="translate(930, 260)">
-    <rect x="0" y="0" width="170" height="70" rx="8" fill="#13203a" stroke="#34d399" stroke-width="1.5" filter="url(#shadow)"/>
-    <text x="85" y="28" font-size="11" fill="#34d399" font-weight="600" text-anchor="middle">&lt;&lt;Secondary System&gt;&gt;</text>
-    <text x="85" y="46" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">Supabase PostgreSQL</text>
-    <text x="85" y="60" font-size="10" fill="#8ea0b3" text-anchor="middle">Audit Logs &amp; Events (X-08)</text>
+  <!-- ================= SECONDARY SYSTEMS (RIGHT) ================= -->
+  <!-- Database Box -->
+  <g transform="translate(930, 270)">
+    <rect x="0" y="0" width="180" height="75" fill="#f5f5f5" stroke="#666666" stroke-width="1.5" rx="4" filter="url(#drawio-shadow)"/>
+    <text x="90" y="24" font-size="11" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Secondary System&gt;&gt;</text>
+    <text x="90" y="44" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Supabase PostgreSQL</text>
+    <text x="90" y="60" font-size="10" fill="#666666" text-anchor="middle">Audit Logs &amp; Events (X-08)</text>
   </g>
 
   <!-- M4 AI Scam Pipeline System -->
   <g transform="translate(930, 480)">
-    <rect x="0" y="0" width="170" height="70" rx="8" fill="#13203a" stroke="#2dd4bf" stroke-width="1.5" filter="url(#shadow)"/>
-    <text x="85" y="28" font-size="11" fill="#2dd4bf" font-weight="600" text-anchor="middle">&lt;&lt;Subsystem M4&gt;&gt;</text>
-    <text x="85" y="46" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">AI Scam Pipeline</text>
-    <text x="85" y="60" font-size="10" fill="#8ea0b3" text-anchor="middle">X-13 Taxonomy Stream</text>
+    <rect x="0" y="0" width="180" height="75" fill="#f5f5f5" stroke="#666666" stroke-width="1.5" rx="4" filter="url(#drawio-shadow)"/>
+    <text x="90" y="24" font-size="11" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Subsystem M4&gt;&gt;</text>
+    <text x="90" y="44" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">AI Scam Pipeline</text>
+    <text x="90" y="60" font-size="10" fill="#666666" text-anchor="middle">X-13 Taxonomy Stream</text>
   </g>
 
-  <!-- ================= USE CASES (ELLIPSES) ================= -->
+  <!-- ================= USE CASES (CLASSIC DRAW.IO BLUE OVALS: #dae8fc / #6c8ebf) ================= -->
 
   <!-- UC1: Overview Dashboard -->
   <g id="uc1">
-    <ellipse cx="420" cy="175" rx="130" ry="24" fill="url(#grad-uc)" stroke="#2dd4bf" stroke-width="1.5"/>
-    <text x="420" y="179" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-01: View Overview Dashboard (M5-14)</text>
+    <ellipse cx="420" cy="165" rx="135" ry="24" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="420" y="170" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">View Executive Overview (M5-14)</text>
   </g>
 
   <!-- UC2: Business Analytics -->
   <g id="uc2">
-    <ellipse cx="420" cy="235" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
-    <text x="420" y="239" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-02: Monitor Business &amp; MRR (M5-03, 05)</text>
+    <ellipse cx="420" cy="225" rx="135" ry="24" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="420" y="230" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Monitor Business &amp; MRR (M5-03, 05)</text>
   </g>
 
   <!-- UC3: AI Scam Threat Intelligence -->
   <g id="uc3">
-    <ellipse cx="420" cy="295" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
-    <text x="420" y="299" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-03: Analyze Threat Vectors (M5-04)</text>
+    <ellipse cx="420" cy="285" rx="135" ry="24" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="420" y="290" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Analyze Threat Vectors (M5-04)</text>
   </g>
 
   <!-- UC4: Search & Inspect Users -->
   <g id="uc4">
-    <ellipse cx="420" cy="365" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
-    <text x="420" y="369" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-04: Search &amp; Inspect Users (M5-09)</text>
+    <ellipse cx="420" cy="355" rx="135" ry="24" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="420" y="360" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Search &amp; Inspect Users (M5-09)</text>
   </g>
 
-  <!-- UC5: Suspend / Reactivate User -->
+  <!-- UC5: Suspend / Reactivate User (Red accent border) -->
   <g id="uc5">
-    <ellipse cx="420" cy="445" rx="130" ry="26" fill="url(#grad-uc)" stroke="#f06a6a" stroke-width="1.5"/>
-    <text x="420" y="443" font-size="11" font-weight="700" fill="#f06a6a" text-anchor="middle">UC-05: Suspend / Reactivate Account</text>
-    <text x="420" y="457" font-size="10" fill="#8ea0b3" text-anchor="middle">(M5-09 · Requires Justification)</text>
+    <ellipse cx="420" cy="435" rx="135" ry="26" fill="#f8cecc" stroke="#b85450" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+    <text x="420" y="434" font-size="12" font-weight="bold" fill="#b85450" text-anchor="middle">Suspend / Reactivate Account</text>
+    <text x="420" y="449" font-size="10" fill="#666666" text-anchor="middle">(M5-09 · Requires Justification)</text>
   </g>
 
-  <!-- UC5_INC: Generate Audit Log -->
+  <!-- UC5_INC: Generate Audit Log (Green fill #d5e8d4 / #82b366) -->
   <g id="uc5_inc">
-    <ellipse cx="730" cy="445" rx="120" ry="24" fill="url(#grad-uc)" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4 2"/>
-    <text x="730" y="449" font-size="11" font-weight="600" fill="#34d399" text-anchor="middle">UC-05A: Write Immutable Audit Log (M5-11)</text>
+    <ellipse cx="730" cy="435" rx="125" ry="24" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5" stroke-dasharray="4 2" filter="url(#drawio-shadow)"/>
+    <text x="730" y="440" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">Write Immutable Audit Log (M5-11)</text>
   </g>
 
   <!-- UC6: Record Internal Support Note -->
   <g id="uc6">
-    <ellipse cx="420" cy="520" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
-    <text x="420" y="524" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-06: Add Internal Support Note (M5-09)</text>
+    <ellipse cx="420" cy="510" rx="135" ry="24" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="420" y="515" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Add Internal Support Note (M5-09)</text>
   </g>
 
   <!-- UC7: Review Audit Log -->
   <g id="uc7">
-    <ellipse cx="420" cy="580" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
-    <text x="420" y="584" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-07: Query Audit Trail (M5-11)</text>
+    <ellipse cx="420" cy="570" rx="135" ry="24" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="420" y="575" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Query Audit Trail (M5-11)</text>
   </g>
 
   <!-- UC8: Export CSV -->
   <g id="uc8">
-    <ellipse cx="420" cy="640" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
-    <text x="420" y="644" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-08: Export Data to CSV (M5-07)</text>
+    <ellipse cx="420" cy="630" rx="135" ry="24" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="420" y="635" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Export Analytics to CSV (M5-07)</text>
   </g>
 
   <!-- UC9: Support Tickets & Feedback -->
   <g id="uc9">
-    <ellipse cx="420" cy="700" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
-    <text x="420" y="704" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-09: Support Tickets &amp; Feedback (M5-12)</text>
+    <ellipse cx="420" cy="690" rx="135" ry="24" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="420" y="695" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">Support Tickets &amp; Feedback (M5-12)</text>
   </g>
 
   <!-- UC10: Module 6 Safety Score View -->
   <g id="uc10">
-    <ellipse cx="420" cy="758" rx="135" ry="22" fill="url(#grad-uc)" stroke="#2dd4bf" stroke-width="1.5"/>
-    <text x="420" y="762" font-size="11" font-weight="600" fill="#2dd4bf" text-anchor="middle">UC-10: Review Safety Score Cohorts (M6-05)</text>
+    <ellipse cx="420" cy="750" rx="135" ry="22" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="420" y="755" font-size="12" font-weight="bold" fill="#274e13" text-anchor="middle">Review Safety Score Cohorts (M6-05)</text>
   </g>
 
-  <!-- ================= RELATIONSHIP CONNECTORS ================= -->
+  <!-- ================= CONNECTORS (SOLID DRAW.IO ARROWS) ================= -->
 
-  <!-- Include relationship UC5 -> UC5_INC -->
-  <line x1="550" y1="445" x2="610" y2="445" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <polygon points="605,441 613,445 605,449" fill="#34d399"/>
-  <text x="580" y="438" font-size="10" font-style="italic" fill="#34d399" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+  <!-- Include connector UC5 -> UC5_INC -->
+  <line x1="555" y1="435" x2="605" y2="435" stroke="#333333" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <polygon points="600,431 605,435 600,439" fill="#333333"/>
+  <text x="580" y="427" font-size="10" font-style="italic" fill="#333333" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
 
-  <!-- Admin Associations (Lines from Actor to UCs) -->
-  <line x1="150" y1="270" x2="290" y2="175" stroke="#8ea0b3" stroke-width="1.2"/>
-  <line x1="150" y1="270" x2="290" y2="235" stroke="#8ea0b3" stroke-width="1.2"/>
-  <line x1="150" y1="270" x2="290" y2="295" stroke="#8ea0b3" stroke-width="1.2"/>
-  <line x1="150" y1="270" x2="290" y2="365" stroke="#8ea0b3" stroke-width="1.2"/>
-  <line x1="150" y1="270" x2="290" y2="445" stroke="#2dd4bf" stroke-width="1.8"/>
-  <line x1="150" y1="270" x2="290" y2="520" stroke="#8ea0b3" stroke-width="1.2"/>
-  <line x1="150" y1="270" x2="290" y2="580" stroke="#8ea0b3" stroke-width="1.2"/>
-  <line x1="150" y1="270" x2="290" y2="640" stroke="#8ea0b3" stroke-width="1.2"/>
-  <line x1="150" y1="270" x2="290" y2="700" stroke="#8ea0b3" stroke-width="1.2"/>
-  <line x1="150" y1="270" x2="290" y2="758" stroke="#8ea0b3" stroke-width="1.2"/>
+  <!-- Admin Connector Lines -->
+  <line x1="140" y1="260" x2="285" y2="165" stroke="#333333" stroke-width="1.2"/>
+  <line x1="140" y1="260" x2="285" y2="225" stroke="#333333" stroke-width="1.2"/>
+  <line x1="140" y1="260" x2="285" y2="285" stroke="#333333" stroke-width="1.2"/>
+  <line x1="140" y1="260" x2="285" y2="355" stroke="#333333" stroke-width="1.2"/>
+  <line x1="140" y1="260" x2="285" y2="435" stroke="#b85450" stroke-width="1.6"/>
+  <line x1="140" y1="260" x2="285" y2="510" stroke="#333333" stroke-width="1.2"/>
+  <line x1="140" y1="260" x2="285" y2="570" stroke="#333333" stroke-width="1.2"/>
+  <line x1="140" y1="260" x2="285" y2="630" stroke="#333333" stroke-width="1.2"/>
+  <line x1="140" y1="260" x2="285" y2="690" stroke="#333333" stroke-width="1.2"/>
+  <line x1="140" y1="260" x2="285" y2="750" stroke="#333333" stroke-width="1.2"/>
 
-  <!-- Support Agent Associations -->
-  <line x1="150" y1="500" x2="290" y2="175" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="3 2"/>
-  <line x1="150" y1="500" x2="290" y2="365" stroke="#f59e0b" stroke-width="1.2"/>
-  <line x1="150" y1="500" x2="290" y2="520" stroke="#f59e0b" stroke-width="1.2"/>
-  <line x1="150" y1="500" x2="290" y2="700" stroke="#f59e0b" stroke-width="1.2"/>
+  <!-- Support Agent Connectors -->
+  <line x1="140" y1="500" x2="285" y2="165" stroke="#666666" stroke-width="1.2" stroke-dasharray="3 2"/>
+  <line x1="140" y1="500" x2="285" y2="355" stroke="#666666" stroke-width="1.2"/>
+  <line x1="140" y1="500" x2="285" y2="510" stroke="#666666" stroke-width="1.2"/>
+  <line x1="140" y1="500" x2="285" y2="690" stroke="#666666" stroke-width="1.2"/>
 
-  <!-- Security Analyst Associations -->
-  <line x1="150" y1="690" x2="290" y2="175" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 2"/>
-  <line x1="150" y1="690" x2="290" y2="295" stroke="#38bdf8" stroke-width="1.2"/>
-  <line x1="150" y1="690" x2="290" y2="580" stroke="#38bdf8" stroke-width="1.2"/>
-  <line x1="150" y1="690" x2="290" y2="758" stroke="#38bdf8" stroke-width="1.2"/>
+  <!-- Security Analyst Connectors -->
+  <line x1="140" y1="690" x2="285" y2="165" stroke="#666666" stroke-width="1.2" stroke-dasharray="3 2"/>
+  <line x1="140" y1="690" x2="285" y2="285" stroke="#666666" stroke-width="1.2"/>
+  <line x1="140" y1="690" x2="285" y2="570" stroke="#666666" stroke-width="1.2"/>
+  <line x1="140" y1="690" x2="285" y2="750" stroke="#666666" stroke-width="1.2"/>
 
-  <!-- Secondary System Connections -->
-  <line x1="850" y1="445" x2="930" y2="310" stroke="#34d399" stroke-width="1.2"/>
-  <line x1="550" y1="295" x2="930" y2="510" stroke="#2dd4bf" stroke-width="1.2"/>
-  <line x1="550" y1="580" x2="930" y2="310" stroke="#34d399" stroke-width="1.2"/>
+  <!-- Secondary System Connectors -->
+  <line x1="855" y1="435" x2="930" y2="310" stroke="#333333" stroke-width="1.2"/>
+  <line x1="555" y1="285" x2="930" y2="515" stroke="#333333" stroke-width="1.2"/>
+  <line x1="555" y1="570" x2="930" y2="310" stroke="#333333" stroke-width="1.2"/>
 
-  <!-- Privacy Boundary Annotation -->
-  <g transform="translate(620, 640)">
-    <rect x="0" y="0" width="250" height="130" rx="8" fill="#13203a" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4 2"/>
-    <text x="15" y="24" font-size="11" font-weight="700" fill="#2dd4bf">🔒 ZERO-KNOWLEDGE BOUNDARY</text>
-    <text x="15" y="44" font-size="10" fill="#eaf1f7">• No vault passwords or notes exposed</text>
-    <text x="15" y="62" font-size="10" fill="#eaf1f7">• No raw scam message bodies stored</text>
-    <text x="15" y="80" font-size="10" fill="#eaf1f7">• Mock billing only (no card numbers)</text>
-    <text x="15" y="98" font-size="10" fill="#eaf1f7">• Mandatory justification on suspension</text>
-    <text x="15" y="116" font-size="10" fill="#34d399">• Audit log is strictly append-only</text>
+  <!-- ================= POST-IT NOTE (CLASSIC DRAW.IO YELLOW NOTE: #fff2cc / #d6b656) ================= -->
+  <g transform="translate(615, 625)">
+    <polygon points="0,0 240,0 260,20 260,145 0,145" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <polygon points="240,0 240,20 260,20" fill="#ffe599" stroke="#d6b656" stroke-width="1"/>
+    <text x="15" y="24" font-size="11" font-weight="bold" fill="#b45f06">Zero-Knowledge Boundary</text>
+    <text x="15" y="44" font-size="10" fill="#333333">• Passwords/notes never shown to Admin</text>
+    <text x="15" y="62" font-size="10" fill="#333333">• Raw scam messages never logged</text>
+    <text x="15" y="80" font-size="10" fill="#333333">• Mock billing only (no card numbers)</text>
+    <text x="15" y="98" font-size="10" fill="#333333">• Mandatory justification on suspension</text>
+    <text x="15" y="116" font-size="10" fill="#333333">• Audit log is strictly append-only</text>
+    <text x="15" y="134" font-size="10" font-style="italic" fill="#666666">(IS2901 Moratuwa Security Boundary)</text>
   </g>
 </svg>

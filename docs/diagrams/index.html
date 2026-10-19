@@ -3,27 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScamShield Module 5 &amp; 6 — UML &amp; Architecture Diagram Gallery</title>
+  <title>ScamShield Module 5 &amp; 6 — Draw.io Style UML &amp; Architecture Diagrams</title>
   <style>
-    :root {
-      --bg: #080e1a;
-      --card-bg: #0e1726;
-      --border: #1f2d45;
-      --text: #eaf1f7;
-      --muted: #8ea0b3;
-      --accent: #2dd4bf;
-    }
     body {
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
     }
     header {
-      padding: 24px 32px;
-      border-bottom: 1px solid var(--border);
-      background-color: #0b1322;
+      padding: 20px 32px;
+      border-bottom: 1px solid #e2e8f0;
+      background-color: #ffffff;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -34,10 +26,11 @@
       margin: 0;
       font-size: 20px;
       font-weight: 700;
+      color: #0f172a;
     }
     .meta {
       font-size: 13px;
-      color: var(--muted);
+      color: #64748b;
       margin-top: 4px;
     }
     .badge {
@@ -46,57 +39,60 @@
       border-radius: 9999px;
       font-size: 11px;
       font-weight: 600;
-      background-color: rgba(45, 212, 191, 0.15);
-      color: var(--accent);
-      border: 1px solid rgba(45, 212, 191, 0.4);
+      background-color: #dae8fc;
+      color: #004085;
+      border: 1px solid #6c8ebf;
     }
     .nav-tabs {
       display: flex;
       gap: 8px;
-      padding: 16px 32px;
-      background: #0b1322;
-      border-bottom: 1px solid var(--border);
+      padding: 12px 32px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
       overflow-x: auto;
     }
     .tab-btn {
       padding: 8px 16px;
-      border-radius: 8px;
+      border-radius: 6px;
       font-size: 12px;
       font-weight: 600;
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid transparent;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
       cursor: pointer;
       transition: all 0.2s;
       white-space: nowrap;
     }
     .tab-btn:hover {
-      color: var(--text);
-      background: #13203a;
+      color: #0f172a;
+      background: #e2e8f0;
     }
     .tab-btn.active {
-      color: var(--accent);
-      background: rgba(45, 212, 191, 0.1);
-      border-color: var(--accent);
+      color: #ffffff;
+      background: #0f766e;
+      border-color: #0f766e;
     }
     .container {
-      max-width: 1280px;
+      max-width: 1240px;
       margin: 0 auto;
-      padding: 32px;
+      padding: 32px 24px;
     }
     .diagram-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
       padding: 24px;
       margin-bottom: 40px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
     }
     .diagram-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       flex-wrap: wrap;
       gap: 12px;
     }
@@ -104,36 +100,37 @@
       font-size: 17px;
       font-weight: 700;
       margin: 0;
+      color: #0f172a;
     }
     .diagram-desc {
       font-size: 12px;
-      color: var(--muted);
+      color: #64748b;
       margin-top: 4px;
     }
     .btn-download {
       padding: 6px 14px;
-      border-radius: 8px;
+      border-radius: 6px;
       font-size: 12px;
       font-weight: 600;
-      background: var(--accent);
-      color: #0b1322;
+      background: #0f766e;
+      color: #ffffff;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: opacity 0.2s;
+      transition: background 0.2s;
     }
     .btn-download:hover {
-      opacity: 0.9;
+      background: #115e59;
     }
     .svg-wrapper {
-      background: #080e1a;
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
       overflow: hidden;
-      padding: 12px;
+      padding: 8px;
     }
-    .svg-wrapper object, .svg-wrapper img {
+    .svg-wrapper img {
       width: 100%;
       height: auto;
       display: block;
@@ -145,15 +142,15 @@
   <header>
     <div>
       <div style="display: flex; align-items: center; gap: 10px;">
-        <h1>ScamShield · Module 5 &amp; 6 Architecture &amp; UML Diagrams</h1>
+        <h1>ScamShield · Draw.io Style UML &amp; Architecture Diagrams</h1>
         <span class="badge">IS2901 Moratuwa FIT</span>
       </div>
       <div class="meta">
-        Author: Vishmi Himaya (Index: 245027T) · Group: Byte Brigade · Evaluation Deliverables
+        Author: Vishmi Himaya (Index: 245027T) · Group: Byte Brigade · Classic Draw.io Academic Palette
       </div>
     </div>
     <div>
-      <span style="font-size: 12px; color: var(--muted);">Click any diagram below to inspect or save for slides/report</span>
+      <span style="font-size: 12px; color: #64748b;">Right-click any diagram to copy or save for PowerPoint / Report</span>
     </div>
   </header>
 
@@ -167,12 +164,12 @@
 
   <div class="container">
 
-    <!-- 1. System Architecture -->
+    <!-- 1. Top Architecture -->
     <div id="sec-arch" class="diagram-card">
       <div class="diagram-header">
         <div>
           <h2 class="diagram-title">1. Top-Level System Architecture</h2>
-          <div class="diagram-desc">How all 6 modules connect, highlighting the Control Room (Module 5 &amp; 6).</div>
+          <div class="diagram-desc">Draw.io style architecture showing all 6 modules and the M5/M6 Control Room.</div>
         </div>
         <a href="5-system-architecture.svg" download="ScamShield-Top-Architecture.svg" class="btn-download">Download SVG</a>
       </div>
@@ -186,7 +183,7 @@
       <div class="diagram-header">
         <div>
           <h2 class="diagram-title">2. Use Case Diagram (UML 2.5)</h2>
-          <div class="diagram-desc">Actors (Administrator, Support Agent, Security Analyst), RBAC bounds, and secondary systems.</div>
+          <div class="diagram-desc">Classic Draw.io stick figures, blue use case ovals (#dae8fc), and yellow boundary post-it note.</div>
         </div>
         <a href="1-use-case-diagram.svg" download="ScamShield-Use-Case-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
@@ -200,7 +197,7 @@
       <div class="diagram-header">
         <div>
           <h2 class="diagram-title">3. Activity Diagram: Moderation &amp; Audit Logging</h2>
-          <div class="diagram-desc">Detailed swimlane workflow for account suspension with mandatory justification and tamper-proof logging.</div>
+          <div class="diagram-desc">Classic Draw.io swimlane format with blue action rounded rectangles and yellow decision diamond.</div>
         </div>
         <a href="2-activity-diagram.svg" download="ScamShield-Activity-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
@@ -214,7 +211,7 @@
       <div class="diagram-header">
         <div>
           <h2 class="diagram-title">4. Sequence Diagram: Analytics &amp; Privacy Sanitization</h2>
-          <div class="diagram-desc">Chronological request lifecycle showing parallel queries and strict Zero-Knowledge filtering.</div>
+          <div class="diagram-desc">Draw.io sequence notation with lifeline boxes, white activation bars, and [par] parallel frame.</div>
         </div>
         <a href="3-sequence-diagram.svg" download="ScamShield-Sequence-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
@@ -228,7 +225,7 @@
       <div class="diagram-header">
         <div>
           <h2 class="diagram-title">5. Class &amp; Database Architecture Diagram</h2>
-          <div class="diagram-desc">Entity models, Supabase tables, audit log structure, and controller methods.</div>
+          <div class="diagram-desc">Standard Draw.io 3-compartment UML class boxes with blue headers and orthogonal associations.</div>
         </div>
         <a href="4-class-er-diagram.svg" download="ScamShield-Class-ER-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
