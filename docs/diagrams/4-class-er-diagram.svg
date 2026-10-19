@@ -10,56 +10,54 @@
   <rect width="100%" height="100%" fill="url(#grid)" />
 
   <!-- Diagram Title Banner -->
-  <text x="40" y="40" font-size="20" font-weight="bold" fill="#000000">Class &amp; Database Diagram — ScamShield Module 5 &amp; 6</text>
-  <text x="40" y="60" font-size="12" fill="#666666">IS2901 Software Development Project · Entity-Relationship &amp; Object Model (X-01, X-08)</text>
+  <text x="40" y="40" font-size="20" font-weight="bold" fill="#000000">Class &amp; Database Architecture Diagram — Module 5: Admin &amp; Operations</text>
+  <text x="40" y="60" font-size="12" fill="#666666">IS2901 Software Development Project · Author: Vishmi Himaya (245027T) · M5 Internal Classes &amp; Tables</text>
 
-  <!-- ================= CLASS 1: AdminController (CLASSIC DRAW.IO UML CLASS) ================= -->
+  <!-- ================= CLASS 1: AdminController ================= -->
   <g transform="translate(50, 95)">
-    <rect x="0" y="0" width="310" height="240" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-    <!-- Header Compartment -->
+    <rect x="0" y="0" width="310" height="235" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
     <rect x="0" y="0" width="310" height="36" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-    <text x="155" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Service&gt;&gt;</text>
-    <text x="155" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">AdminController</text>
+    <text x="155" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Controller&gt;&gt;</text>
+    <text x="155" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">AdminController (M5)</text>
     
-    <!-- Attributes Compartment -->
     <rect x="0" y="36" width="310" height="42" fill="#ffffff" stroke="#6c8ebf" stroke-width="1"/>
     <text x="12" y="52" font-size="10" font-family="monospace" fill="#000000">- currentRole: AdminRole</text>
-    <text x="12" y="68" font-size="10" font-family="monospace" fill="#000000">- adminSession: AdminSession</text>
+    <text x="12" y="68" font-size="10" font-family="monospace" fill="#000000">- adminEmail: string</text>
     
-    <!-- Operations Compartment -->
     <text x="12" y="96" font-size="10" font-family="monospace" fill="#000000">+ getExecutiveOverview(): OverviewMetrics</text>
     <text x="12" y="114" font-size="10" font-family="monospace" fill="#000000">+ searchUsers(query, filters): UserRecord[]</text>
-    <text x="12" y="132" font-size="10" font-family="monospace" fill="#b85450">+ suspendUser(userId, reason): Status</text>
-    <text x="12" y="150" font-size="10" font-family="monospace" fill="#274e13">+ reactivateUser(userId, reason): Status</text>
+    <text x="12" y="132" font-size="10" font-family="monospace" fill="#b85450">+ suspendUser(userId, reason): Result</text>
+    <text x="12" y="150" font-size="10" font-family="monospace" fill="#274e13">+ reactivateUser(userId, reason): Result</text>
     <text x="12" y="168" font-size="10" font-family="monospace" fill="#000000">+ addSupportNote(userId, note): void</text>
-    <text x="12" y="186" font-size="10" font-family="monospace" fill="#000000">+ exportCsvReport(filters): Blob</text>
-    <text x="12" y="204" font-size="10" font-family="monospace" fill="#000000">+ logAuditAction(action, target, details): void</text>
-    <text x="12" y="222" font-size="10" font-family="monospace" fill="#000000">+ updateTicketStatus(tktId, status): void</text>
+    <text x="12" y="186" font-size="10" font-family="monospace" fill="#000000">+ exportCsvData(): Blob (M5-07)</text>
+    <text x="12" y="204" font-size="10" font-family="monospace" fill="#000000">+ updateTicket(ticketId, status): void</text>
+    <text x="12" y="222" font-size="10" font-family="monospace" fill="#274e13">+ resetSeedData(): void (M5-15)</text>
   </g>
 
-  <!-- ================= CLASS 2: SafetyScoreEngine (M6) ================= -->
-  <g transform="translate(50, 375)">
-    <rect x="0" y="0" width="310" height="200" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <!-- ================= CLASS 2: AnalyticsEngine ================= -->
+  <g transform="translate(50, 365)">
+    <rect x="0" y="0" width="310" height="210" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
     <rect x="0" y="0" width="310" height="36" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-    <text x="155" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Coordinator&gt;&gt;</text>
-    <text x="155" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">SafetyScoreEngine (M6)</text>
+    <text x="155" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Service Engine&gt;&gt;</text>
+    <text x="155" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">AnalyticsEngine (M5)</text>
     
     <rect x="0" y="36" width="310" height="42" fill="#ffffff" stroke="#6c8ebf" stroke-width="1"/>
-    <text x="12" y="52" font-size="10" font-family="monospace" fill="#000000">- formulaVersion: "1.0-draft"</text>
-    <text x="12" y="68" font-size="10" font-family="monospace" fill="#000000">- inputThresholds: Map&lt;string, number&gt;</text>
+    <text x="12" y="52" font-size="10" font-family="monospace" fill="#000000">- planPrices: Map&lt;Plan, number&gt;</text>
+    <text x="12" y="68" font-size="10" font-family="monospace" fill="#000000">- dateRangeFilter: string</text>
     
-    <text x="12" y="98" font-size="10" font-family="monospace" fill="#000000">+ aggregateScore(m2, m3, m4): ScoreCard</text>
-    <text x="12" y="118" font-size="10" font-family="monospace" fill="#000000">+ getRiskCohorts(): CohortDistribution</text>
-    <text x="12" y="138" font-size="10" font-family="monospace" fill="#000000">+ validatePrivacyBoundary(): boolean</text>
-    <text x="12" y="158" font-size="10" font-family="monospace" fill="#000000">+ getActionRecommendations(): Action[]</text>
-    <text x="12" y="180" font-size="9" font-style="italic" fill="#274e13">🔒 No payment or raw message input</text>
+    <text x="12" y="98" font-size="10" font-family="monospace" fill="#000000">+ computeMRR(subscribers): number</text>
+    <text x="12" y="118" font-size="10" font-family="monospace" fill="#000000">+ calculateFunnelDropoff(): FunnelStats</text>
+    <text x="12" y="138" font-size="10" font-family="monospace" fill="#000000">+ buildRetentionCohorts(): CohortMatrix</text>
+    <text x="12" y="158" font-size="10" font-family="monospace" fill="#000000">+ getScamCategoryDistribution(): CategoryStats</text>
+    <text x="12" y="178" font-size="10" font-family="monospace" fill="#000000">+ generateCsvExport(): string</text>
+    <text x="12" y="196" font-size="9" font-style="italic" fill="#274e13">🔒 Privacy: Sanitized metadata only</text>
   </g>
 
-  <!-- ================= DB TABLE 1: public.audit_logs (GREEN HEADER: #d5e8d4 / #82b366) ================= -->
+  <!-- ================= DB TABLE 1: public.audit_logs (GREEN HEADER) ================= -->
   <g transform="translate(420, 95)">
-    <rect x="0" y="0" width="320" height="240" fill="#ffffff" stroke="#82b366" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="320" height="235" fill="#ffffff" stroke="#82b366" stroke-width="1.8" filter="url(#drawio-shadow)"/>
     <rect x="0" y="0" width="320" height="36" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
-    <text x="160" y="16" font-size="10" font-style="italic" fill="#274e13" text-anchor="middle">&lt;&lt;Table&gt;&gt;</text>
+    <text x="160" y="16" font-size="10" font-style="italic" fill="#274e13" text-anchor="middle">&lt;&lt;Table · M5-11&gt;&gt;</text>
     <text x="160" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">public.audit_logs</text>
     
     <text x="15" y="54" font-size="10" font-family="monospace" font-weight="bold" fill="#274e13">+ id: UUID [PK, gen_random_uuid()]</text>
@@ -68,18 +66,18 @@
     <text x="15" y="108" font-size="10" font-family="monospace" fill="#000000">+ admin_role: TEXT CHECK(role IN ...)</text>
     <text x="15" y="126" font-size="10" font-family="monospace" fill="#000000">+ action: TEXT NOT NULL</text>
     <text x="15" y="144" font-size="10" font-family="monospace" fill="#000000">+ target_identifier: TEXT NOT NULL</text>
-    <text x="15" y="162" font-size="10" font-family="monospace" fill="#000000">+ details: TEXT NOT NULL</text>
+    <text x="15" y="162" font-size="10" font-family="monospace" fill="#000000">+ details: TEXT NOT NULL (Justification)</text>
     <text x="15" y="180" font-size="10" font-family="monospace" fill="#666666">+ ip_address: TEXT</text>
     <text x="15" y="198" font-size="10" font-family="monospace" fill="#666666">+ user_agent: TEXT</text>
     <text x="15" y="216" font-size="10" font-family="monospace" fill="#666666">+ created_at: TIMESTAMPTZ DEFAULT NOW()</text>
-    <text x="15" y="232" font-size="9" font-style="italic" fill="#274e13">🔒 Append-Only (UPDATE/DELETE Denied)</text>
+    <text x="15" y="230" font-size="8.5" font-style="italic" fill="#274e13">RLS: UPDATE and DELETE are revoked</text>
   </g>
 
   <!-- ================= DB TABLE 2: public.support_tickets ================= -->
   <g transform="translate(790, 95)">
-    <rect x="0" y="0" width="310" height="240" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="310" height="235" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
     <rect x="0" y="0" width="310" height="36" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-    <text x="155" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Table&gt;&gt;</text>
+    <text x="155" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Table · M5-12&gt;&gt;</text>
     <text x="155" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">public.support_tickets</text>
     
     <text x="15" y="54" font-size="10" font-family="monospace" font-weight="bold" fill="#000000">+ id: UUID [PK]</text>
@@ -95,10 +93,10 @@
   </g>
 
   <!-- ================= DB TABLE 3: public.verdict_feedback ================= -->
-  <g transform="translate(420, 375)">
-    <rect x="0" y="0" width="320" height="200" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <g transform="translate(420, 365)">
+    <rect x="0" y="0" width="320" height="210" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
     <rect x="0" y="0" width="320" height="36" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-    <text x="160" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Table&gt;&gt;</text>
+    <text x="160" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Table · M5-12&gt;&gt;</text>
     <text x="160" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">public.verdict_feedback</text>
     
     <text x="15" y="54" font-size="10" font-family="monospace" font-weight="bold" fill="#000000">+ id: UUID [PK]</text>
@@ -109,13 +107,14 @@
     <text x="15" y="144" font-size="10" font-family="monospace" fill="#b85450">+ user_reaction: TEXT (Dispute/FalsePos)</text>
     <text x="15" y="162" font-size="10" font-family="monospace" fill="#666666">+ user_comment: TEXT</text>
     <text x="15" y="180" font-size="10" font-family="monospace" fill="#666666">+ status: TEXT DEFAULT 'Pending Review'</text>
+    <text x="15" y="198" font-size="9" font-style="italic" fill="#666666">User-reported AI verdict disputes</text>
   </g>
 
   <!-- ================= DB TABLE 4: public.analytics_events ================= -->
-  <g transform="translate(790, 375)">
-    <rect x="0" y="0" width="310" height="200" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <g transform="translate(790, 365)">
+    <rect x="0" y="0" width="310" height="210" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
     <rect x="0" y="0" width="310" height="36" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-    <text x="155" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Table&gt;&gt;</text>
+    <text x="155" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Table · M5-04, 05&gt;&gt;</text>
     <text x="155" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">public.analytics_events</text>
     
     <text x="15" y="54" font-size="10" font-family="monospace" font-weight="bold" fill="#000000">+ id: UUID [PK]</text>
@@ -126,14 +125,15 @@
     <text x="15" y="144" font-size="10" font-family="monospace" fill="#000000">+ metadata: JSONB NOT NULL</text>
     <text x="15" y="162" font-size="10" font-family="monospace" fill="#666666">+ created_at: TIMESTAMPTZ</text>
     <text x="15" y="180" font-size="9" font-style="italic" fill="#274e13">Index on: event_name, created_at</text>
+    <text x="15" y="196" font-size="9" font-style="italic" fill="#274e13">Zero-Knowledge: Event metadata only</text>
   </g>
 
   <!-- ================= DB VIEW: public.admin_user_directory ================= -->
-  <g transform="translate(420, 615)">
-    <rect x="0" y="0" width="680" height="190" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <g transform="translate(420, 610)">
+    <rect x="0" y="0" width="680" height="195" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
     <rect x="0" y="0" width="680" height="34" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-    <text x="340" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;View&gt;&gt;</text>
-    <text x="340" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">public.admin_user_directory (M2 + M3 + M4 Aggregation)</text>
+    <text x="340" y="16" font-size="10" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;View · M5-09&gt;&gt;</text>
+    <text x="340" y="30" font-size="12" font-weight="bold" fill="#000000" text-anchor="middle">public.admin_user_directory</text>
     
     <g transform="translate(20, 48)">
       <text x="0" y="15" font-size="10" font-family="monospace" fill="#000000">+ id: UUID (from auth.users)</text>
@@ -145,24 +145,24 @@
 
     <g transform="translate(360, 48)">
       <text x="0" y="15" font-size="10" font-family="monospace" fill="#666666">+ joined_at: TIMESTAMPTZ</text>
-      <text x="0" y="35" font-size="10" font-family="monospace" fill="#000000">+ checks_count: INT (from M4 logs)</text>
-      <text x="0" y="55" font-size="10" font-family="monospace" fill="#000000">+ vault_count: INT (from M3 counts only)</text>
+      <text x="0" y="35" font-size="10" font-family="monospace" fill="#000000">+ checks_count: INT</text>
+      <text x="0" y="55" font-size="10" font-family="monospace" fill="#000000">+ vault_count: INT (Counts only)</text>
       <text x="0" y="75" font-size="10" font-family="monospace" fill="#274e13">+ monthly_billing: NUMERIC (mock LKR)</text>
-      <text x="0" y="95" font-size="10" font-family="monospace" fill="#000000">+ safety_score: INT (from M6 coordinator)</text>
+      <text x="0" y="95" font-size="10" font-family="monospace" fill="#000000">+ support_notes: TEXT[]</text>
     </g>
     
-    <rect x="20" y="150" width="640" height="24" rx="4" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-    <text x="340" y="166" font-size="9" fill="#666666" text-anchor="middle">🔒 Zero-Knowledge: Passwords, plaintext notes, and submitted scam bodies are EXCLUDED from this view</text>
+    <rect x="20" y="155" width="640" height="24" rx="4" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+    <text x="340" y="171" font-size="9" fill="#666666" text-anchor="middle">🔒 Zero-Knowledge: Passwords, plaintext vault notes, and submitted scam bodies are EXCLUDED from this view</text>
   </g>
 
-  <!-- ================= CONNECTORS (ORTHOGONAL DRAW.IO LINES) ================= -->
+  <!-- ================= CONNECTORS ================= -->
   <!-- AdminController -> AuditLogs (1 to *) -->
   <line x1="360" y1="200" x2="420" y2="200" stroke="#333333" stroke-width="1.5"/>
   <text x="375" y="192" font-size="10" font-weight="bold" fill="#000000">1</text>
   <text x="405" y="192" font-size="10" font-weight="bold" fill="#000000">*</text>
 
   <!-- AdminController -> UsersView -->
-  <line x1="200" y1="335" x2="200" y2="700" stroke="#333333" stroke-width="1.5"/>
+  <line x1="200" y1="330" x2="200" y2="700" stroke="#333333" stroke-width="1.5"/>
   <line x1="200" y1="700" x2="420" y2="700" stroke="#333333" stroke-width="1.5"/>
   <polygon points="415,696 420,700 415,704" fill="#333333"/>
 
@@ -171,12 +171,12 @@
   <polygon points="785,136 790,140 785,144" fill="#333333"/>
 
   <!-- AdminController -> VerdictFeedback -->
-  <line x1="360" y1="280" x2="400" y2="280" stroke="#333333" stroke-width="1.2"/>
-  <line x1="400" y1="280" x2="400" y2="450" stroke="#333333" stroke-width="1.2"/>
-  <line x1="400" y1="450" x2="420" y2="450" stroke="#333333" stroke-width="1.2"/>
-  <polygon points="415,446 420,450 415,454" fill="#333333"/>
+  <line x1="360" y1="270" x2="400" y2="270" stroke="#333333" stroke-width="1.2"/>
+  <line x1="400" y1="270" x2="400" y2="440" stroke="#333333" stroke-width="1.2"/>
+  <line x1="400" y1="440" x2="420" y2="440" stroke="#333333" stroke-width="1.2"/>
+  <polygon points="415,436 420,440 415,444" fill="#333333"/>
 
-  <!-- AdminController -> AnalyticsEvents -->
-  <line x1="740" y1="450" x2="790" y2="450" stroke="#333333" stroke-width="1.2"/>
-  <polygon points="785,446 790,450 785,454" fill="#333333"/>
+  <!-- AnalyticsEngine -> AnalyticsEvents -->
+  <line x1="360" y1="480" x2="790" y2="480" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="785,476 790,480 785,484" fill="#333333"/>
 </svg>
