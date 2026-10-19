@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 920" width="100%" height="100%" style="background:#080e1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Title & Metadata -->
+  <text x="50" y="45" font-size="22" font-weight="700" fill="#eaf1f7">ScamShield · Module 5 Sequence Diagram</text>
+  <text x="50" y="70" font-size="12" fill="#8ea0b3">Admin Analytics Request &amp; Zero-Knowledge Telemetry Pipeline (M5-03, M5-04, M5-05, X-13)</text>
+
+  <!-- ================= LIFELINE HEADERS ================= -->
+
+  <!-- Lifeline 1: Admin -->
+  <g transform="translate(60, 95)">
+    <rect x="0" y="0" width="110" height="42" rx="8" fill="#13203a" stroke="#2dd4bf" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="55" y="26" font-size="12" font-weight="700" fill="#2dd4bf" text-anchor="middle">Administrator</text>
+    <line x1="55" y1="42" x2="55" y2="780" stroke="#1f2d45" stroke-dasharray="4 4" stroke-width="1.5"/>
+  </g>
+
+  <!-- Lifeline 2: AdminUI (Next.js) -->
+  <g transform="translate(210, 95)">
+    <rect x="0" y="0" width="130" height="42" rx="8" fill="#13203a" stroke="#38bdf8" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="65" y="26" font-size="12" font-weight="700" fill="#38bdf8" text-anchor="middle">UI: Next.js Client</text>
+    <line x1="65" y1="42" x2="65" y2="780" stroke="#1f2d45" stroke-dasharray="4 4" stroke-width="1.5"/>
+  </g>
+
+  <!-- Lifeline 3: AdminAPI Route -->
+  <g transform="translate(380, 95)">
+    <rect x="0" y="0" width="130" height="42" rx="8" fill="#13203a" stroke="#38bdf8" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="65" y="26" font-size="12" font-weight="700" fill="#38bdf8" text-anchor="middle">API: Route Handler</text>
+    <line x1="65" y1="42" x2="65" y2="780" stroke="#1f2d45" stroke-dasharray="4 4" stroke-width="1.5"/>
+  </g>
+
+  <!-- Lifeline 4: RBAC Guard -->
+  <g transform="translate(550, 95)">
+    <rect x="0" y="0" width="120" height="42" rx="8" fill="#13203a" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="60" y="26" font-size="12" font-weight="700" fill="#f59e0b" text-anchor="middle">RBAC Guard</text>
+    <line x1="60" y1="42" x2="60" y2="780" stroke="#1f2d45" stroke-dasharray="4 4" stroke-width="1.5"/>
+  </g>
+
+  <!-- Lifeline 5: M2 Subscriptions -->
+  <g transform="translate(710, 95)">
+    <rect x="0" y="0" width="120" height="42" rx="8" fill="#13203a" stroke="#2dd4bf" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="60" y="26" font-size="12" font-weight="700" fill="#2dd4bf" text-anchor="middle">M2 Subscriptions</text>
+    <line x1="60" y1="42" x2="60" y2="780" stroke="#1f2d45" stroke-dasharray="4 4" stroke-width="1.5"/>
+  </g>
+
+  <!-- Lifeline 6: M4 AI Scam Pipeline -->
+  <g transform="translate(870, 95)">
+    <rect x="0" y="0" width="110" height="42" rx="8" fill="#13203a" stroke="#2dd4bf" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="55" y="26" font-size="12" font-weight="700" fill="#2dd4bf" text-anchor="middle">M4 Scam Engine</text>
+    <line x1="55" y1="42" x2="55" y2="780" stroke="#1f2d45" stroke-dasharray="4 4" stroke-width="1.5"/>
+  </g>
+
+  <!-- Lifeline 7: Supabase Audit Store -->
+  <g transform="translate(1010, 95)">
+    <rect x="0" y="0" width="100" height="42" rx="8" fill="#13203a" stroke="#34d399" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="50" y="26" font-size="12" font-weight="700" fill="#34d399" text-anchor="middle">Audit Store</text>
+    <line x1="50" y1="42" x2="50" y2="780" stroke="#1f2d45" stroke-dasharray="4 4" stroke-width="1.5"/>
+  </g>
+
+  <!-- ================= INTERACTIONS ================= -->
+
+  <!-- 1. Admin navigates to Analytics -->
+  <line x1="115" y1="170" x2="270" y2="170" stroke="#2dd4bf" stroke-width="1.5"/>
+  <polygon points="270,166 278,170 270,174" fill="#2dd4bf"/>
+  <text x="195" y="162" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">1: Navigate to /admin/analytics</text>
+
+  <!-- 2. UI dispatches GET request with auth token -->
+  <line x1="275" y1="210" x2="440" y2="210" stroke="#38bdf8" stroke-width="1.5"/>
+  <polygon points="440,206 448,210 440,214" fill="#38bdf8"/>
+  <text x="360" y="202" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">2: GET /api/admin/analytics (Bearer Token)</text>
+
+  <!-- 3. Verify RBAC -->
+  <line x1="445" y1="250" x2="605" y2="250" stroke="#f59e0b" stroke-width="1.5"/>
+  <polygon points="605,246 613,250 605,254" fill="#f59e0b"/>
+  <text x="525" y="242" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">3: verifyRole(token, ['admin'])</text>
+
+  <!-- 4. RBAC Authorized -->
+  <line x1="605" y1="285" x2="450" y2="285" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <polygon points="450,281 442,285 450,289" fill="#34d399"/>
+  <text x="525" y="278" font-size="10" font-weight="600" fill="#34d399" text-anchor="middle">4: { authorized: true, role: 'admin' }</text>
+
+  <!-- PARALLEL DATA FETCHING BLOCK -->
+  <rect x="360" y="315" width="750" height="280" rx="8" fill="#13203a" fill-opacity="0.3" stroke="#2dd4bf" stroke-width="1.2" stroke-dasharray="4 4"/>
+  <rect x="360" y="315" width="130" height="24" rx="6" fill="#13203a" stroke="#2dd4bf" stroke-width="1"/>
+  <text x="425" y="331" font-size="10" font-weight="700" fill="#2dd4bf" text-anchor="middle">PARALLEL FETCH</text>
+
+  <!-- 5a. Query M2 Subscriptions -->
+  <line x1="445" y1="360" x2="765" y2="360" stroke="#8ea0b3" stroke-width="1.5"/>
+  <polygon points="765,356 773,360 765,364" fill="#8ea0b3"/>
+  <text x="605" y="352" font-size="11" fill="#eaf1f7" text-anchor="middle">5a: getSubscriptionMetrics()</text>
+
+  <!-- 5a return -->
+  <line x1="765" y1="395" x2="450" y2="395" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <polygon points="450,391 442,395 450,399" fill="#2dd4bf"/>
+  <text x="605" y="388" font-size="10" fill="#2dd4bf" text-anchor="middle">return { Sentinel: 52, Guardian: 40, Aegis: 18, MRR: 39600 }</text>
+
+  <!-- 5b. Query M4 Scam Engine -->
+  <line x1="445" y1="435" x2="920" y2="435" stroke="#8ea0b3" stroke-width="1.5"/>
+  <polygon points="920,431 928,435 920,439" fill="#8ea0b3"/>
+  <text x="685" y="427" font-size="11" fill="#eaf1f7" text-anchor="middle">5b: getCategoryDistribution(X-13)</text>
+
+  <!-- Privacy barrier annotation -->
+  <rect x="740" y="450" width="300" height="26" rx="4" fill="#0e1726" stroke="#2dd4bf" stroke-width="1"/>
+  <text x="890" y="467" font-size="10" font-weight="600" fill="#2dd4bf" text-anchor="middle">🔒 PRIVACY: Raw message bodies excluded</text>
+
+  <!-- 5b return -->
+  <line x1="920" y1="495" x2="450" y2="495" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <polygon points="450,491 442,495 450,499" fill="#2dd4bf"/>
+  <text x="685" y="488" font-size="10" fill="#2dd4bf" text-anchor="middle">return { Phishing: 410, JobScam: 230, Delivery: 170, Other: 90 }</text>
+
+  <!-- 5c. Query Funnel Events from DB -->
+  <line x1="445" y1="535" x2="1055" y2="535" stroke="#8ea0b3" stroke-width="1.5"/>
+  <polygon points="1055,531 1063,535 1055,539" fill="#8ea0b3"/>
+  <text x="750" y="527" font-size="11" fill="#eaf1f7" text-anchor="middle">5c: getFunnelDropoffTelemetry()</text>
+
+  <!-- 5c return -->
+  <line x1="1055" y1="570" x2="450" y2="570" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <polygon points="450,566 442,570 450,574" fill="#34d399"/>
+  <text x="750" y="563" font-size="10" fill="#34d399" text-anchor="middle">return { Landing: 1430, Started: 610, Finished: 290, Signup: 120 }</text>
+
+  <!-- 6. Local computation -->
+  <rect x="420" y="615" width="220" height="32" rx="6" fill="#13203a" stroke="#1f2d45" stroke-width="1.2"/>
+  <text x="530" y="635" font-size="10" font-weight="600" fill="#eaf1f7" text-anchor="middle">Compute Churn (5.2%) &amp; Cohorts</text>
+
+  <!-- 7. Record Access in Audit Log -->
+  <line x1="445" y1="675" x2="1055" y2="675" stroke="#34d399" stroke-width="1.5"/>
+  <polygon points="1055,671 1063,675 1055,679" fill="#34d399"/>
+  <text x="750" y="667" font-size="11" font-weight="600" fill="#34d399" text-anchor="middle">7: logAuditAction("ANALYTICS_QUERY", admin_email, IP)</text>
+
+  <!-- 8. Return response payload -->
+  <line x1="440" y1="715" x2="280" y2="715" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <polygon points="280,711 272,715 280,719" fill="#38bdf8"/>
+  <text x="360" y="708" font-size="11" font-weight="600" fill="#38bdf8" text-anchor="middle">8: 200 OK (Aggregated Analytics JSON)</text>
+
+  <!-- 9. UI Renders Charts -->
+  <line x1="270" y1="755" x2="120" y2="755" stroke="#2dd4bf" stroke-width="1.5"/>
+  <polygon points="120,751 112,755 120,759" fill="#2dd4bf"/>
+  <text x="195" y="748" font-size="11" font-weight="700" fill="#2dd4bf" text-anchor="middle">9: Render Recharts &amp; Cohort Heatmap</text>
+</svg>

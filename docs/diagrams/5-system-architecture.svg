@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" width="100%" height="100%" style="background:#080e1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Title & Metadata -->
+  <text x="50" y="45" font-size="22" font-weight="700" fill="#eaf1f7">ScamShield · Top-Level System Architecture</text>
+  <text x="50" y="70" font-size="12" fill="#8ea0b3">Module Interconnections &amp; The Control Room Subsystem (M5 &amp; M6) · Byte Brigade · IS2901 FIT UoM</text>
+
+  <!-- ================= MODULE 1 (FRONT DOOR) ================= -->
+  <g transform="translate(60, 110)">
+    <rect x="0" y="0" width="230" height="150" rx="10" fill="#0e1726" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="230" height="32" rx="10" fill="#13203a"/>
+    <rect x="0" y="22" width="230" height="10" fill="#13203a"/>
+    <text x="115" y="21" font-size="12" font-weight="700" fill="#eaf1f7" text-anchor="middle">Module 1 · The Shopfront</text>
+    <text x="15" y="55" font-size="11" font-weight="600" fill="#2dd4bf">Landing, Onboarding, Growth</text>
+    <text x="15" y="75" font-size="10" fill="#8ea0b3">• Marketing Funnel (Q1–Q4)</text>
+    <text x="15" y="93" font-size="10" fill="#8ea0b3">• Referral links &amp; attribution</text>
+    <text x="15" y="111" font-size="10" fill="#8ea0b3">• Shared Design Tokens (X-03)</text>
+    <text x="15" y="132" font-size="9" fill="#8ea0b3">Owner: Suraji Saunders</text>
+  </g>
+
+  <!-- ================= MODULE 2 (RECEPTION) ================= -->
+  <g transform="translate(340, 110)">
+    <rect x="0" y="0" width="240" height="150" rx="10" fill="#0e1726" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="240" height="32" rx="10" fill="#13203a"/>
+    <rect x="0" y="22" width="240" height="10" fill="#13203a"/>
+    <text x="120" y="21" font-size="12" font-weight="700" fill="#eaf1f7" text-anchor="middle">Module 2 · The Reception</text>
+    <text x="15" y="55" font-size="11" font-weight="600" fill="#2dd4bf">Auth, Paywall &amp; Subscription</text>
+    <text x="15" y="75" font-size="10" fill="#8ea0b3">• User Sessions &amp; JWT</text>
+    <text x="15" y="93" font-size="10" fill="#8ea0b3">• Mock Paywall (Sentinel/Guardian/Aegis)</text>
+    <text x="15" y="111" font-size="10" fill="#8ea0b3">• Entitlement checks</text>
+    <text x="15" y="132" font-size="9" fill="#8ea0b3">Owner: Lahiru Achintha</text>
+  </g>
+
+  <!-- ================= MODULE 3 (PILLAR 1: VAULT) ================= -->
+  <g transform="translate(630, 110)">
+    <rect x="0" y="0" width="240" height="150" rx="10" fill="#0e1726" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="240" height="32" rx="10" fill="#13203a"/>
+    <rect x="0" y="22" width="240" height="10" fill="#13203a"/>
+    <text x="120" y="21" font-size="12" font-weight="700" fill="#eaf1f7" text-anchor="middle">Module 3 · Locked Drawer</text>
+    <text x="15" y="55" font-size="11" font-weight="600" fill="#2dd4bf">Encrypted Password Vault</text>
+    <text x="15" y="75" font-size="10" fill="#8ea0b3">• Client-side encryption (X-12)</text>
+    <text x="15" y="93" font-size="10" fill="#8ea0b3">• Weak &amp; reused password check</text>
+    <text x="15" y="111" font-size="10" fill="#8ea0b3">• Zero-Knowledge to Admin</text>
+    <text x="15" y="132" font-size="9" fill="#8ea0b3">Owner: Prashni Saundarya</text>
+  </g>
+
+  <!-- ================= MODULE 4 (PILLAR 2: SCANNER) ================= -->
+  <g transform="translate(915, 110)">
+    <rect x="0" y="0" width="230" height="150" rx="10" fill="#0e1726" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="230" height="32" rx="10" fill="#13203a"/>
+    <rect x="0" y="22" width="230" height="10" fill="#13203a"/>
+    <text x="115" y="21" font-size="12" font-weight="700" fill="#eaf1f7" text-anchor="middle">Module 4 · The Scanner</text>
+    <text x="15" y="55" font-size="11" font-weight="600" fill="#2dd4bf">AI Scam Analysis Pipeline</text>
+    <text x="15" y="75" font-size="10" fill="#8ea0b3">• 5-Stage Analysis Pipeline</text>
+    <text x="15" y="93" font-size="10" fill="#8ea0b3">• Server-side OpenAI API (X-09)</text>
+    <text x="15" y="111" font-size="10" fill="#8ea0b3">• X-13 Threat Taxonomy Stream</text>
+    <text x="15" y="132" font-size="9" fill="#8ea0b3">Owner: Svishwa Perera</text>
+  </g>
+
+  <!-- ================= CENTER HIGHLIGHT: MODULE 5 & 6 (THE CONTROL ROOM) ================= -->
+  <rect x="60" y="320" width="1085" height="490" rx="16" fill="#0e1726" stroke="#2dd4bf" stroke-width="2.5" filter="url(#shadow)"/>
+  <rect x="60" y="320" width="1085" height="42" rx="16" fill="#13203a"/>
+  <rect x="60" y="348" width="1085" height="14" fill="#13203a"/>
+  <text x="85" y="347" font-size="14" font-weight="700" fill="#2dd4bf" letter-spacing="0.5">
+    MODULE 5 &amp; MODULE 6: THE CONTROL ROOM &amp; DIGITAL SAFETY SCORE SUBSYSTEM (OWNER &amp; COORDINATOR: VISHMI HIMAYA)
+  </text>
+
+  <!-- Sub-block 1: Business Analytics Engine -->
+  <g transform="translate(90, 390)">
+    <rect x="0" y="0" width="310" height="190" rx="10" fill="#13203a" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="15" y="28" font-size="13" font-weight="700" fill="#eaf1f7">1. Business &amp; Growth Engine</text>
+    <text x="15" y="46" font-size="10" fill="#2dd4bf">Tasks: M5-02, M5-03, M5-05, M5-08</text>
+    <text x="15" y="75" font-size="11" fill="#8ea0b3">• Mock MRR &amp; Tier Distributions</text>
+    <text x="15" y="95" font-size="11" fill="#8ea0b3">• Funnel Conversion &amp; Drop-off</text>
+    <text x="15" y="115" font-size="11" fill="#8ea0b3">• 5-Month Retention Cohorts</text>
+    <text x="15" y="135" font-size="11" fill="#8ea0b3">• Referral Campaign Attribution</text>
+    <text x="15" y="160" font-size="11" font-weight="600" fill="#34d399">✓ One-Click CSV Export (M5-07)</text>
+  </g>
+
+  <!-- Sub-block 2: User Moderation & Operations -->
+  <g transform="translate(440, 390)">
+    <rect x="0" y="0" width="320" height="190" rx="10" fill="#13203a" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="15" y="28" font-size="13" font-weight="700" fill="#eaf1f7">2. User Operations &amp; Moderation</text>
+    <text x="15" y="46" font-size="10" fill="#2dd4bf">Tasks: M5-09, M5-10, M5-12</text>
+    <text x="15" y="75" font-size="11" fill="#8ea0b3">• Search &amp; Filter User Registry</text>
+    <text x="15" y="95" font-size="11" fill="#8ea0b3">• RBAC Simulator (Admin vs. Support)</text>
+    <text x="15" y="115" font-size="11" fill="#8ea0b3">• Suspend / Reactivate Modal</text>
+    <text x="15" y="135" font-size="11" fill="#8ea0b3">• Support Ticket &amp; Dispute Inbox</text>
+    <text x="15" y="160" font-size="11" font-weight="600" fill="#f06a6a">🔒 Zero-Knowledge Privacy Filter</text>
+  </g>
+
+  <!-- Sub-block 3: AI Threat Intelligence -->
+  <g transform="translate(800, 390)">
+    <rect x="0" y="0" width="315" height="190" rx="10" fill="#13203a" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="15" y="28" font-size="13" font-weight="700" fill="#eaf1f7">3. AI Scam Intelligence (M5-04)</text>
+    <text x="15" y="46" font-size="10" fill="#2dd4bf">Shared Contract: X-13 Taxonomy</text>
+    <text x="15" y="75" font-size="11" fill="#8ea0b3">• Phishing (45.5%) &amp; Job Scams (25.6%)</text>
+    <text x="15" y="95" font-size="11" fill="#8ea0b3">• Parcel delivery threat distribution</text>
+    <text x="15" y="115" font-size="11" fill="#8ea0b3">• AI Confidence Level Analytics</text>
+    <text x="15" y="135" font-size="11" fill="#8ea0b3">• Real-time threat volume tracking</text>
+    <text x="15" y="160" font-size="11" font-weight="600" fill="#2dd4bf">🔒 No raw message bodies stored</text>
+  </g>
+
+  <!-- Sub-block 4: Module 6 Shared Coordination Engine -->
+  <g transform="translate(90, 610)">
+    <rect x="0" y="0" width="500" height="170" rx="10" fill="#13203a" stroke="#38bdf8" stroke-width="1.5"/>
+    <text x="15" y="28" font-size="13" font-weight="700" fill="#38bdf8">Module 6: Digital Safety Score Engine</text>
+    <text x="15" y="46" font-size="10" fill="#8ea0b3">Role: Shared Module · Coordinator: Vishmi Himaya (M6-05, M6-09)</text>
+    <text x="15" y="75" font-size="11" fill="#eaf1f7">• Combines 3 safe summary cards: M2 (Auth) + M3 (Vault) + M4 (Scam)</text>
+    <text x="15" y="95" font-size="11" fill="#eaf1f7">• Non-negotiable: Upgrading subscription does NOT increase score</text>
+    <text x="15" y="115" font-size="11" fill="#eaf1f7">• Cohort risk distributions: Optimal (80+), Fair (60-79), At Risk (&lt;60)</text>
+    <text x="15" y="140" font-size="11" font-weight="600" fill="#34d399">✓ Admin Safety Score View Implemented</text>
+  </g>
+
+  <!-- Sub-block 5: Tamper-Proof Audit Trail (M5-11) & Seed Data (M5-15) -->
+  <g transform="translate(615, 610)">
+    <rect x="0" y="0" width="500" height="170" rx="10" fill="#13203a" stroke="#34d399" stroke-width="1.5"/>
+    <text x="15" y="28" font-size="13" font-weight="700" fill="#34d399">Tamper-Proof Audit Trail &amp; Seed Data</text>
+    <text x="15" y="46" font-size="10" fill="#8ea0b3">Tasks: M5-11, M5-15 · Second Hat: Seed Data &amp; Environments</text>
+    <text x="15" y="75" font-size="11" fill="#eaf1f7">• Append-only ledger in PostgreSQL (RLS forbids UPDATE &amp; DELETE)</text>
+    <text x="15" y="95" font-size="11" fill="#eaf1f7">• Timestamp, Admin Email, Role, Target, Justification, IP Address</text>
+    <text x="15" y="115" font-size="11" fill="#eaf1f7">• 100+ User Synthetic Dataset Engine for Viva Demonstration</text>
+    <text x="15" y="140" font-size="11" font-weight="600" fill="#2dd4bf">✓ Live interactive logging verified</text>
+  </g>
+
+  <!-- ================= DATA FLOW CONNECTIONS ================= -->
+  <!-- M1 -> M5 (Funnel events) -->
+  <line x1="175" y1="260" x2="175" y2="390" stroke="#2dd4bf" stroke-width="2"/>
+  <polygon points="171,385 175,393 179,385" fill="#2dd4bf"/>
+  <text x="185" y="300" font-size="10" fill="#2dd4bf">Funnel Events</text>
+
+  <!-- M2 -> M5 (Users & mock revenue) -->
+  <line x1="460" y1="260" x2="460" y2="390" stroke="#2dd4bf" stroke-width="2"/>
+  <polygon points="456,385 460,393 464,385" fill="#2dd4bf"/>
+  <text x="470" y="300" font-size="10" fill="#2dd4bf">Users &amp; Plans</text>
+
+  <!-- M3 -> M5 (Vault counts only) -->
+  <line x1="750" y1="260" x2="750" y2="390" stroke="#2dd4bf" stroke-width="2"/>
+  <polygon points="746,385 750,393 754,385" fill="#2dd4bf"/>
+  <text x="760" y="300" font-size="10" fill="#2dd4bf">Vault Counts</text>
+
+  <!-- M4 -> M5 (Threat taxonomy) -->
+  <line x1="1030" y1="260" x2="1030" y2="390" stroke="#2dd4bf" stroke-width="2"/>
+  <polygon points="1026,385 1030,393 1034,385" fill="#2dd4bf"/>
+  <text x="945" y="300" font-size="10" fill="#2dd4bf">X-13 Taxonomy</text>
+</svg>

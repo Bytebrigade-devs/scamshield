@@ -1,0 +1,193 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 820" width="100%" height="100%" style="background:#080e1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <linearGradient id="grad-box" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e1726" />
+      <stop offset="100%" stop-color="#13203a" />
+    </linearGradient>
+    <linearGradient id="grad-uc" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#13203a" />
+      <stop offset="100%" stop-color="#1e2e4a" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Title & Metadata -->
+  <text x="50" y="45" font-size="22" font-weight="700" fill="#eaf1f7">ScamShield · Module 5 &amp; Module 6 Use Case Diagram</text>
+  <text x="50" y="70" font-size="12" fill="#8ea0b3">UML 2.5 Specification · Owner: Vishmi Himaya (245027T) · Byte Brigade · IS2901 Software Development Project</text>
+
+  <!-- System Boundary Box -->
+  <rect x="260" y="100" width="630" height="690" rx="16" fill="url(#grad-box)" stroke="#1f2d45" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="260" y="100" width="630" height="38" rx="16" fill="#13203a"/>
+  <rect x="260" y="122" width="630" height="16" fill="#13203a"/>
+  <text x="280" y="125" font-size="13" font-weight="700" fill="#2dd4bf" letter-spacing="0.5">SYSTEM BOUNDARY: MODULE 5 (ADMIN &amp; OPERATIONS) &amp; MODULE 6 (SAFETY SCORE COORDINATION)</text>
+
+  <!-- ================= ACTORS (LEFT) ================= -->
+
+  <!-- Actor 1: Administrator -->
+  <g transform="translate(60, 210)">
+    <circle cx="50" cy="25" r="16" fill="#13203a" stroke="#2dd4bf" stroke-width="2.5"/>
+    <line x1="50" y1="41" x2="50" y2="85" stroke="#2dd4bf" stroke-width="2.5"/>
+    <line x1="15" y1="58" x2="85" y2="58" stroke="#2dd4bf" stroke-width="2.5"/>
+    <line x1="50" y1="85" x2="25" y2="125" stroke="#2dd4bf" stroke-width="2.5"/>
+    <line x1="50" y1="85" x2="75" y2="125" stroke="#2dd4bf" stroke-width="2.5"/>
+    <text x="50" y="148" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">Administrator</text>
+    <text x="50" y="164" font-size="11" fill="#2dd4bf" text-anchor="middle">(Full Control / M5-10)</text>
+  </g>
+
+  <!-- Actor 2: Support Agent -->
+  <g transform="translate(60, 440)">
+    <circle cx="50" cy="25" r="16" fill="#13203a" stroke="#f59e0b" stroke-width="2.5"/>
+    <line x1="50" y1="41" x2="50" y2="85" stroke="#f59e0b" stroke-width="2.5"/>
+    <line x1="15" y1="58" x2="85" y2="58" stroke="#f59e0b" stroke-width="2.5"/>
+    <line x1="50" y1="85" x2="25" y2="125" stroke="#f59e0b" stroke-width="2.5"/>
+    <line x1="50" y1="85" x2="75" y2="125" stroke="#f59e0b" stroke-width="2.5"/>
+    <text x="50" y="148" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">Support Agent</text>
+    <text x="50" y="164" font-size="11" fill="#f59e0b" text-anchor="middle">(User Support / Notes)</text>
+  </g>
+
+  <!-- Actor 3: Security Analyst -->
+  <g transform="translate(60, 630)">
+    <circle cx="50" cy="20" r="15" fill="#13203a" stroke="#38bdf8" stroke-width="2.5"/>
+    <line x1="50" y1="35" x2="50" y2="75" stroke="#38bdf8" stroke-width="2.5"/>
+    <line x1="20" y1="50" x2="80" y2="50" stroke="#38bdf8" stroke-width="2.5"/>
+    <line x1="50" y1="75" x2="30" y2="110" stroke="#38bdf8" stroke-width="2.5"/>
+    <line x1="50" y1="75" x2="70" y2="110" stroke="#38bdf8" stroke-width="2.5"/>
+    <text x="50" y="130" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">Security Analyst</text>
+    <text x="50" y="146" font-size="11" fill="#38bdf8" text-anchor="middle">(Telemetry &amp; Audit)</text>
+  </g>
+
+  <!-- ================= SECONDARY ACTORS (RIGHT) ================= -->
+  <!-- Supabase DB Actor -->
+  <g transform="translate(930, 260)">
+    <rect x="0" y="0" width="170" height="70" rx="8" fill="#13203a" stroke="#34d399" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="85" y="28" font-size="11" fill="#34d399" font-weight="600" text-anchor="middle">&lt;&lt;Secondary System&gt;&gt;</text>
+    <text x="85" y="46" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">Supabase PostgreSQL</text>
+    <text x="85" y="60" font-size="10" fill="#8ea0b3" text-anchor="middle">Audit Logs &amp; Events (X-08)</text>
+  </g>
+
+  <!-- M4 AI Scam Pipeline System -->
+  <g transform="translate(930, 480)">
+    <rect x="0" y="0" width="170" height="70" rx="8" fill="#13203a" stroke="#2dd4bf" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="85" y="28" font-size="11" fill="#2dd4bf" font-weight="600" text-anchor="middle">&lt;&lt;Subsystem M4&gt;&gt;</text>
+    <text x="85" y="46" font-size="13" font-weight="700" fill="#eaf1f7" text-anchor="middle">AI Scam Pipeline</text>
+    <text x="85" y="60" font-size="10" fill="#8ea0b3" text-anchor="middle">X-13 Taxonomy Stream</text>
+  </g>
+
+  <!-- ================= USE CASES (ELLIPSES) ================= -->
+
+  <!-- UC1: Overview Dashboard -->
+  <g id="uc1">
+    <ellipse cx="420" cy="175" rx="130" ry="24" fill="url(#grad-uc)" stroke="#2dd4bf" stroke-width="1.5"/>
+    <text x="420" y="179" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-01: View Overview Dashboard (M5-14)</text>
+  </g>
+
+  <!-- UC2: Business Analytics -->
+  <g id="uc2">
+    <ellipse cx="420" cy="235" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="420" y="239" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-02: Monitor Business &amp; MRR (M5-03, 05)</text>
+  </g>
+
+  <!-- UC3: AI Scam Threat Intelligence -->
+  <g id="uc3">
+    <ellipse cx="420" cy="295" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="420" y="299" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-03: Analyze Threat Vectors (M5-04)</text>
+  </g>
+
+  <!-- UC4: Search & Inspect Users -->
+  <g id="uc4">
+    <ellipse cx="420" cy="365" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="420" y="369" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-04: Search &amp; Inspect Users (M5-09)</text>
+  </g>
+
+  <!-- UC5: Suspend / Reactivate User -->
+  <g id="uc5">
+    <ellipse cx="420" cy="445" rx="130" ry="26" fill="url(#grad-uc)" stroke="#f06a6a" stroke-width="1.5"/>
+    <text x="420" y="443" font-size="11" font-weight="700" fill="#f06a6a" text-anchor="middle">UC-05: Suspend / Reactivate Account</text>
+    <text x="420" y="457" font-size="10" fill="#8ea0b3" text-anchor="middle">(M5-09 · Requires Justification)</text>
+  </g>
+
+  <!-- UC5_INC: Generate Audit Log -->
+  <g id="uc5_inc">
+    <ellipse cx="730" cy="445" rx="120" ry="24" fill="url(#grad-uc)" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4 2"/>
+    <text x="730" y="449" font-size="11" font-weight="600" fill="#34d399" text-anchor="middle">UC-05A: Write Immutable Audit Log (M5-11)</text>
+  </g>
+
+  <!-- UC6: Record Internal Support Note -->
+  <g id="uc6">
+    <ellipse cx="420" cy="520" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="420" y="524" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-06: Add Internal Support Note (M5-09)</text>
+  </g>
+
+  <!-- UC7: Review Audit Log -->
+  <g id="uc7">
+    <ellipse cx="420" cy="580" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="420" y="584" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-07: Query Audit Trail (M5-11)</text>
+  </g>
+
+  <!-- UC8: Export CSV -->
+  <g id="uc8">
+    <ellipse cx="420" cy="640" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="420" y="644" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-08: Export Data to CSV (M5-07)</text>
+  </g>
+
+  <!-- UC9: Support Tickets & Feedback -->
+  <g id="uc9">
+    <ellipse cx="420" cy="700" rx="130" ry="24" fill="url(#grad-uc)" stroke="#1f2d45" stroke-width="1.5"/>
+    <text x="420" y="704" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UC-09: Support Tickets &amp; Feedback (M5-12)</text>
+  </g>
+
+  <!-- UC10: Module 6 Safety Score View -->
+  <g id="uc10">
+    <ellipse cx="420" cy="758" rx="135" ry="22" fill="url(#grad-uc)" stroke="#2dd4bf" stroke-width="1.5"/>
+    <text x="420" y="762" font-size="11" font-weight="600" fill="#2dd4bf" text-anchor="middle">UC-10: Review Safety Score Cohorts (M6-05)</text>
+  </g>
+
+  <!-- ================= RELATIONSHIP CONNECTORS ================= -->
+
+  <!-- Include relationship UC5 -> UC5_INC -->
+  <line x1="550" y1="445" x2="610" y2="445" stroke="#34d399" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <polygon points="605,441 613,445 605,449" fill="#34d399"/>
+  <text x="580" y="438" font-size="10" font-style="italic" fill="#34d399" text-anchor="middle">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Admin Associations (Lines from Actor to UCs) -->
+  <line x1="150" y1="270" x2="290" y2="175" stroke="#8ea0b3" stroke-width="1.2"/>
+  <line x1="150" y1="270" x2="290" y2="235" stroke="#8ea0b3" stroke-width="1.2"/>
+  <line x1="150" y1="270" x2="290" y2="295" stroke="#8ea0b3" stroke-width="1.2"/>
+  <line x1="150" y1="270" x2="290" y2="365" stroke="#8ea0b3" stroke-width="1.2"/>
+  <line x1="150" y1="270" x2="290" y2="445" stroke="#2dd4bf" stroke-width="1.8"/>
+  <line x1="150" y1="270" x2="290" y2="520" stroke="#8ea0b3" stroke-width="1.2"/>
+  <line x1="150" y1="270" x2="290" y2="580" stroke="#8ea0b3" stroke-width="1.2"/>
+  <line x1="150" y1="270" x2="290" y2="640" stroke="#8ea0b3" stroke-width="1.2"/>
+  <line x1="150" y1="270" x2="290" y2="700" stroke="#8ea0b3" stroke-width="1.2"/>
+  <line x1="150" y1="270" x2="290" y2="758" stroke="#8ea0b3" stroke-width="1.2"/>
+
+  <!-- Support Agent Associations -->
+  <line x1="150" y1="500" x2="290" y2="175" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="3 2"/>
+  <line x1="150" y1="500" x2="290" y2="365" stroke="#f59e0b" stroke-width="1.2"/>
+  <line x1="150" y1="500" x2="290" y2="520" stroke="#f59e0b" stroke-width="1.2"/>
+  <line x1="150" y1="500" x2="290" y2="700" stroke="#f59e0b" stroke-width="1.2"/>
+
+  <!-- Security Analyst Associations -->
+  <line x1="150" y1="690" x2="290" y2="175" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 2"/>
+  <line x1="150" y1="690" x2="290" y2="295" stroke="#38bdf8" stroke-width="1.2"/>
+  <line x1="150" y1="690" x2="290" y2="580" stroke="#38bdf8" stroke-width="1.2"/>
+  <line x1="150" y1="690" x2="290" y2="758" stroke="#38bdf8" stroke-width="1.2"/>
+
+  <!-- Secondary System Connections -->
+  <line x1="850" y1="445" x2="930" y2="310" stroke="#34d399" stroke-width="1.2"/>
+  <line x1="550" y1="295" x2="930" y2="510" stroke="#2dd4bf" stroke-width="1.2"/>
+  <line x1="550" y1="580" x2="930" y2="310" stroke="#34d399" stroke-width="1.2"/>
+
+  <!-- Privacy Boundary Annotation -->
+  <g transform="translate(620, 640)">
+    <rect x="0" y="0" width="250" height="130" rx="8" fill="#13203a" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4 2"/>
+    <text x="15" y="24" font-size="11" font-weight="700" fill="#2dd4bf">🔒 ZERO-KNOWLEDGE BOUNDARY</text>
+    <text x="15" y="44" font-size="10" fill="#eaf1f7">• No vault passwords or notes exposed</text>
+    <text x="15" y="62" font-size="10" fill="#eaf1f7">• No raw scam message bodies stored</text>
+    <text x="15" y="80" font-size="10" fill="#eaf1f7">• Mock billing only (no card numbers)</text>
+    <text x="15" y="98" font-size="10" fill="#eaf1f7">• Mandatory justification on suspension</text>
+    <text x="15" y="116" font-size="10" fill="#34d399">• Audit log is strictly append-only</text>
+  </g>
+</svg>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScamShield Module 5 &amp; 6 — UML &amp; Architecture Diagram Gallery</title>
+  <style>
+    :root {
+      --bg: #080e1a;
+      --card-bg: #0e1726;
+      --border: #1f2d45;
+      --text: #eaf1f7;
+      --muted: #8ea0b3;
+      --accent: #2dd4bf;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+      background-color: #0b1322;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .meta {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      background-color: rgba(45, 212, 191, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(45, 212, 191, 0.4);
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 16px 32px;
+      background: #0b1322;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover {
+      color: var(--text);
+      background: #13203a;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      background: rgba(45, 212, 191, 0.1);
+      border-color: var(--accent);
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+    .diagram-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 40px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .diagram-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .diagram-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .diagram-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .btn-download {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--accent);
+      color: #0b1322;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
+    }
+    .btn-download:hover {
+      opacity: 0.9;
+    }
+    .svg-wrapper {
+      background: #080e1a;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      padding: 12px;
+    }
+    .svg-wrapper object, .svg-wrapper img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h1>ScamShield · Module 5 &amp; 6 Architecture &amp; UML Diagrams</h1>
+        <span class="badge">IS2901 Moratuwa FIT</span>
+      </div>
+      <div class="meta">
+        Author: Vishmi Himaya (Index: 245027T) · Group: Byte Brigade · Evaluation Deliverables
+      </div>
+    </div>
+    <div>
+      <span style="font-size: 12px; color: var(--muted);">Click any diagram below to inspect or save for slides/report</span>
+    </div>
+  </header>
+
+  <nav class="nav-tabs">
+    <button class="tab-btn active" onclick="scrollToSection('sec-arch')">1. Top Architecture</button>
+    <button class="tab-btn" onclick="scrollToSection('sec-usecase')">2. Use Case Diagram</button>
+    <button class="tab-btn" onclick="scrollToSection('sec-activity')">3. Activity Diagram</button>
+    <button class="tab-btn" onclick="scrollToSection('sec-sequence')">4. Sequence Diagram</button>
+    <button class="tab-btn" onclick="scrollToSection('sec-class')">5. Class &amp; Database Diagram</button>
+  </nav>
+
+  <div class="container">
+
+    <!-- 1. System Architecture -->
+    <div id="sec-arch" class="diagram-card">
+      <div class="diagram-header">
+        <div>
+          <h2 class="diagram-title">1. Top-Level System Architecture</h2>
+          <div class="diagram-desc">How all 6 modules connect, highlighting the Control Room (Module 5 &amp; 6).</div>
+        </div>
+        <a href="5-system-architecture.svg" download="ScamShield-Top-Architecture.svg" class="btn-download">Download SVG</a>
+      </div>
+      <div class="svg-wrapper">
+        <img src="5-system-architecture.svg" alt="Top-Level Architecture Diagram">
+      </div>
+    </div>
+
+    <!-- 2. Use Case Diagram -->
+    <div id="sec-usecase" class="diagram-card">
+      <div class="diagram-header">
+        <div>
+          <h2 class="diagram-title">2. Use Case Diagram (UML 2.5)</h2>
+          <div class="diagram-desc">Actors (Administrator, Support Agent, Security Analyst), RBAC bounds, and secondary systems.</div>
+        </div>
+        <a href="1-use-case-diagram.svg" download="ScamShield-Use-Case-Diagram.svg" class="btn-download">Download SVG</a>
+      </div>
+      <div class="svg-wrapper">
+        <img src="1-use-case-diagram.svg" alt="Use Case Diagram">
+      </div>
+    </div>
+
+    <!-- 3. Activity Diagram -->
+    <div id="sec-activity" class="diagram-card">
+      <div class="diagram-header">
+        <div>
+          <h2 class="diagram-title">3. Activity Diagram: Moderation &amp; Audit Logging</h2>
+          <div class="diagram-desc">Detailed swimlane workflow for account suspension with mandatory justification and tamper-proof logging.</div>
+        </div>
+        <a href="2-activity-diagram.svg" download="ScamShield-Activity-Diagram.svg" class="btn-download">Download SVG</a>
+      </div>
+      <div class="svg-wrapper">
+        <img src="2-activity-diagram.svg" alt="Activity Diagram">
+      </div>
+    </div>
+
+    <!-- 4. Sequence Diagram -->
+    <div id="sec-sequence" class="diagram-card">
+      <div class="diagram-header">
+        <div>
+          <h2 class="diagram-title">4. Sequence Diagram: Analytics &amp; Privacy Sanitization</h2>
+          <div class="diagram-desc">Chronological request lifecycle showing parallel queries and strict Zero-Knowledge filtering.</div>
+        </div>
+        <a href="3-sequence-diagram.svg" download="ScamShield-Sequence-Diagram.svg" class="btn-download">Download SVG</a>
+      </div>
+      <div class="svg-wrapper">
+        <img src="3-sequence-diagram.svg" alt="Sequence Diagram">
+      </div>
+    </div>
+
+    <!-- 5. Class & ER Diagram -->
+    <div id="sec-class" class="diagram-card">
+      <div class="diagram-header">
+        <div>
+          <h2 class="diagram-title">5. Class &amp; Database Architecture Diagram</h2>
+          <div class="diagram-desc">Entity models, Supabase tables, audit log structure, and controller methods.</div>
+        </div>
+        <a href="4-class-er-diagram.svg" download="ScamShield-Class-ER-Diagram.svg" class="btn-download">Download SVG</a>
+      </div>
+      <div class="svg-wrapper">
+        <img src="4-class-er-diagram.svg" alt="Class and Database Diagram">
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+      }
+    }
+  </script>
+</body>
+</html>
