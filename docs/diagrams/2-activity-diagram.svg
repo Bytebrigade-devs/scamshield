@@ -1,154 +1,157 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 980" width="100%" height="100%" style="background:#080e1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 980" width="100%" height="100%" style="background:#ffffff; font-family: Helvetica, Arial, sans-serif;">
   <defs>
-    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f0f0f0" stroke-width="1"/>
+    </pattern>
+    <filter id="drawio-shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.15"/>
     </filter>
   </defs>
+  <rect width="100%" height="100%" fill="url(#grid)" />
 
-  <!-- Title & Metadata -->
-  <text x="50" y="45" font-size="22" font-weight="700" fill="#eaf1f7">ScamShield · Module 5 Activity Diagram</text>
-  <text x="50" y="70" font-size="12" fill="#8ea0b3">User Moderation, RBAC Validation &amp; Tamper-Proof Audit Trail Workflow (M5-09, M5-10, M5-11)</text>
+  <!-- Diagram Title Banner -->
+  <text x="40" y="40" font-size="20" font-weight="bold" fill="#000000">Activity Diagram — Account Moderation &amp; Audit Trail</text>
+  <text x="40" y="60" font-size="12" fill="#666666">IS2901 Software Development Project · Swimlane Workflow (M5-09, M5-10, M5-11)</text>
 
-  <!-- Swimlane Headers -->
-  <rect x="50" y="95" width="340" height="40" fill="#13203a" stroke="#1f2d45" stroke-width="1.5"/>
-  <text x="220" y="120" font-size="13" font-weight="700" fill="#2dd4bf" text-anchor="middle">ADMINISTRATOR (UI CLIENT)</text>
+  <!-- ================= SWIMLANE HEADERS (CLASSIC DRAW.IO STYLE) ================= -->
+  <rect x="50" y="90" width="340" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text x="220" y="115" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Administrator (Client UI)</text>
 
-  <rect x="390" y="95" width="370" height="40" fill="#13203a" stroke="#1f2d45" stroke-width="1.5"/>
-  <text x="575" y="120" font-size="13" font-weight="700" fill="#38bdf8" text-anchor="middle">RBAC &amp; MODERATION CONTROLLER</text>
+  <rect x="390" y="90" width="370" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text x="575" y="115" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">RBAC &amp; Moderation Controller</text>
 
-  <rect x="760" y="95" width="340" height="40" fill="#13203a" stroke="#1f2d45" stroke-width="1.5"/>
-  <text x="930" y="120" font-size="13" font-weight="700" fill="#34d399" text-anchor="middle">SUPABASE AUDIT &amp; DATA STORE</text>
+  <rect x="760" y="90" width="340" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text x="930" y="115" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Supabase PostgreSQL Audit Store</text>
 
-  <!-- Swimlane Backgrounds -->
-  <rect x="50" y="135" width="340" height="800" fill="#0b1322" stroke="#1f2d45" stroke-width="1.5"/>
-  <rect x="390" y="135" width="370" height="800" fill="#0e1726" stroke="#1f2d45" stroke-width="1.5"/>
-  <rect x="760" y="135" width="340" height="800" fill="#0b1322" stroke="#1f2d45" stroke-width="1.5"/>
+  <!-- Swimlane Body Lanes -->
+  <rect x="50" y="130" width="340" height="810" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="390" y="130" width="370" height="810" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="760" y="130" width="340" height="810" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
 
-  <!-- ================= WORKFLOW NODES ================= -->
+  <!-- ================= NODES ================= -->
 
-  <!-- Initial State -->
-  <circle cx="220" cy="170" r="12" fill="#2dd4bf"/>
-  <line x1="220" y1="182" x2="220" y2="215" stroke="#2dd4bf" stroke-width="2"/>
-  <polygon points="216,215 220,223 224,215" fill="#2dd4bf"/>
+  <!-- Initial Node (Solid Black Circle) -->
+  <circle cx="220" cy="165" r="12" fill="#000000"/>
+  <line x1="220" y1="177" x2="220" y2="210" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="216,210 220,218 224,210" fill="#333333"/>
 
   <!-- Action 1: Search & Filter Users -->
-  <rect x="110" y="225" width="220" height="44" rx="8" fill="#13203a" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="220" y="252" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">Search &amp; Filter User Directory</text>
+  <rect x="110" y="218" width="220" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="220" y="245" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Search &amp; Filter User Directory</text>
 
-  <line x1="220" y1="269" x2="220" y2="300" stroke="#8ea0b3" stroke-width="1.5"/>
-  <polygon points="216,300 220,308 224,300" fill="#8ea0b3"/>
+  <line x1="220" y1="262" x2="220" y2="295" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="216,295 220,303 224,295" fill="#333333"/>
 
   <!-- Action 2: Inspect Account Profile -->
-  <rect x="110" y="310" width="220" height="52" rx="8" fill="#13203a" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="220" y="333" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">Select User &amp; Inspect Profile</text>
-  <text x="220" y="348" font-size="10" fill="#8ea0b3" text-anchor="middle">(Plan, Joined Date, Scam Check Count)</text>
+  <rect x="110" y="303" width="220" height="52" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="220" y="325" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Select User &amp; Inspect Profile</text>
+  <text x="220" y="342" font-size="10" fill="#666666" text-anchor="middle">(Plan, Joined Date, Scam Check Count)</text>
 
-  <!-- Path to Privacy Verification -->
-  <line x1="330" y1="336" x2="465" y2="336" stroke="#8ea0b3" stroke-width="1.5"/>
-  <polygon points="465,332 473,336 465,340" fill="#8ea0b3"/>
+  <!-- Connect to Controller (Lane 2) -->
+  <line x1="330" y1="329" x2="475" y2="329" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="475,325 483,329 475,333" fill="#333333"/>
 
-  <!-- Action 3: Enforce Zero-Knowledge Privacy Boundary -->
-  <rect x="475" y="310" width="200" height="52" rx="8" fill="#13203a" stroke="#2dd4bf" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="575" y="333" font-size="11" font-weight="700" fill="#2dd4bf" text-anchor="middle">🔒 Zero-Knowledge Filter</text>
-  <text x="575" y="348" font-size="10" fill="#eaf1f7" text-anchor="middle">Masks passwords &amp; raw message text</text>
+  <!-- Action 3: Zero-Knowledge Filter -->
+  <rect x="485" y="303" width="200" height="52" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="585" y="325" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">Zero-Knowledge Filter (M5)</text>
+  <text x="585" y="342" font-size="10" fill="#333333" text-anchor="middle">Masks passwords &amp; raw messages</text>
 
-  <!-- Connect back to Admin clicking Suspend -->
-  <line x1="575" y1="362" x2="575" y2="400" stroke="#8ea0b3" stroke-width="1.5"/>
-  <line x1="575" y1="400" x2="220" y2="400" stroke="#8ea0b3" stroke-width="1.5"/>
-  <line x1="220" y1="400" x2="220" y2="425" stroke="#8ea0b3" stroke-width="1.5"/>
-  <polygon points="216,425 220,433 224,425" fill="#8ea0b3"/>
+  <!-- Connect back to Admin Lane -->
+  <line x1="585" y1="355" x2="585" y2="395" stroke="#333333" stroke-width="1.5"/>
+  <line x1="585" y1="395" x2="220" y2="395" stroke="#333333" stroke-width="1.5"/>
+  <line x1="220" y1="395" x2="220" y2="425" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="216,425 220,433 224,425" fill="#333333"/>
 
   <!-- Action 4: Click Suspend -->
-  <rect x="110" y="435" width="220" height="44" rx="8" fill="#13203a" stroke="#f06a6a" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="220" y="462" font-size="11" font-weight="700" fill="#f06a6a" text-anchor="middle">Click "Suspend Account"</text>
+  <rect x="110" y="433" width="220" height="44" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="220" y="460" font-size="11" font-weight="bold" fill="#b85450" text-anchor="middle">Click "Suspend Account"</text>
 
-  <!-- Path to RBAC Check -->
-  <line x1="330" y1="457" x2="515" y2="457" stroke="#8ea0b3" stroke-width="1.5"/>
-  <polygon points="515,453 523,457 515,461" fill="#8ea0b3"/>
+  <!-- Connect to Decision -->
+  <line x1="330" y1="455" x2="525" y2="455" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="525,451 533,455 525,459" fill="#333333"/>
 
-  <!-- Decision Diamond: RBAC Check -->
-  <polygon points="575,435 635,465 575,495 515,465" fill="#13203a" stroke="#38bdf8" stroke-width="2"/>
-  <text x="575" y="462" font-size="10" font-weight="700" fill="#eaf1f7" text-anchor="middle">Role ==</text>
-  <text x="575" y="474" font-size="10" font-weight="700" fill="#38bdf8" text-anchor="middle">'Admin'?</text>
+  <!-- Decision Diamond (Yellow: #fff2cc / #d6b656) -->
+  <polygon points="585,425 645,455 585,485 525,455" fill="#fff2cc" stroke="#d6b656" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+  <text x="585" y="451" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Role ==</text>
+  <text x="585" y="465" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">'Admin'?</text>
 
-  <!-- Decision Branch [No]: Access Denied -->
-  <line x1="635" y1="465" x2="690" y2="465" stroke="#f06a6a" stroke-width="1.5"/>
-  <text x="660" y="455" font-size="10" font-weight="700" fill="#f06a6a" text-anchor="middle">[No]</text>
-  <line x1="690" y1="465" x2="690" y2="520" stroke="#f06a6a" stroke-width="1.5"/>
-  <line x1="690" y1="520" x2="330" y2="520" stroke="#f06a6a" stroke-width="1.5"/>
-  <polygon points="330,516 322,520 330,524" fill="#f06a6a"/>
+  <!-- [No] Branch: Unauthorized -->
+  <line x1="645" y1="455" x2="700" y2="455" stroke="#b85450" stroke-width="1.5"/>
+  <text x="670" y="445" font-size="10" font-weight="bold" fill="#b85450" text-anchor="middle">[No]</text>
+  <line x1="700" y1="455" x2="700" y2="520" stroke="#b85450" stroke-width="1.5"/>
+  <line x1="700" y1="520" x2="330" y2="520" stroke="#b85450" stroke-width="1.5"/>
+  <polygon points="330,516 322,520 330,524" fill="#b85450"/>
 
-  <!-- Error Node: Display RBAC Error -->
-  <rect x="110" y="500" width="210" height="42" rx="8" fill="#13203a" stroke="#f06a6a" stroke-width="1.5"/>
-  <text x="215" y="518" font-size="10" font-weight="700" fill="#f06a6a" text-anchor="middle">Display 403 Forbidden Modal</text>
-  <text x="215" y="532" font-size="9" fill="#8ea0b3" text-anchor="middle">"Only Admin role can suspend (M5-10)"</text>
+  <!-- Error Node: Display 403 -->
+  <rect x="110" y="500" width="210" height="42" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="215" y="518" font-size="10" font-weight="bold" fill="#b85450" text-anchor="middle">Display 403 Forbidden Modal</text>
+  <text x="215" y="533" font-size="9" fill="#666666" text-anchor="middle">"Only Admin role can suspend (M5-10)"</text>
 
-  <!-- End Node for Failure -->
-  <circle cx="215" cy="575" r="14" fill="none" stroke="#f06a6a" stroke-width="2"/>
-  <circle cx="215" cy="575" r="7" fill="#f06a6a"/>
-  <line x1="215" y1="542" x2="215" y2="560" stroke="#f06a6a" stroke-width="1.5"/>
-  <polygon points="211,560 215,568 219,560" fill="#f06a6a"/>
-  <text x="215" y="605" font-size="10" fill="#f06a6a" font-weight="600" text-anchor="middle">Action Aborted</text>
+  <!-- Aborted End State -->
+  <line x1="215" y1="542" x2="215" y2="565" stroke="#b85450" stroke-width="1.5"/>
+  <polygon points="211,565 215,573 219,565" fill="#b85450"/>
+  <circle cx="215" cy="582" r="13" fill="none" stroke="#b85450" stroke-width="2"/>
+  <circle cx="215" cy="582" r="7" fill="#b85450"/>
+  <text x="215" y="612" font-size="10" font-weight="bold" fill="#b85450" text-anchor="middle">Operation Terminated</text>
 
-  <!-- Decision Branch [Yes]: Open Modal -->
-  <line x1="575" y1="495" x2="575" y2="550" stroke="#34d399" stroke-width="1.5"/>
-  <text x="590" y="515" font-size="10" font-weight="700" fill="#34d399">[Yes]</text>
-  <polygon points="571,550 575,558 579,550" fill="#34d399"/>
+  <!-- [Yes] Branch: Open Reason Modal -->
+  <line x1="585" y1="485" x2="585" y2="550" stroke="#274e13" stroke-width="1.5"/>
+  <text x="600" y="515" font-size="10" font-weight="bold" fill="#274e13">[Yes]</text>
+  <polygon points="581,550 585,558 589,550" fill="#274e13"/>
 
-  <!-- Action: Open Reason Modal -->
-  <rect x="475" y="560" width="200" height="44" rx="8" fill="#13203a" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="575" y="587" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">Prompt for Audit Justification</text>
+  <rect x="475" y="558" width="220" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="585" y="585" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Prompt for Audit Justification</text>
 
-  <!-- Path to Input Reason in UI -->
-  <line x1="475" y1="582" x2="330" y2="582" stroke="#8ea0b3" stroke-width="1.5"/>
-  <polygon points="330,578 322,582 330,586" fill="#8ea0b3"/>
+  <!-- Connect to Admin entering reason -->
+  <line x1="475" y1="580" x2="330" y2="580" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="330,576 322,580 330,584" fill="#333333"/>
 
-  <!-- Action: Admin Inputs Justification -->
-  <rect x="110" y="640" width="220" height="48" rx="8" fill="#13203a" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="220" y="662" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">Enter Justification &amp; Confirm</text>
-  <text x="220" y="676" font-size="9" fill="#2dd4bf" text-anchor="middle">(e.g., "Abusive API rate limit bursts")</text>
+  <!-- Admin inputs justification -->
+  <rect x="110" y="640" width="220" height="48" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="220" y="662" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Enter Justification &amp; Confirm</text>
+  <text x="220" y="677" font-size="9" fill="#666666" text-anchor="middle">(e.g., "Abusive API rate limit bursts")</text>
 
-  <!-- Path back to Controller execution -->
-  <line x1="330" y1="664" x2="475" y2="664" stroke="#8ea0b3" stroke-width="1.5"/>
-  <polygon points="475,660 483,664 475,668" fill="#8ea0b3"/>
+  <!-- Connect back to Controller -->
+  <line x1="330" y1="664" x2="475" y2="664" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="475,660 483,664 475,668" fill="#333333"/>
 
-  <!-- Action: Execute Suspension -->
-  <rect x="475" y="640" width="200" height="48" rx="8" fill="#13203a" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="575" y="662" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">Set User Status = 'Suspended'</text>
-  <text x="575" y="676" font-size="9" fill="#8ea0b3" text-anchor="middle">Freeze API Token &amp; Sessions</text>
+  <!-- Controller sets status -->
+  <rect x="475" y="640" width="220" height="48" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="585" y="662" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Set User Status = 'Suspended'</text>
+  <text x="585" y="677" font-size="9" fill="#666666" text-anchor="middle">Freeze API Token &amp; Active Sessions</text>
 
-  <!-- Path to Database Persistence -->
-  <line x1="675" y1="664" x2="815" y2="664" stroke="#8ea0b3" stroke-width="1.5"/>
-  <polygon points="815,660 823,664 815,668" fill="#8ea0b3"/>
+  <!-- Connect to Database (Lane 3) -->
+  <line x1="695" y1="664" x2="815" y2="664" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="815,660 823,664 815,668" fill="#333333"/>
 
-  <!-- Action: DB Update -->
-  <rect x="825" y="640" width="210" height="48" rx="8" fill="#13203a" stroke="#1f2d45" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="930" y="662" font-size="11" font-weight="600" fill="#eaf1f7" text-anchor="middle">UPDATE public.users</text>
-  <text x="930" y="676" font-size="10" fill="#8ea0b3" text-anchor="middle">status='Suspended'</text>
+  <!-- DB Update -->
+  <rect x="825" y="640" width="210" height="48" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="930" y="662" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">UPDATE public.users</text>
+  <text x="930" y="677" font-size="10" fill="#666666" text-anchor="middle">SET status = 'Suspended'</text>
 
-  <!-- Path to Insert Audit Log -->
-  <line x1="930" y1="688" x2="930" y2="725" stroke="#34d399" stroke-width="2"/>
-  <polygon points="926,725 930,733 934,725" fill="#34d399"/>
+  <!-- Connect to Audit Log Write -->
+  <line x1="930" y1="688" x2="930" y2="725" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="926,725 930,733 934,725" fill="#333333"/>
 
-  <!-- Action: Write Immutable Audit Log -->
-  <rect x="800" y="735" width="260" height="64" rx="8" fill="#13203a" stroke="#34d399" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="930" y="757" font-size="11" font-weight="700" fill="#34d399" text-anchor="middle">INSERT INTO public.audit_logs</text>
-  <text x="930" y="773" font-size="10" fill="#eaf1f7" text-anchor="middle">Actor, Action, Target, Justification, IP</text>
-  <text x="930" y="788" font-size="9" fill="#8ea0b3" text-anchor="middle">🔒 Append-Only (UPDATE/DELETE Denied)</text>
+  <!-- Write Immutable Audit Log (Green) -->
+  <rect x="800" y="733" width="260" height="64" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+  <text x="930" y="755" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">INSERT INTO public.audit_logs</text>
+  <text x="930" y="771" font-size="10" fill="#000000" text-anchor="middle">AdminEmail, Action, Target, Reason, IP</text>
+  <text x="930" y="787" font-size="9" fill="#666666" text-anchor="middle">🔒 Append-Only (UPDATE/DELETE Forbidden)</text>
 
-  <!-- Return to UI for Refresh -->
-  <line x1="930" y1="799" x2="930" y2="835" stroke="#8ea0b3" stroke-width="1.5"/>
-  <line x1="930" y1="835" x2="220" y2="835" stroke="#8ea0b3" stroke-width="1.5"/>
-  <line x1="220" y1="835" x2="220" y2="865" stroke="#8ea0b3" stroke-width="1.5"/>
-  <polygon points="216,865 220,873 224,865" fill="#8ea0b3"/>
+  <!-- Return to UI -->
+  <line x1="930" y1="797" x2="930" y2="835" stroke="#333333" stroke-width="1.5"/>
+  <line x1="930" y1="835" x2="220" y2="835" stroke="#333333" stroke-width="1.5"/>
+  <line x1="220" y1="835" x2="220" y2="865" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="216,865 220,873 224,865" fill="#333333"/>
 
-  <!-- Action: UI Updates Badges -->
-  <rect x="110" y="875" width="220" height="44" rx="8" fill="#13203a" stroke="#34d399" stroke-width="1.5" filter="url(#shadow)"/>
-  <text x="220" y="895" font-size="11" font-weight="600" fill="#34d399" text-anchor="middle">Refresh UI &amp; Audit Log View</text>
-  <text x="220" y="909" font-size="9" fill="#8ea0b3" text-anchor="middle">Badge turns red · Needs Attention +1</text>
+  <!-- UI Refreshes -->
+  <rect x="110" y="873" width="220" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="220" y="893" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Refresh User Management UI</text>
+  <text x="220" y="908" font-size="9" fill="#b85450" text-anchor="middle">Status Badge turns Red · Audit Log Updated</text>
 
-  <!-- Final Success State -->
-  <line x1="220" y1="919" x2="220" y2="945" stroke="#34d399" stroke-width="1.5"/>
-  <circle cx="220" cy="955" r="14" fill="none" stroke="#34d399" stroke-width="2"/>
-  <circle cx="220" cy="955" r="7" fill="#34d399"/>
+  <!-- Final Success Node (Black Bullseye) -->
+  <line x1="220" y1="917" x2="220" y2="940" stroke="#333333" stroke-width="1.5"/>
+  <circle cx="220" cy="950" r="14" fill="none" stroke="#000000" stroke-width="2"/>
+  <circle cx="220" cy="950" r="8" fill="#000000"/>
 </svg>
