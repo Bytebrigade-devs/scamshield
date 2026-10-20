@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 840" width="100%" height="100%" style="background:#ffffff; font-family: Helvetica, Arial, sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="100%" height="100%" style="background:#ffffff; font-family: Helvetica, Arial, sans-serif;">
   <defs>
     <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
       <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f0f0f0" stroke-width="1"/>
@@ -13,180 +13,201 @@
   <text x="40" y="45" font-size="20" font-weight="bold" fill="#000000">Subsystem Architecture — Module 5: Admin Dashboard, Analytics &amp; Operations</text>
 
   <!-- ================= TIER 1: PRESENTATION LAYER ================= -->
-  <g transform="translate(60, 95)">
-    <rect x="0" y="0" width="1060" height="180" fill="#ffffff" stroke="#6c8ebf" stroke-width="2" rx="4" filter="url(#drawio-shadow)"/>
-    <rect x="0" y="0" width="1060" height="34" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-    <text x="530" y="22" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">TIER 1: PRESENTATION LAYER (Next.js 14 App Router · React 18 · Tailwind CSS · Recharts)</text>
+  <g transform="translate(40, 85)">
+    <rect x="0" y="0" width="1120" height="195" fill="#ffffff" stroke="#6c8ebf" stroke-width="2" rx="4" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="1120" height="34" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+    <text x="560" y="22" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">TIER 1: PRESENTATION LAYER (Next.js 14 App Router · React 18 · Tailwind CSS · Recharts)</text>
 
-    <!-- Component 1: Overview -->
-    <g transform="translate(30, 50)">
-      <rect x="0" y="0" width="180" height="110" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="180" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-      <text x="90" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Overview Dashboard</text>
-      <text x="10" y="45" font-size="10" fill="#333333">• M5-14 Combined View</text>
-      <text x="10" y="63" font-size="10" fill="#333333">• Signups &amp; MRR KPIs</text>
-      <text x="10" y="81" font-size="10" fill="#333333">• Needs Attention Alerts</text>
-      <text x="10" y="99" font-size="9" fill="#666666">Route: /admin</text>
+    <!-- Component 1: Overview Dashboard -->
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="205" height="130" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
+      <rect x="0" y="0" width="205" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+      <text x="102" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Overview Dashboard (/admin)</text>
+      <text x="10" y="46" font-size="9.5" fill="#333333">• M5-14 Combined View &amp; KPIs</text>
+      <text x="10" y="64" font-size="9.5" font-weight="bold" fill="#b85450">• ⭐ Automated Alert Banners</text>
+      <text x="10" y="82" font-size="9.5" font-weight="bold" fill="#004085">• ⭐ Recommended Action Cards</text>
+      <text x="10" y="100" font-size="9.5" fill="#333333">• 1-Click Action Dispatcher</text>
+      <text x="10" y="118" font-size="8.5" fill="#666666">Signups, Active Subs, MRR</text>
     </g>
 
     <!-- Component 2: User Management -->
-    <g transform="translate(235, 50)">
-      <rect x="0" y="0" width="185" height="110" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="185" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-      <text x="92" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">User Management UI</text>
-      <text x="10" y="45" font-size="10" fill="#333333">• M5-09 Search &amp; Filter</text>
-      <text x="10" y="63" font-size="10" fill="#333333">• Plan &amp; Status Badges</text>
-      <text x="10" y="81" font-size="10" fill="#b85450">• Suspend/Reactivate Modal</text>
-      <text x="10" y="99" font-size="9" fill="#666666">Route: /admin/users</text>
+    <g transform="translate(240, 50)">
+      <rect x="0" y="0" width="205" height="130" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
+      <rect x="0" y="0" width="205" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+      <text x="102" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">User Management (/admin/users)</text>
+      <text x="10" y="46" font-size="9.5" fill="#333333">• M5-09 Search &amp; Plan Filter</text>
+      <text x="10" y="64" font-size="9.5" fill="#333333">• Status Badges &amp; Notes Form</text>
+      <text x="10" y="82" font-size="9.5" fill="#b85450">• Suspend / Reactivate Modal</text>
+      <text x="10" y="100" font-size="9.5" fill="#274e13">• Mandatory Audit Reason Input</text>
+      <text x="10" y="118" font-size="8.5" fill="#666666">Zero-Knowledge Masking</text>
     </g>
 
     <!-- Component 3: Analytics -->
-    <g transform="translate(445, 50)">
-      <rect x="0" y="0" width="185" height="110" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="185" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-      <text x="92" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Business Analytics UI</text>
-      <text x="10" y="45" font-size="10" fill="#333333">• M5-05 Funnel Drop-off</text>
-      <text x="10" y="63" font-size="10" fill="#333333">• M5-06 Cohort Matrix</text>
-      <text x="10" y="81" font-size="10" fill="#274e13">• M5-07 CSV Export Button</text>
-      <text x="10" y="99" font-size="9" fill="#666666">Route: /admin/analytics</text>
+    <g transform="translate(460, 50)">
+      <rect x="0" y="0" width="205" height="130" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
+      <rect x="0" y="0" width="205" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+      <text x="102" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Business Analytics (/admin/analytics)</text>
+      <text x="10" y="46" font-size="9.5" fill="#333333">• M5-05 Funnel Drop-off Chart</text>
+      <text x="10" y="64" font-size="9.5" fill="#333333">• M5-06 Cohort Retention Grid</text>
+      <text x="10" y="82" font-size="9.5" fill="#274e13">• M5-07 One-Click CSV Export</text>
+      <text x="10" y="100" font-size="9.5" fill="#333333">• Trial-to-Paid &amp; Churn Metrics</text>
+      <text x="10" y="118" font-size="8.5" fill="#666666">Synthetic 39,600 LKR MRR</text>
     </g>
 
-    <!-- Component 4: Threat Feed -->
-    <g transform="translate(655, 50)">
-      <rect x="0" y="0" width="180" height="110" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="180" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-      <text x="90" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Scam Intelligence UI</text>
-      <text x="10" y="45" font-size="10" fill="#333333">• M5-04 Category Charts</text>
-      <text x="10" y="63" font-size="10" fill="#333333">• AI Confidence Donut</text>
-      <text x="10" y="81" font-size="10" fill="#333333">• X-13 Taxonomy Specs</text>
-      <text x="10" y="99" font-size="9" fill="#666666">Route: /admin/scams</text>
+    <!-- Component 4: Scam Intelligence & Trends -->
+    <g transform="translate(680, 50)">
+      <rect x="0" y="0" width="215" height="130" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
+      <rect x="0" y="0" width="215" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+      <text x="107" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Scam Intelligence (/admin/scams)</text>
+      <text x="10" y="46" font-size="9.5" font-weight="bold" fill="#b85450">• ⭐ Anomaly &amp; Trend Spike View</text>
+      <text x="10" y="64" font-size="9.5" fill="#000000">• +40% Surge vs 7-Day Baseline</text>
+      <text x="10" y="82" font-size="9.5" fill="#333333">• X-13 Taxonomy Distribution</text>
+      <text x="10" y="100" font-size="9.5" fill="#333333">• AI Confidence Donut Chart</text>
+      <text x="10" y="118" font-size="8.5" fill="#274e13">Privacy: Metadata only</text>
     </g>
 
     <!-- Component 5: Support & Audit -->
-    <g transform="translate(860, 50)">
-      <rect x="0" y="0" width="170" height="110" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="170" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-      <text x="85" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Support &amp; Audit UI</text>
-      <text x="10" y="45" font-size="10" fill="#333333">• M5-11 Audit Log Table</text>
-      <text x="10" y="63" font-size="10" fill="#333333">• M5-12 Support Tickets</text>
-      <text x="10" y="81" font-size="10" fill="#333333">• Verdict Feedback List</text>
-      <text x="10" y="99" font-size="9" fill="#666666">Route: /admin/support-audit</text>
+    <g transform="translate(910, 50)">
+      <rect x="0" y="0" width="190" height="130" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
+      <rect x="0" y="0" width="190" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+      <text x="95" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Support &amp; Audit (/admin/support)</text>
+      <text x="10" y="46" font-size="9.5" fill="#333333">• M5-11 Immutable Audit Table</text>
+      <text x="10" y="64" font-size="9.5" fill="#333333">• M5-12 Support Tickets Inbox</text>
+      <text x="10" y="82" font-size="9.5" fill="#333333">• AI Verdict Dispute Queue</text>
+      <text x="10" y="100" font-size="9.5" font-weight="bold" fill="#004085">• ⭐ Alert Resolution Drawer</text>
+      <text x="10" y="118" font-size="8.5" fill="#274e13">Append-Only Audit Trail</text>
     </g>
   </g>
 
   <!-- Connectors Tier 1 -> Tier 2 -->
-  <line x1="590" y1="275" x2="590" y2="330" stroke="#333333" stroke-width="2"/>
-  <polygon points="585,325 590,333 595,325" fill="#333333"/>
-  <text x="610" y="305" font-size="11" font-weight="bold" fill="#000000">Next.js API Calls</text>
+  <line x1="600" y1="280" x2="600" y2="335" stroke="#333333" stroke-width="2"/>
+  <polygon points="595,330 600,338 605,330" fill="#333333"/>
+  <text x="620" y="310" font-size="11" font-weight="bold" fill="#000000">Next.js API Routes &amp; RPCs</text>
 
-  <!-- ================= TIER 2: BUSINESS LOGIC & CONTROLLER LAYER ================= -->
-  <g transform="translate(60, 335)">
-    <rect x="0" y="0" width="1060" height="195" fill="#ffffff" stroke="#d6b656" stroke-width="2" rx="4" filter="url(#drawio-shadow)"/>
-    <rect x="0" y="0" width="1060" height="34" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
-    <text x="530" y="22" font-size="13" font-weight="bold" fill="#b45f06" text-anchor="middle">TIER 2: BUSINESS LOGIC &amp; SERVICE CONTROLLERS (M5 Core)</text>
+  <!-- ================= TIER 2: BUSINESS LOGIC & SERVICE CONTROLLERS ================= -->
+  <g transform="translate(40, 340)">
+    <rect x="0" y="0" width="1120" height="225" fill="#ffffff" stroke="#d6b656" stroke-width="2" rx="4" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="1120" height="34" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+    <text x="560" y="22" font-size="13" font-weight="bold" fill="#b45f06" text-anchor="middle">TIER 2: BUSINESS LOGIC &amp; SERVICE CONTROLLERS (M5 Core)</text>
 
-    <!-- Service 1: RBAC Simulator Guard -->
-    <g transform="translate(30, 50)">
-      <rect x="0" y="0" width="225" height="125" fill="#ffffff" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="225" height="26" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-      <text x="112" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">RBAC Policy Guard (M5-10)</text>
-      <text x="10" y="48" font-size="10" fill="#333333">• Admin: full execution privileges</text>
-      <text x="10" y="66" font-size="10" fill="#333333">• Support: read &amp; note adding only</text>
-      <text x="10" y="84" font-size="10" fill="#333333">• Analyst: read-only telemetry</text>
-      <text x="10" y="105" font-size="9" font-style="italic" fill="#274e13">Enforces 403 Forbidden on illegal action</text>
+    <!-- Service 1: Anomaly & Trend Detection Engine (⭐ B) -->
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="255" height="155" fill="#ffffff" stroke="#d6b656" stroke-width="1.5" rx="4"/>
+      <rect x="0" y="0" width="255" height="26" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+      <text x="127" y="18" font-size="10.5" font-weight="bold" fill="#b45f06" text-anchor="middle">⭐ Anomaly &amp; Trend Detection Engine</text>
+      <text x="10" y="46" font-size="9.5" fill="#000000">• <tspan font-weight="bold">7-Day Rolling Baseline</tspan> Comparator</text>
+      <text x="10" y="64" font-size="9.5" fill="#b85450">• <tspan font-weight="bold">Spike Detection:</tspan> +40% Scam Warnings</text>
+      <text x="10" y="82" font-size="9.5" fill="#333333">• <tspan font-weight="bold">Failed Login Monitor:</tspan> Rate burst spikes</text>
+      <text x="10" y="100" font-size="9.5" fill="#333333">• <tspan font-weight="bold">Component Heartbeats:</tspan> Vault health</text>
+      <text x="10" y="118" font-size="9.5" fill="#274e13">• <tspan font-weight="bold">Data Integrity:</tspan> Incomplete score inputs</text>
+      <text x="10" y="140" font-size="8.5" font-style="italic" fill="#b45f06">Compares Current Activity vs. Prev 7 Days</text>
     </g>
 
-    <!-- Service 2: Moderation Engine -->
-    <g transform="translate(285, 50)">
-      <rect x="0" y="0" width="235" height="125" fill="#ffffff" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="235" height="26" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-      <text x="117" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Moderation Controller (M5-09)</text>
-      <text x="10" y="48" font-size="10" fill="#333333">• Validate target user status</text>
-      <text x="10" y="66" font-size="10" fill="#333333">• Require written audit reason</text>
-      <text x="10" y="84" font-size="10" fill="#333333">• Toggle active / suspended state</text>
-      <text x="10" y="105" font-size="9" font-style="italic" fill="#b85450">Triggers append to AuditLogger</text>
+    <!-- Service 2: Automated Alert & Recommendation Rule Engine (⭐ A & C) -->
+    <g transform="translate(290, 50)">
+      <rect x="0" y="0" width="280" height="155" fill="#ffffff" stroke="#d6b656" stroke-width="1.5" rx="4"/>
+      <rect x="0" y="0" width="280" height="26" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+      <text x="140" y="18" font-size="10.5" font-weight="bold" fill="#b45f06" text-anchor="middle">⭐ Alert &amp; Recommendation Rule Engine</text>
+      <text x="10" y="44" font-size="9.5" font-weight="bold" fill="#000000">Predefined Condition &#8594; Recommended Action:</text>
+      <text x="10" y="62" font-size="9" fill="#333333">• Failed logins &#8594; <tspan font-weight="bold" fill="#004085">Review auth logs</tspan></text>
+      <text x="10" y="80" font-size="9" fill="#333333">• Vault down &#8594; <tspan font-weight="bold" fill="#b85450">Investigate component health</tspan></text>
+      <text x="10" y="98" font-size="9" fill="#333333">• Missing score inputs &#8594; <tspan font-weight="bold" fill="#274e13">Check data integration</tspan></text>
+      <text x="10" y="116" font-size="9" fill="#333333">• +40% scam warnings &#8594; <tspan font-weight="bold" fill="#b45f06">Review scam trends</tspan></text>
+      <text x="10" y="140" font-size="8.5" font-style="italic" fill="#274e13">Rule-Based Guidance (No complex ML needed)</text>
     </g>
 
-    <!-- Service 3: Analytics & Financial Engine -->
-    <g transform="translate(550, 50)">
-      <rect x="0" y="0" width="240" height="125" fill="#ffffff" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="240" height="26" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-      <text x="120" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Metrics &amp; MRR Engine (M5-03, 05)</text>
-      <text x="10" y="48" font-size="10" fill="#333333">• Calculate mock MRR (39,600 LKR)</text>
-      <text x="10" y="66" font-size="10" fill="#333333">• Compute Funnel conversion %</text>
-      <text x="10" y="84" font-size="10" fill="#333333">• Build Cohort retention matrix</text>
-      <text x="10" y="105" font-size="9" font-style="italic" fill="#274e13">Streaming CSV Formatter (M5-07)</text>
+    <!-- Service 3: RBAC & Moderation Guard -->
+    <g transform="translate(585, 50)">
+      <rect x="0" y="0" width="245" height="155" fill="#ffffff" stroke="#666666" stroke-width="1" rx="4"/>
+      <rect x="0" y="0" width="245" height="26" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+      <text x="122" y="18" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">RBAC &amp; Moderation Controller (M5-09/10)</text>
+      <text x="10" y="46" font-size="9.5" fill="#333333">• Admin: Full execution rights</text>
+      <text x="10" y="64" font-size="9.5" fill="#333333">• Support: Read-only &amp; ticket notes</text>
+      <text x="10" y="82" font-size="9.5" fill="#333333">• Analyst: Read-only telemetry</text>
+      <text x="10" y="100" font-size="9.5" fill="#b85450">• Mandatory justification check</text>
+      <text x="10" y="118" font-size="9.5" fill="#000000">• Session &amp; API token revocation</text>
+      <text x="10" y="140" font-size="8.5" font-style="italic" fill="#b85450">Blocks unauthorized 403 operations</text>
     </g>
 
-    <!-- Service 4: Immutable Audit Logger -->
-    <g transform="translate(815, 50)">
-      <rect x="0" y="0" width="220" height="125" fill="#ffffff" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="220" height="26" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-      <text x="110" y="18" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">Audit Logger (M5-11)</text>
-      <text x="10" y="48" font-size="10" fill="#333333">• Capture: Actor, Action, Target</text>
-      <text x="10" y="66" font-size="10" fill="#333333">• Capture: Timestamp, Reason, IP</text>
-      <text x="10" y="84" font-size="10" fill="#333333">• Write to append-only ledger</text>
-      <text x="10" y="105" font-size="9" font-style="italic" fill="#274e13">Non-repudiation audit trail</text>
+    <!-- Service 4: Metrics Engine & Audit Logger -->
+    <g transform="translate(845, 50)">
+      <rect x="0" y="0" width="255" height="155" fill="#ffffff" stroke="#82b366" stroke-width="1.5" rx="4"/>
+      <rect x="0" y="0" width="255" height="26" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+      <text x="127" y="18" font-size="10.5" font-weight="bold" fill="#274e13" text-anchor="middle">Metrics Engine &amp; Audit Logger (M5-11)</text>
+      <text x="10" y="46" font-size="9.5" fill="#000000">• Compute MRR &amp; subscriber tiers</text>
+      <text x="10" y="64" font-size="9.5" fill="#000000">• Build 5-Month Cohort heatmap</text>
+      <text x="10" y="82" font-size="9.5" fill="#000000">• Funnel drop-off aggregator</text>
+      <text x="10" y="100" font-size="9.5" fill="#274e13">• CSV Streaming Generator (M5-07)</text>
+      <text x="10" y="118" font-size="9.5" font-weight="bold" fill="#274e13">• Immutable Append-Only Logger</text>
+      <text x="10" y="140" font-size="8.5" font-style="italic" fill="#274e13">Non-repudiation administrative ledger</text>
     </g>
   </g>
 
   <!-- Connectors Tier 2 -> Tier 3 -->
-  <line x1="590" y1="530" x2="590" y2="585" stroke="#333333" stroke-width="2"/>
-  <polygon points="585,580 590,588 595,580" fill="#333333"/>
-  <text x="610" y="560" font-size="11" font-weight="bold" fill="#000000">SQL Queries / RLS</text>
+  <line x1="600" y1="565" x2="600" y2="620" stroke="#333333" stroke-width="2"/>
+  <polygon points="595,615 600,623 605,615" fill="#333333"/>
+  <text x="620" y="595" font-size="11" font-weight="bold" fill="#000000">SQL Queries / RLS Policies</text>
 
   <!-- ================= TIER 3: DATA & PERSISTENCE LAYER ================= -->
-  <g transform="translate(60, 590)">
-    <rect x="0" y="0" width="1060" height="205" fill="#ffffff" stroke="#82b366" stroke-width="2" rx="4" filter="url(#drawio-shadow)"/>
-    <rect x="0" y="0" width="1060" height="34" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
-    <text x="530" y="22" font-size="13" font-weight="bold" fill="#274e13" text-anchor="middle">TIER 3: DATA &amp; STORAGE LAYER (PostgreSQL on Supabase · Schema X-01 / X-08)</text>
+  <g transform="translate(40, 625)">
+    <rect x="0" y="0" width="1120" height="235" fill="#ffffff" stroke="#82b366" stroke-width="2" rx="4" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="1120" height="34" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+    <text x="560" y="22" font-size="13" font-weight="bold" fill="#274e13" text-anchor="middle">TIER 3: DATA &amp; STORAGE LAYER (PostgreSQL on Supabase · Schema X-01 / X-08)</text>
 
-    <!-- Table 1: audit_logs -->
-    <g transform="translate(30, 50)">
-      <rect x="0" y="0" width="230" height="135" fill="#f5f5f5" stroke="#82b366" stroke-width="1.5" rx="4"/>
-      <rect x="0" y="0" width="230" height="26" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-      <text x="115" y="18" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">public.audit_logs (M5-11)</text>
-      <text x="10" y="46" font-size="10" font-family="monospace" fill="#000000">+ id: UUID [PK]</text>
-      <text x="10" y="64" font-size="10" font-family="monospace" fill="#000000">+ admin_email: TEXT</text>
-      <text x="10" y="82" font-size="10" font-family="monospace" fill="#000000">+ action: TEXT</text>
-      <text x="10" y="100" font-size="10" font-family="monospace" fill="#000000">+ target_identifier: TEXT</text>
-      <text x="10" y="118" font-size="9" font-style="italic" fill="#274e13">RLS: UPDATE/DELETE Denied</text>
+    <!-- Table 1: automated_alerts (⭐ A / C) -->
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="255" height="165" fill="#f5f5f5" stroke="#b85450" stroke-width="1.5" rx="4"/>
+      <rect x="0" y="0" width="255" height="26" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
+      <text x="127" y="18" font-size="10.5" font-weight="bold" fill="#b85450" text-anchor="middle">⭐ public.automated_alerts</text>
+      <text x="10" y="46" font-size="9" font-family="monospace" fill="#000000">+ id: UUID [PK]</text>
+      <text x="10" y="62" font-size="9" font-family="monospace" fill="#000000">+ alert_type: TEXT ('ANOMALY' | 'HEALTH')</text>
+      <text x="10" y="78" font-size="9" font-family="monospace" fill="#b85450">+ detected_event: TEXT NOT NULL</text>
+      <text x="10" y="94" font-size="9" font-family="monospace" fill="#000000">+ baseline_delta: NUMERIC (+40%)</text>
+      <text x="10" y="110" font-size="9" font-family="monospace" font-weight="bold" fill="#004085">+ recommended_action: TEXT NOT NULL</text>
+      <text x="10" y="126" font-size="9" font-family="monospace" fill="#000000">+ status: TEXT ('Active' | 'Investigating')</text>
+      <text x="10" y="150" font-size="8" font-style="italic" fill="#274e13">Powers real-time admin alert cards</text>
     </g>
 
-    <!-- Table 2: support_tickets -->
+    <!-- Table 2: audit_logs -->
     <g transform="translate(290, 50)">
-      <rect x="0" y="0" width="230" height="135" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="230" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-      <text x="115" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">public.support_tickets</text>
-      <text x="10" y="46" font-size="10" font-family="monospace" fill="#000000">+ id: UUID [PK]</text>
-      <text x="10" y="64" font-size="10" font-family="monospace" fill="#000000">+ ticket_number: TEXT</text>
-      <text x="10" y="82" font-size="10" font-family="monospace" fill="#000000">+ user_email: TEXT</text>
-      <text x="10" y="100" font-size="10" font-family="monospace" fill="#000000">+ status: 'Open'|'Resolved'</text>
-      <text x="10" y="118" font-size="9" fill="#666666">Indexed on status</text>
+      <rect x="0" y="0" width="255" height="165" fill="#f5f5f5" stroke="#82b366" stroke-width="1.5" rx="4"/>
+      <rect x="0" y="0" width="255" height="26" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+      <text x="127" y="18" font-size="10.5" font-weight="bold" fill="#274e13" text-anchor="middle">public.audit_logs (M5-11)</text>
+      <text x="10" y="46" font-size="9" font-family="monospace" fill="#000000">+ id: UUID [PK]</text>
+      <text x="10" y="62" font-size="9" font-family="monospace" fill="#000000">+ admin_email: TEXT NOT NULL</text>
+      <text x="10" y="78" font-size="9" font-family="monospace" fill="#000000">+ action: TEXT ('ALERT_INVESTIGATED')</text>
+      <text x="10" y="94" font-size="9" font-family="monospace" fill="#000000">+ target_identifier: TEXT NOT NULL</text>
+      <text x="10" y="110" font-size="9" font-family="monospace" fill="#000000">+ details: TEXT (Justification / Notes)</text>
+      <text x="10" y="126" font-size="9" font-family="monospace" fill="#666666">+ created_at: TIMESTAMPTZ DEFAULT NOW()</text>
+      <text x="10" y="150" font-size="8" font-style="italic" fill="#274e13">🔒 Immutable Ledger: UPDATE/DELETE Revoked</text>
     </g>
 
-    <!-- Table 3: verdict_feedback -->
-    <g transform="translate(550, 50)">
-      <rect x="0" y="0" width="230" height="135" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="230" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-      <text x="115" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">public.verdict_feedback</text>
-      <text x="10" y="46" font-size="10" font-family="monospace" fill="#000000">+ id: UUID [PK]</text>
-      <text x="10" y="64" font-size="10" font-family="monospace" fill="#000000">+ check_id: TEXT</text>
-      <text x="10" y="82" font-size="10" font-family="monospace" fill="#000000">+ user_reaction: TEXT</text>
-      <text x="10" y="100" font-size="10" font-family="monospace" fill="#000000">+ taxonomy_category: TEXT</text>
-      <text x="10" y="118" font-size="9" fill="#666666">User-flagged accuracy</text>
+    <!-- Table 3: analytics_events & 7-Day Baseline View -->
+    <g transform="translate(560, 50)">
+      <rect x="0" y="0" width="270" height="165" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
+      <rect x="0" y="0" width="270" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+      <text x="135" y="18" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">public.analytics_events &amp; Baseline View</text>
+      <text x="10" y="46" font-size="9" font-family="monospace" fill="#000000">+ id: UUID [PK]</text>
+      <text x="10" y="62" font-size="9" font-family="monospace" fill="#000000">+ event_name: TEXT ('scam_check', 'login')</text>
+      <text x="10" y="78" font-size="9" font-family="monospace" fill="#000000">+ metadata: JSONB (X-13 taxonomy tags)</text>
+      <text x="10" y="94" font-size="9" font-family="monospace" font-weight="bold" fill="#b45f06">+ ⭐ v_7day_metric_baselines (View)</text>
+      <text x="10" y="110" font-size="9" font-family="monospace" fill="#333333">  - current_count vs prev_7day_avg</text>
+      <text x="10" y="126" font-size="9" font-family="monospace" fill="#b85450">  - delta_pct (Flags > 40% spikes)</text>
+      <text x="10" y="150" font-size="8" font-style="italic" fill="#274e13">Zero-Knowledge: Event metadata only</text>
     </g>
 
-    <!-- Table 4: analytics_events -->
-    <g transform="translate(810, 50)">
-      <rect x="0" y="0" width="220" height="135" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
-      <rect x="0" y="0" width="220" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-      <text x="110" y="18" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">public.analytics_events</text>
-      <text x="10" y="46" font-size="10" font-family="monospace" fill="#000000">+ id: UUID [PK]</text>
-      <text x="10" y="64" font-size="10" font-family="monospace" fill="#000000">+ event_name: TEXT</text>
-      <text x="10" y="82" font-size="10" font-family="monospace" fill="#000000">+ metadata: JSONB</text>
-      <text x="10" y="100" font-size="10" font-family="monospace" fill="#000000">+ created_at: TIMESTAMPTZ</text>
-      <text x="10" y="118" font-size="9" font-style="italic" fill="#274e13">Zero-Knowledge event store</text>
+    <!-- Table 4: User Directory & Support Tables -->
+    <g transform="translate(845, 50)">
+      <rect x="0" y="0" width="255" height="165" fill="#f5f5f5" stroke="#666666" stroke-width="1" rx="4"/>
+      <rect x="0" y="0" width="255" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+      <text x="127" y="18" font-size="10.5" font-weight="bold" fill="#000000" text-anchor="middle">Support &amp; Directory Entities</text>
+      <text x="10" y="46" font-size="9" font-family="monospace" fill="#000000">+ public.admin_user_directory (View)</text>
+      <text x="10" y="62" font-size="9" font-family="monospace" fill="#000000">+ public.support_tickets (Table)</text>
+      <text x="10" y="78" font-size="9" font-family="monospace" fill="#000000">+ public.verdict_feedback (Table)</text>
+      <text x="10" y="94" font-size="9" font-family="monospace" fill="#000000">+ auth.users (Supabase Auth)</text>
+      <text x="10" y="110" font-size="9" font-family="monospace" fill="#274e13">+ RLS: Zero-Knowledge Protection</text>
+      <text x="10" y="126" font-size="9" font-family="monospace" fill="#666666">+ Synthetic billing &amp; plan data</text>
+      <text x="10" y="150" font-size="8" font-style="italic" fill="#666666">Aggregates profiles across modules</text>
     </g>
   </g>
 </svg>

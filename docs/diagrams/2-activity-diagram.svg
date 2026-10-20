@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 980" width="100%" height="100%" style="background:#ffffff; font-family: Helvetica, Arial, sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 1020" width="100%" height="100%" style="background:#ffffff; font-family: Helvetica, Arial, sans-serif;">
   <defs>
     <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
       <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f0f0f0" stroke-width="1"/>
@@ -10,147 +10,157 @@
   <rect width="100%" height="100%" fill="url(#grid)" />
 
   <!-- Diagram Title Banner -->
-  <text x="40" y="45" font-size="20" font-weight="bold" fill="#000000">Activity Diagram — Account Moderation &amp; Audit Trail</text>
+  <text x="40" y="45" font-size="20" font-weight="bold" fill="#000000">Activity Diagram — Automated Alerts, Anomaly Detection &amp; Recommended Actions</text>
 
   <!-- ================= SWIMLANE HEADERS (CLASSIC DRAW.IO STYLE) ================= -->
-  <rect x="50" y="90" width="340" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-  <text x="220" y="115" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Administrator (Client UI)</text>
+  <rect x="50" y="85" width="340" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text x="220" y="110" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Administrator (Client UI)</text>
 
-  <rect x="390" y="90" width="370" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-  <text x="575" y="115" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">RBAC &amp; Moderation Controller</text>
+  <rect x="390" y="85" width="410" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text x="595" y="110" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Anomaly Detection &amp; Alert Rule Controller</text>
 
-  <rect x="760" y="90" width="340" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-  <text x="930" y="115" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">Supabase PostgreSQL Audit Store</text>
+  <rect x="800" y="85" width="330" height="40" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text x="965" y="110" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">PostgreSQL Telemetry &amp; Audit Store</text>
 
   <!-- Swimlane Body Lanes -->
-  <rect x="50" y="130" width="340" height="810" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
-  <rect x="390" y="130" width="370" height="810" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
-  <rect x="760" y="130" width="340" height="810" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="50" y="125" width="340" height="860" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="390" y="125" width="410" height="860" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="800" y="125" width="330" height="860" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
 
   <!-- ================= NODES ================= -->
 
-  <!-- Initial Node (Solid Black Circle) -->
-  <circle cx="220" cy="165" r="12" fill="#000000"/>
-  <line x1="220" y1="177" x2="220" y2="210" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="216,210 220,218 224,210" fill="#333333"/>
+  <!-- Initial Node (Solid Black Circle in Controller Lane) -->
+  <circle cx="595" cy="155" r="12" fill="#000000"/>
+  <text x="595" y="180" font-size="10" fill="#666666" text-anchor="middle">Telemetry Event Ingestion</text>
 
-  <!-- Action 1: Search & Filter Users -->
-  <rect x="110" y="218" width="220" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="220" y="245" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Search &amp; Filter User Directory</text>
+  <line x1="595" y1="185" x2="595" y2="205" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="591,205 595,213 599,205" fill="#333333"/>
 
-  <line x1="220" y1="262" x2="220" y2="295" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="216,295 220,303 224,295" fill="#333333"/>
+  <!-- Action 1: Capture Live Platform Events -->
+  <rect x="475" y="213" width="240" height="48" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="595" y="233" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Capture Live Telemetry Events</text>
+  <text x="595" y="249" font-size="10" fill="#666666" text-anchor="middle">(Logins, Scams, Vault Health, Score Inputs)</text>
 
-  <!-- Action 2: Inspect Account Profile -->
-  <rect x="110" y="303" width="220" height="52" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="220" y="325" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Select User &amp; Inspect Profile</text>
-  <text x="220" y="342" font-size="10" fill="#666666" text-anchor="middle">(Plan, Joined Date, Scam Check Count)</text>
+  <!-- Connect to Database (Query 7-Day Baseline) -->
+  <line x1="715" y1="237" x2="855" y2="237" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="855,233 863,237 855,241" fill="#333333"/>
 
-  <!-- Connect to Controller (Lane 2) -->
-  <line x1="330" y1="329" x2="475" y2="329" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="475,325 483,329 475,333" fill="#333333"/>
-
-  <!-- Action 3: Zero-Knowledge Filter -->
-  <rect x="485" y="303" width="200" height="52" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="585" y="325" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">Zero-Knowledge Filter (M5)</text>
-  <text x="585" y="342" font-size="10" fill="#333333" text-anchor="middle">Masks passwords &amp; raw messages</text>
-
-  <!-- Connect back to Admin Lane -->
-  <line x1="585" y1="355" x2="585" y2="395" stroke="#333333" stroke-width="1.5"/>
-  <line x1="585" y1="395" x2="220" y2="395" stroke="#333333" stroke-width="1.5"/>
-  <line x1="220" y1="395" x2="220" y2="425" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="216,425 220,433 224,425" fill="#333333"/>
-
-  <!-- Action 4: Click Suspend -->
-  <rect x="110" y="433" width="220" height="44" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="220" y="460" font-size="11" font-weight="bold" fill="#b85450" text-anchor="middle">Click "Suspend Account"</text>
-
-  <!-- Connect to Decision -->
-  <line x1="330" y1="455" x2="525" y2="455" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="525,451 533,455 525,459" fill="#333333"/>
-
-  <!-- Decision Diamond (Yellow: #fff2cc / #d6b656) -->
-  <polygon points="585,425 645,455 585,485 525,455" fill="#fff2cc" stroke="#d6b656" stroke-width="1.8" filter="url(#drawio-shadow)"/>
-  <text x="585" y="451" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Role ==</text>
-  <text x="585" y="465" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">'Admin'?</text>
-
-  <!-- [No] Branch: Unauthorized -->
-  <line x1="645" y1="455" x2="700" y2="455" stroke="#b85450" stroke-width="1.5"/>
-  <text x="670" y="445" font-size="10" font-weight="bold" fill="#b85450" text-anchor="middle">[No]</text>
-  <line x1="700" y1="455" x2="700" y2="520" stroke="#b85450" stroke-width="1.5"/>
-  <line x1="700" y1="520" x2="330" y2="520" stroke="#b85450" stroke-width="1.5"/>
-  <polygon points="330,516 322,520 330,524" fill="#b85450"/>
-
-  <!-- Error Node: Display 403 -->
-  <rect x="110" y="500" width="210" height="42" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="215" y="518" font-size="10" font-weight="bold" fill="#b85450" text-anchor="middle">Display 403 Forbidden Modal</text>
-  <text x="215" y="533" font-size="9" fill="#666666" text-anchor="middle">"Only Admin role can suspend (M5-10)"</text>
-
-  <!-- Aborted End State -->
-  <line x1="215" y1="542" x2="215" y2="565" stroke="#b85450" stroke-width="1.5"/>
-  <polygon points="211,565 215,573 219,565" fill="#b85450"/>
-  <circle cx="215" cy="582" r="13" fill="none" stroke="#b85450" stroke-width="2"/>
-  <circle cx="215" cy="582" r="7" fill="#b85450"/>
-  <text x="215" y="612" font-size="10" font-weight="bold" fill="#b85450" text-anchor="middle">Operation Terminated</text>
-
-  <!-- [Yes] Branch: Open Reason Modal -->
-  <line x1="585" y1="485" x2="585" y2="550" stroke="#274e13" stroke-width="1.5"/>
-  <text x="600" y="515" font-size="10" font-weight="bold" fill="#274e13">[Yes]</text>
-  <polygon points="581,550 585,558 589,550" fill="#274e13"/>
-
-  <rect x="475" y="558" width="220" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="585" y="585" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Prompt for Audit Justification</text>
-
-  <!-- Connect to Admin entering reason -->
-  <line x1="475" y1="580" x2="330" y2="580" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="330,576 322,580 330,584" fill="#333333"/>
-
-  <!-- Admin inputs justification -->
-  <rect x="110" y="640" width="220" height="48" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="220" y="662" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Enter Justification &amp; Confirm</text>
-  <text x="220" y="677" font-size="9" fill="#666666" text-anchor="middle">(e.g., "Abusive API rate limit bursts")</text>
+  <!-- Action 2: Query 7-Day Baseline from DB -->
+  <rect x="865" y="213" width="230" height="52" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="980" y="233" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">Query 7-Day Baseline Averages</text>
+  <text x="980" y="250" font-size="9" fill="#000000" text-anchor="middle">SELECT avg(daily_count) FROM analytics_events</text>
 
   <!-- Connect back to Controller -->
-  <line x1="330" y1="664" x2="475" y2="664" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="475,660 483,664 475,668" fill="#333333"/>
+  <line x1="980" y1="265" x2="980" y2="295" stroke="#333333" stroke-width="1.5"/>
+  <line x1="980" y1="295" x2="715" y2="295" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="715,291 707,295 715,299" fill="#333333"/>
 
-  <!-- Controller sets status -->
-  <rect x="475" y="640" width="220" height="48" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="585" y="662" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Set User Status = 'Suspended'</text>
-  <text x="585" y="677" font-size="9" fill="#666666" text-anchor="middle">Freeze API Token &amp; Active Sessions</text>
+  <!-- Action 3: Anomaly & Trend Detection (⭐ B) -->
+  <rect x="475" y="275" width="240" height="52" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="595" y="295" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">⭐ Compute Trend Delta &amp; Spikes</text>
+  <text x="595" y="312" font-size="9" fill="#b85450" text-anchor="middle">Compare Current vs. 7-Day Rolling Baseline</text>
 
-  <!-- Connect to Database (Lane 3) -->
-  <line x1="695" y1="664" x2="815" y2="664" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="815,660 823,664 815,668" fill="#333333"/>
+  <!-- Connect to Decision -->
+  <line x1="595" y1="327" x2="595" y2="355" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="591,355 595,363 599,355" fill="#333333"/>
 
-  <!-- DB Update -->
-  <rect x="825" y="640" width="210" height="48" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="930" y="662" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">UPDATE public.users</text>
-  <text x="930" y="677" font-size="10" fill="#666666" text-anchor="middle">SET status = 'Suspended'</text>
+  <!-- Decision Diamond: Anomaly Detected? -->
+  <polygon points="595,363 675,395 595,427 515,395" fill="#fff2cc" stroke="#d6b656" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+  <text x="595" y="391" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Threshold</text>
+  <text x="595" y="405" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Exceeded?</text>
 
-  <!-- Connect to Audit Log Write -->
-  <line x1="930" y1="688" x2="930" y2="725" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="926,725 930,733 934,725" fill="#333333"/>
+  <!-- [No] Branch: Normal Operations -->
+  <line x1="515" y1="395" x2="310" y2="395" stroke="#274e13" stroke-width="1.5"/>
+  <polygon points="310,391 302,395 310,399" fill="#274e13"/>
+  <text x="400" y="388" font-size="10" font-weight="bold" fill="#274e13" text-anchor="middle">[No: Normal Activity]</text>
 
-  <!-- Write Immutable Audit Log (Green) -->
-  <rect x="800" y="733" width="260" height="64" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.8" filter="url(#drawio-shadow)"/>
-  <text x="930" y="755" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">INSERT INTO public.audit_logs</text>
-  <text x="930" y="771" font-size="10" fill="#000000" text-anchor="middle">AdminEmail, Action, Target, Reason, IP</text>
-  <text x="930" y="787" font-size="9" fill="#666666" text-anchor="middle">🔒 Append-Only (UPDATE/DELETE Forbidden)</text>
+  <rect x="110" y="375" width="190" height="42" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="205" y="395" font-size="10" font-weight="bold" fill="#274e13" text-anchor="middle">Display Normal Status</text>
+  <text x="205" y="408" font-size="9" fill="#666666" text-anchor="middle">(All systems operational)</text>
 
-  <!-- Return to UI -->
-  <line x1="930" y1="797" x2="930" y2="835" stroke="#333333" stroke-width="1.5"/>
-  <line x1="930" y1="835" x2="220" y2="835" stroke="#333333" stroke-width="1.5"/>
-  <line x1="220" y1="835" x2="220" y2="865" stroke="#333333" stroke-width="1.5"/>
-  <polygon points="216,865 220,873 224,865" fill="#333333"/>
+  <!-- Normal Termination Node -->
+  <line x1="205" y1="417" x2="205" y2="445" stroke="#274e13" stroke-width="1.5"/>
+  <polygon points="201,445 205,453 209,445" fill="#274e13"/>
+  <circle cx="205" cy="465" r="12" fill="none" stroke="#274e13" stroke-width="2"/>
+  <circle cx="205" cy="465" r="6" fill="#274e13"/>
 
-  <!-- UI Refreshes -->
-  <rect x="110" y="873" width="220" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
-  <text x="220" y="893" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Refresh User Management UI</text>
-  <text x="220" y="908" font-size="9" fill="#b85450" text-anchor="middle">Status Badge turns Red · Audit Log Updated</text>
+  <!-- [Yes] Branch: Anomaly Identified -->
+  <line x1="595" y1="427" x2="595" y2="475" stroke="#b85450" stroke-width="1.8"/>
+  <polygon points="591,475 595,483 599,475" fill="#b85450"/>
+  <text x="685" y="450" font-size="10" font-weight="bold" fill="#b85450" text-anchor="middle">[Yes: Anomaly Identified (e.g. +40% Surge)]</text>
 
-  <!-- Final Success Node (Black Bullseye) -->
-  <line x1="220" y1="917" x2="220" y2="940" stroke="#333333" stroke-width="1.5"/>
-  <circle cx="220" cy="950" r="14" fill="none" stroke="#000000" stroke-width="2"/>
-  <circle cx="220" cy="950" r="8" fill="#000000"/>
+  <!-- Action 4: Formulate Rule-Based Recommended Action (⭐ C) -->
+  <rect x="460" y="483" width="270" height="65" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+  <text x="595" y="503" font-size="11" font-weight="bold" fill="#b45f06" text-anchor="middle">⭐ Rule Engine: Map Recommended Action</text>
+  <text x="595" y="520" font-size="9.5" fill="#000000" text-anchor="middle">• Failed logins &#8594; "Review auth logs"</text>
+  <text x="595" y="534" font-size="9.5" fill="#000000" text-anchor="middle">• Vault down &#8594; "Investigate component health"</text>
+  <text x="595" y="546" font-size="9.5" fill="#000000" text-anchor="middle">• +40% scam warnings &#8594; "Review scam trends"</text>
+
+  <!-- Connect to DB: Store Alert -->
+  <line x1="730" y1="515" x2="845" y2="515" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="845,511 853,515 845,519" fill="#333333"/>
+
+  <!-- Action 5: INSERT INTO automated_alerts -->
+  <rect x="855" y="490" width="250" height="52" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="980" y="510" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">INSERT INTO public.automated_alerts</text>
+  <text x="980" y="527" font-size="9.5" fill="#000000" text-anchor="middle">event_type, severity, recommended_action</text>
+
+  <!-- Connect back to Admin UI Lane -->
+  <line x1="460" y1="525" x2="320" y2="525" stroke="#333333" stroke-width="1.5"/>
+  <line x1="320" y1="525" x2="320" y2="585" stroke="#333333" stroke-width="1.5"/>
+  <line x1="320" y1="585" x2="220" y2="585" stroke="#333333" stroke-width="1.5"/>
+  <line x1="220" y1="585" x2="220" y2="615" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="216,615 220,623 224,615" fill="#333333"/>
+
+  <!-- Action 6: Display Automated Alert Card (⭐ A) -->
+  <rect x="90" y="623" width="260" height="62" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+  <text x="220" y="643" font-size="11" font-weight="bold" fill="#b85450" text-anchor="middle">⭐ Display Automated Alert Banner</text>
+  <text x="220" y="659" font-size="9.5" fill="#000000" text-anchor="middle">Shows Anomaly Details (+40% Spikes / Health)</text>
+  <text x="220" y="674" font-size="9.5" font-weight="bold" fill="#004085" text-anchor="middle">Action Button: "Review Scam Activity Trends"</text>
+
+  <!-- Connect to Admin Decision/Action -->
+  <line x1="220" y1="685" x2="220" y2="720" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="216,720 220,728 224,720" fill="#333333"/>
+
+  <!-- Action 7: Admin clicks Recommended Action -->
+  <rect x="90" y="728" width="260" height="52" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="220" y="748" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Admin Clicks Recommended Action</text>
+  <text x="220" y="765" font-size="9.5" fill="#666666" text-anchor="middle">(Trigger one-click navigation to investigation view)</text>
+
+  <!-- Connect to Controller Execution -->
+  <line x1="350" y1="754" x2="475" y2="754" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="475,750 483,754 475,758" fill="#333333"/>
+
+  <!-- Action 8: Route Navigation & Status Update -->
+  <rect x="485" y="728" width="220" height="52" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="595" y="748" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Dispatch Diagnostic Route</text>
+  <text x="595" y="765" font-size="9.5" fill="#666666" text-anchor="middle">Route to /admin/scams or /admin/support-audit</text>
+
+  <!-- Connect to DB: Append Audit Log -->
+  <line x1="705" y1="754" x2="845" y2="754" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="845,750 853,754 845,758" fill="#333333"/>
+
+  <!-- Action 9: Append Immutable Audit Log -->
+  <rect x="855" y="723" width="250" height="62" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+  <text x="980" y="743" font-size="11" font-weight="bold" fill="#274e13" text-anchor="middle">INSERT INTO public.audit_logs</text>
+  <text x="980" y="760" font-size="9.5" fill="#000000" text-anchor="middle">Action: 'ADMIN_ALERT_INVESTIGATED'</text>
+  <text x="980" y="774" font-size="9" fill="#274e13" text-anchor="middle">🔒 Tamper-proof append-only ledger</text>
+
+  <!-- Connect back to Admin UI for Drill-Down -->
+  <line x1="980" y1="785" x2="980" y2="825" stroke="#333333" stroke-width="1.5"/>
+  <line x1="980" y1="825" x2="220" y2="825" stroke="#333333" stroke-width="1.5"/>
+  <line x1="220" y1="825" x2="220" y2="855" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="216,855 220,863 224,855" fill="#333333"/>
+
+  <!-- Action 10: Render Diagnostic Drilldown -->
+  <rect x="90" y="863" width="260" height="52" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+  <text x="220" y="883" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">Render Detailed Diagnostic View</text>
+  <text x="220" y="900" font-size="9.5" fill="#274e13" text-anchor="middle">Alert Marked as "Investigating" · Graphs Focused</text>
+
+  <!-- Final State (Double Circle) -->
+  <line x1="220" y1="915" x2="220" y2="945" stroke="#333333" stroke-width="1.5"/>
+  <polygon points="216,945 220,953 224,945" fill="#333333"/>
+  <circle cx="220" cy="965" r="14" fill="none" stroke="#000000" stroke-width="2"/>
+  <circle cx="220" cy="965" r="8" fill="#000000"/>
+  <text x="220" y="995" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">Investigation Initiated</text>
 </svg>
