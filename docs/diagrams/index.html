@@ -168,7 +168,7 @@
       <div class="diagram-header">
         <div>
           <h2 class="diagram-title">1. Module 5 Subsystem Architecture (3-Tier Layered)</h2>
-          <div class="diagram-desc">Presentation Layer (Next.js UI), Business Logic Layer (RBAC &amp; Metrics Controllers), and PostgreSQL Data Layer.</div>
+          <div class="diagram-desc">Presentation Layer (Next.js UI &amp; Alert Banners), Business Logic Layer (⭐ Anomaly &amp; Trend Detection Engine with 7-Day Baseline, ⭐ Alert &amp; Recommended Action Rule Engine, RBAC &amp; Audit Loggers), and PostgreSQL Data Layer (automated_alerts, baseline views).</div>
         </div>
         <a href="5-system-architecture.svg" download="M5-Subsystem-Architecture.svg" class="btn-download">Download SVG</a>
       </div>
@@ -182,7 +182,7 @@
       <div class="diagram-header">
         <div>
           <h2 class="diagram-title">2. Module 5 Use Case Diagram (UML 2.5)</h2>
-          <div class="diagram-desc">Actors (Administrator, Support Agent, Security Analyst), all 10 Module 5 functional use cases, and audit log include relations.</div>
+          <div class="diagram-desc">Actors (Administrator, Support Agent, Security Analyst), functional use cases, ⭐ Monitor Automated Alerts, ⭐ Detect 7-Day Baseline Anomalies (+40% Spikes), ⭐ View Recommended Admin Actions (Rule Matrix), and Execute Investigation.</div>
         </div>
         <a href="1-use-case-diagram.svg" download="M5-Use-Case-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
@@ -195,8 +195,8 @@
     <div id="sec-activity" class="diagram-card">
       <div class="diagram-header">
         <div>
-          <h2 class="diagram-title">3. Module 5 Activity Diagram: Account Moderation &amp; Audit Trail</h2>
-          <div class="diagram-desc">Swimlane workflow showing user suspension, mandatory audit justification, RBAC error checking, and append-only database logging.</div>
+          <h2 class="diagram-title">3. Module 5 Activity Diagram: Automated Alerts, Anomaly Detection &amp; Recommended Actions</h2>
+          <div class="diagram-desc">Swimlane workflow showing live telemetry capture, 7-day rolling baseline comparison, threshold anomaly triggering (+40% scam spikes, vault outages), rule-based action recommendations, admin 1-click execution, and immutable audit logging.</div>
         </div>
         <a href="2-activity-diagram.svg" download="M5-Activity-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
@@ -209,8 +209,8 @@
     <div id="sec-sequence" class="diagram-card">
       <div class="diagram-header">
         <div>
-          <h2 class="diagram-title">4. Module 5 Sequence Diagram: Analytics Telemetry &amp; Privacy Pipeline</h2>
-          <div class="diagram-desc">Internal chronological sequence showing RBAC verification, telemetry aggregation, audit logging, and chart rendering.</div>
+          <h2 class="diagram-title">4. Module 5 Sequence Diagram: Baseline Anomaly Spikes, Alert Dispatch &amp; Recommendation Execution</h2>
+          <div class="diagram-desc">Lifeline sequence showing telemetry querying, Anomaly Engine 7-day baseline comparison (+40% scam check surge), Recommendation Rule Engine action mapping, automated_alerts insertion, and admin investigatory action logging.</div>
         </div>
         <a href="3-sequence-diagram.svg" download="M5-Sequence-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
@@ -224,7 +224,7 @@
       <div class="diagram-header">
         <div>
           <h2 class="diagram-title">5. Module 5 Class &amp; Database Architecture Diagram</h2>
-          <div class="diagram-desc">M5 Controller services, PostgreSQL tables (audit_logs, support_tickets, verdict_feedback, analytics_events), and RLS policies.</div>
+          <div class="diagram-desc">AdminController, ⭐ AnomalyDetectionEngine (7-day baseline, spike detection), ⭐ AlertRecommendationEngine (rule-based guidance), public.automated_alerts, public.v_7day_metric_baselines, audit_logs, and support tables.</div>
         </div>
         <a href="4-class-er-diagram.svg" download="M5-Class-ER-Diagram.svg" class="btn-download">Download SVG</a>
       </div>
