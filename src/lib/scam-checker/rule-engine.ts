@@ -5,7 +5,7 @@
  * record which rules matched. Check scam fixtures and paired legitimate near-matches; a keyword
  * match alone is not confirmation of an incident."
  *
- * HONESTY BOUNDARY (load-bearing): the 12 rules below implement the HYPOTHESES of the proposed
+ * HONESTY BOUNDARY (load-bearing): the patterns below implement HYPOTHESES of the proposed
  * rule catalogue (testing/M4-rule-catalogue.md), which is owner-accepted as an interim PLANNING
  * artifact only — NOT approved executable detector logic or final matching criteria. This module
  * reports which documented rules matched and quotes evidence spans; it produces NO verdict, score,
@@ -13,11 +13,10 @@
  *
  * Design rules (each pinned by rule-engine.test.ts):
  * 1. Pure string processing — no network I/O, no fetching of URLs or any destination.
- * 2. Clause-local negation guard (the R-M4-12 context/negation role): a demand/action cue is
- *    suppressed when its own clause negates it ("never", "do not", "no", "without", "cannot",
- *    "is not needed", ...). This is a review guard — it does not prove a message is legitimate.
+ * 2. Instruction-local negation guard (R-M4-12): prohibitions suppress their own requests,
+ *    with noun-specific handling for fees/credentials. This heuristic does not prove legitimacy.
  * 3. Evidence excerpts are exact substrings of the submitted text (FR-M4-07 spirit); the
- *    PRIMARY cue span is reported so callers can highlight only text the user actually sent.
+ *    qualifying PRIMARY cue is reported with its UTF-16 start/end offsets.
  * 4. Never throws; Unicode-safe; no truncation (input capping is FR-M4-01 server validation).
  *
  * R-M4-11 is a separate metadata check (`checkDisplayTarget`) — plain text never triggers it.
@@ -30,6 +29,9 @@
 export interface RuleMatch {
   ruleId: string;
   excerpt: string;
+  /** UTF-16 offsets into analyzeRules' input (or checkDisplayTarget's target). */
+  start: number;
+  end: number;
   contextNote?: string;
 }
 
@@ -50,7 +52,7 @@ interface Rule {
   id: string;
   cues: Cue[];
   /** Optional same-clause proximity between two named cues. */
-  proximity?: { a: string; b: string; maxChars: number };
+  proximity?: { a: string; b: string; maxChars: number; sameClause?: boolean };
   /** Suppressor cues: if any survives the negation guard, the rule does not fire. */
   noneOf?: Cue[];
 }
@@ -59,47 +61,49 @@ interface Rule {
 
 /** Negation/prohibition markers suppress guarded cues in the same clause (R-M4-12 role). */
 const NEGATION_RE =
-  /\b(never|do\s?n[o']?t|don'?t|dont|no|without|nothing|cannot|can'?t|is\s+not\s+needed|not\s+needed|refuse[sd]?|decline[sd]?|is\s+free|free\s+of\s+charge)\b/i;
+  /\b(?:never|do\s+not|don'?t|dont|cannot|can'?t|will\s+not|should\s+not|must\s+not|without|no\s+need\s+to|not\s+to|not\s+(?:a\s+(?:place|request|reason)|asking|requesting|needed|required))\b/i;
+const NO_NOUN_RE = /\bno\s+(?:(?:registration|processing|reservation|delivery|customs|training|application|upfront|advance|card|bank|login|password|security|code|fee|payment|or|is|are|required|needed|requested|upgrade|number)\s+)*$/i;
+const INSTRUCTION_BREAK_RE = /\b(?:but|however|instead|then|so|therefore|before\s+you)\b/i;
 
 const SECRET_RE = /\b(password|passcode|otp|one[-\s]?time\s+code|pin)\b|\bbank\s+login\b/i;
-const DEMAND_RE = /\b(reply\s+with|send|share|provide|disclose|give|enter|type|confirm|verify|update)\b/i;
+const DEMAND_RE = /\b(reply\s+with|send(?:ing)?|shar(?:e|ing)|provid(?:e|ing)|disclos(?:e|ing)|giv(?:e|ing)|enter(?:ing)?|typ(?:e|ing)|confirm(?:ing)?|verify(?:ing)?|updat(?:e|ing))\b/i;
 const THREAT_RE =
-  /\b(suspend\w*|disabl\w*|clos(?:e|es|ed|ing)|shut\w*|terminat\w*|expir\w*|cancel\w*|delet\w*|block\w*|froze\w*|penalt\w*)\b/i;
+  /\b(suspend\w*|disabl\w*|clos(?:e|es|ed|ing)|shut\w*|terminat\w*|expir\w*|cancel\w*|delet\w*|block\w*|froze\w*|penalt\w*|locked|los(?:e|ing))\b/i;
 const PRESSURE_RE =
-  /\b(\d+\s*(?:minutes?|hours?|days?)|today|tonight|now|immediately|right\s+away|within\s+\d+|unless\s+you|deadline)\b/i;
+  /\b(\d+\s*(?:minutes?|hours?|days?|[ap]\.?m\.?)|today|tonight|now|immediately|right\s+away|within\s+(?:\d+|the\s+hour)|unless\s+you|deadline)\b/i;
 const ACTION_RE =
-  /\b(verify|confirm|update|restore|enter|click|log\s?in|pay|send|reply(?:\s+with)?|buy|collect|deposit|transfer)\b/i;
+  /\b(?:verify|confirm|update|restore|enter)\s+(?:\w+\s+){0,3}(?:password|pin|otp|login|account|bank\s+details)\b|\b(click|log\s?in|pay|send|reply(?:\s+with)?|buy|deposit|transfer)\b/i;
 const DESTINATION_RE =
   /\b(?:https?:\/\/|www\.)\S+|[\w.+-]+@[\w-]+\.[\w.-]+|\+?\d[\d\s().-]{7,}\d/i;
 
-const ROMANCE_RE = /\b(my\s+(love|darling|dear|sweetheart|baby|heart)|darling|sweetheart)\b/i;
+const ROMANCE_RE = /\b(my\s+(love|darling|dear|sweetheart|baby|heart)|darling|dearest|sweetheart|online\s+(?:romance|dating)|dated\s+online|our\s+love)\b/i;
 const MONEY_DEMAND_RE =
-  /\b(send\s+(?:me\s+)?(?:lkr|rs\.?|usd|\d)|send\s+money|transfer\s+(?:money|funds|lkr)|pay\s+(?:me\s+)?(?:lkr|rs\.?|usd|\d)|wire\s+(?:money|funds))\b/i;
+  /\b(?:send|transfer|pay|wire|buy|purchase)\s+(?:\w+\s+){0,4}(?:lkr|rs|usd|\d+|money|funds|ticket|visa|gift[ -]?cards?|fee|wallet|broker)\b/i;
 const PRESSURE_BLOCK_RE =
-  /\b(never\s+met|cannot\s+(?:video|meet|talk|speak|call|let)|can'?t\s+(?:video|meet|talk|speak|call)|trust\s+(?:our|me|this)|video\s+call)\b/i;
+  /\b(never\s+met|only\s+chatted\s+online|cannot\s+(?:video|meet|talk|speak|call|let|show|join|discuss)|can'?t\s+(?:video|meet|talk|speak|call)|trust\s+(?:our|me|this)|video\s+call|first\s+time|forbids\s+calls|without\s+checking|do\s+not\s+(?:ask|question|speak)|prove\s+you\s+care|loyalty)\b/i;
 
 const INVOICE_CTX_RE = /\b(invoice\w*|bill\w*|renewal|payment\w*|receipt\w*|fi-\d+)\b/i;
 const PAYMENT_DEMAND_RE = /\b(pay|send|transfer|buy|purchase|settle|payable)\b|\bis\s+due\b/i;
 const ORDER_CTX_RE =
-  /\b(purchase\s+order|po-\d+|reconcile\w*|existing\s+supplier\s+record|existing\s+(?:order|record)|calls?\s+(?:the|your)\s+(?:usual\s+)?contact|usual\s+contact|independently)\b/i;
+  /\b(purchase\s+order|po-\d+|reconcile\w*|existing\s+supplier\s+record|existing\s+(?:order|record)|calls?\s+(?:the|your)\s+(?:usual\s+)?contact|usual\s+contact|normal\s+billing\s+portal|established\s+supplier\s+details|existing\s+supplier\s+contact|independently\s+(?:verify|check|confirm))\b/i;
 
-const PRIZE_RE = /\b(prize|winnings?|award\w*|draw|lottery|jackpot|winner|winning\s+odds)\b/i;
-const MONEY_VERB_RE = /\b(pay|send|transfer|buy|purchase)\b/i;
+const PRIZE_RE = /\b(prize|winnings?|award\w*|draw|lottery|jackpot|winner|voucher|winning\s+odds)\b/i;
+const MONEY_VERB_RE = /\b(pay(?:ing)?|send(?:ing)?|transfer(?:ring)?|buy(?:ing)?|purchas(?:e|ing))\b/i;
 const FEE_NOUN_RE = /\b(fee|charge|cost|upgrade|release|processing|delivery|customs|registration|odds|entry|entries|retain|guarantee)\b/i;
 
-const CRED_RE = /\b(bank\s+login(?:\s+and\s+|\s+or\s+)?password|bank\s+(?:login|password)|account\s+(?:login|password)|bank\s+details|account\s+number|internet\s+banking)\b/i;
+const CRED_RE = /\b(bank\s+login(?:\s+and\s+|\s+or\s+)?password|bank\s+(?:login|password)|account\s+(?:login|password)|bank\s+details|account\s+number|card\s+number|security\s+code|internet\s+banking)\b/i;
 
 const BYPASS_RE =
-  /\b(do\s?n[o']?t\s+(?:call|ask|contact|tell|verify|check|mention|inform|use|involve|pay\s+attention)|don'?t\s+(?:call|ask|contact|tell|verify|check|mention|inform|use|involve)|ignore\s+(?:the|your|our|any)\s+\w+|keep\s+(?:this|it)\s+(?:between|private|confidential|quiet)|delete\s+(?:this|these|my\s+number)|avoid\s+\w+)\b/i;
+  /\b(do\s+not\s+(?:call|ask|contact|tell|verify|check|mention|inform|involve)|don'?t\s+(?:call|ask|contact|tell|verify|check|mention|inform|involve)|do\s+not\s+use\s+(?:the\s+)?(?:normal|usual|official)\s+\w+|ignore\s+(?:the|your|our|any)\s+\w+|skip\s+approval|will\s+not\s+accept\s+questions|keep\s+(?:this|it)\s+(?:between|private|confidential|quiet|outside)|delete\s+(?:this|these|my\s+number)|avoid\s+\w+)\b/i;
 const TRANSACT_CTX_RE =
   /\b(invoice|payee|beneficiary|payment\w*|bank\s+details|account\s+details|order|supplier|dispatch|billing|renewal|transfer|listing)\b/i;
 
-const JOB_RE = /\b(job|role|position|hiring|employment|employer|assistant|recruit\w*|offer\s+you|interview)\b/i;
-const JOB_FEE_NOUN_RE = /\b(registration|application|training|enrol?l?ment|membership|fee)\b/i;
+const JOB_RE = /\b(job|role|position|hiring|employment|employer|assistant|recruit\w*|offer\s+you|interview|home[ -]work|guaranteed\s+tasks|placement)\b/i;
+const JOB_FEE_NOUN_RE = /\b(registration|application|training|enrol?l?ment|membership|fee|starter[ -]kit|(?:upfront|advance|a|the)\s+deposit|certificate)\b/i;
 
 const CHEQUE_RE = /\b(cheques?|paycheck)\b/i;
-const OVERPAY_RE = /\b(extra|surplus|overpay\w*|additional|more\s+than|excess)\b/i;
-const ONWARD_RE = /\b(send|forward|transfer)\s+(?:the\s+|any\s+|back\s+|out\s+)?(?:surplus|extra|difference|rest|amount|funds)\b/i;
+const OVERPAY_RE = /\b(extra|surplus|overpay\w*|additional|more\s+than|excess|keep\s+your\s+fee|the\s+rest)\b/i;
+const ONWARD_RE = /\b(send|forward|transfer)\s+(?:the\s+|any\s+|back\s+|out\s+)?(?:surplus|extra|difference|rest|amount|funds)\b|\b(?:buy|purchase)\s+gift[ -]?cards?\s+for\s+(?:the\s+)?(?:rest|surplus|difference)\b/i;
 
 // ---- rule table: catalogue hypotheses R-M4-01…R-M4-10 (planning IDs, draft logic) ----
 
@@ -161,7 +165,7 @@ const RULES: Rule[] = [
       { name: 'money-verb', re: MONEY_VERB_RE, guarded: true },
       { name: 'fee-noun', re: FEE_NOUN_RE, guarded: true, primary: true },
     ],
-    proximity: { a: 'money-verb', b: 'fee-noun', maxChars: 80 },
+    proximity: { a: 'money-verb', b: 'fee-noun', maxChars: 160, sameClause: false },
   },
   {
     id: 'R-M4-08',
@@ -218,9 +222,20 @@ function segments(text: string): Segment[] {
   return out;
 }
 
-function negated(seg: Segment, cueStart: number): boolean {
+function negated(seg: Segment, cueStart: number, cue: Cue, value: string): boolean {
   const from = Math.max(0, cueStart - seg.start - 80);
-  return NEGATION_RE.test(seg.text.slice(from, cueStart - seg.start));
+  // A new affirmative instruction ends the scope of an earlier prohibition.
+  const prefix = seg.text.slice(from, cueStart - seg.start)
+    .split(INSTRUCTION_BREAK_RE).at(-1) ?? '';
+  // Ignored or bypassed records are not affirmative verification context and must not suppress the invoice rule.
+  if (cue.name === 'order-context' && /\b(?:ignore|skip|bypass|disregard)\b/i.test(prefix)) return true;
+  if (/^(?:is\s+due|payable)$/i.test(value) && /\b(?:if|whether)\b/i.test(prefix)) return true;
+  // Negating a different verb does not negate a fee/information noun: for example,
+  // "cannot confirm your entry until the fee arrives" still requests that fee.
+  if (['fee-noun', 'job-fee', 'credential'].includes(cue.name)) {
+    return NO_NOUN_RE.test(prefix) || /\bwithout\s+(?:\w+\s+){0,3}$/i.test(prefix);
+  }
+  return NEGATION_RE.test(prefix) || NO_NOUN_RE.test(prefix);
 }
 
 function cueSpans(text: string, segs: Segment[], cue: Cue): Span[] {
@@ -230,7 +245,7 @@ function cueSpans(text: string, segs: Segment[], cue: Cue): Span[] {
     const value = m[0];
     if (cue.guarded) {
       const seg = segs.find((s) => start >= s.start && start < s.start + s.text.length);
-      if (seg && negated(seg, start)) continue;
+      if (seg && negated(seg, start, cue, value)) continue;
     }
     out.push({ start, end: start + value.length, value });
   }
@@ -239,7 +254,53 @@ function cueSpans(text: string, segs: Segment[], cue: Cue): Span[] {
 
 function sameClauseWithin(segs: Segment[], a: Span, b: Span, maxChars: number): boolean {
   if (Math.abs(a.start - b.start) > maxChars) return false;
-  return segs.some((s) => a.start >= s.start && a.start < s.start + s.text.length && b.start >= s.start && b.start < s.start + s.text.length);
+  return segs.some((s) => a.start >= s.start && a.start < s.start + s.text.length && b.start >= s.start && b.start < s.start + s.text.length &&
+    !INSTRUCTION_BREAK_RE.test(s.text.slice(Math.min(a.start, b.start) - s.start, Math.max(a.start, b.start) - s.start)));
+}
+
+// Draft context bound, independent of the server's input cap. Cues may span nearby
+// sentences, but an explicit change of topic cannot supply evidence for another request.
+const CONTEXT_CHARS = 320;
+function connected(text: string, spans: Span[]): boolean {
+  const start = Math.min(...spans.map((s) => s.start));
+  const end = Math.max(...spans.map((s) => s.end));
+  return end - start <= CONTEXT_CHARS &&
+    !/\b(?:separately|unrelated(?:ly)?|on\s+another\s+topic|independently(?=\s*[,;:]))\b/i.test(text.slice(start, end));
+}
+
+/** Bind evidence to a qualifying pair first, then attach only nearby context cues. */
+function selectEvidence(text: string, segs: Segment[], rule: Rule, found: Map<string, Span[]>): Span | undefined {
+  const primary = rule.cues.find((c) => c.primary) ?? rule.cues[0];
+  const anchors: Map<string, Span>[] = [];
+  if (rule.proximity) {
+    const { a, b, maxChars, sameClause = true } = rule.proximity;
+    for (const left of found.get(a) ?? []) {
+      for (const right of found.get(b) ?? []) {
+        if (Math.abs(left.start - right.start) > maxChars || !connected(text, [left, right])) continue;
+        if (sameClause && !sameClauseWithin(segs, left, right, maxChars)) continue;
+        anchors.push(new Map([[a, left], [b, right]]));
+      }
+    }
+  } else {
+    for (const span of found.get(primary.name) ?? []) anchors.push(new Map([[primary.name, span]]));
+  }
+  for (const selected of anchors) {
+    const anchor = selected.get(primary.name);
+    if (!anchor) continue;
+    for (const cue of rule.cues) {
+      if (selected.has(cue.name)) continue;
+      const nearest = (found.get(cue.name) ?? [])
+        .filter((span) => connected(text, [...selected.values(), span]))
+        .sort((a, b) => Math.abs(a.start - anchor.start) - Math.abs(b.start - anchor.start))[0];
+      if (!nearest) break;
+      selected.set(cue.name, nearest);
+    }
+    if (selected.size !== rule.cues.length) continue;
+    const suppressed = rule.noneOf?.some((cue) => cueSpans(text, segs, cue)
+      .some((span) => connected(text, [...selected.values(), span])));
+    if (!suppressed) return anchor;
+  }
+  return undefined;
 }
 
 /**
@@ -265,22 +326,10 @@ export function analyzeRules(text: string): RuleAnalysis {
     }
     if (!allPresent) continue;
 
-    if (rule.proximity) {
-      const as = found.get(rule.proximity.a) ?? [];
-      const bs = found.get(rule.proximity.b) ?? [];
-      const close = as.some((a) => bs.some((b) => sameClauseWithin(segs, a, b, rule.proximity!.maxChars)));
-      if (!close) continue;
-    }
-
-    if (rule.noneOf) {
-      const suppressed = rule.noneOf.some((cue) => cueSpans(text, segs, cue).length > 0);
-      if (suppressed) continue;
-    }
-
     const primary = rule.cues.find((c) => c.primary) ?? rule.cues[0];
-    const excerpt = (found.get(primary.name) ?? [])[0];
+    const excerpt = selectEvidence(text, segs, rule, found);
     if (!excerpt) continue;
-    matches.push({ ruleId: rule.id, excerpt: excerpt.value, contextNote: primary.name });
+    matches.push({ ruleId: rule.id, excerpt: excerpt.value, start: excerpt.start, end: excerpt.end, contextNote: primary.name });
   }
 
   return { matches };
@@ -294,5 +343,5 @@ export function analyzeRules(text: string): RuleAnalysis {
 export function checkDisplayTarget(display?: string, target?: string): RuleMatch[] {
   if (!display || !target) return [];
   if (display.trim() === target.trim()) return [];
-  return [{ ruleId: 'R-M4-11', excerpt: target, contextNote: 'display-target mismatch' }];
+  return [{ ruleId: 'R-M4-11', excerpt: target, start: 0, end: target.length, contextNote: 'display-target mismatch' }];
 }
