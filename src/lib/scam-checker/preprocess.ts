@@ -34,11 +34,23 @@ interface Span {
   value: string;
 }
 
-const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<>"']+/gu;
+const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<>"']+/giu;
 const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+\b/gu;
-// Starts with '+' or '0', 7–15 digits total, common separator spellings allowed.
-const PHONE_RE = /(?:\+|(?<![0-9]))0?\+?[0-9][0-9\s().-]{5,24}[0-9](?![0-9])/gu;
-const TRAILING_PUNCTUATION_RE = /[.,;:!?'")\]}]+$/u;
+// Phone SPAN finder — deliberately wider than a phone number. A span starts with '+'
+// or a digit-run start, never right after another digit (so a stray '+' inside a digit
+// run cannot begin a match — PR #13 review, F3), and may carry common separators.
+// The phone RULES — 7–15 digits, leading '+' or '0' — are enforced by isValidPhone
+// below, not by this regex: an over-long digit run matches wide and is then rejected
+// whole; no 7–15-digit window is carved from it, because any such window would be a
+// number the sender never wrote (PR #13 review, F4).
+const PHONE_RE = /(?<![0-9+])\+?[0-9][0-9 \t().-]*[0-9](?![0-9])/gu;
+// Sentence punctuation is stripped from candidate tails. Bracket closers are stripped
+// only when they are UNBALANCED within the matched value (count openers vs closers):
+// a balanced pair belongs to the candidate (Wikipedia-style "Scam_(disambiguation)"
+// URLs), a stray trailing one is punctuation (PR #13 review, F2).
+const TRAILING_SENTENCE_RE = /[.,;:!?'"]+$/u;
+const TRAILING_CLOSER_RE = /[)\]}]$/u;
+const CLOSER_PAIRS: Readonly<Record<string, string>> = { ')': '(', ']': '[', '}': '{' };
 
 function collect(re: RegExp, text: string): Span[] {
   const out: Span[] = [];
@@ -64,9 +76,30 @@ function uniqueInOrder(spans: Span[]): string[] {
   return out;
 }
 
+function countOf(value: string, ch: string): number {
+  let n = 0;
+  for (const c of value) if (c === ch) n += 1;
+  return n;
+}
+
+/**
+ * Strip trailing sentence punctuation and, only when unbalanced in the matched value,
+ * a trailing bracket closer. A balanced trailing closer is part of the candidate.
+ */
+function trimTrailing(value: string): string {
+  let out = value.replace(TRAILING_SENTENCE_RE, '');
+  while (TRAILING_CLOSER_RE.test(out)) {
+    const closer = out[out.length - 1];
+    if (countOf(out, closer) <= countOf(out, CLOSER_PAIRS[closer])) break;
+    out = out.slice(0, -1);
+    out = out.replace(TRAILING_SENTENCE_RE, '');
+  }
+  return out;
+}
+
 /** A scheme URL must have a dotted host (`https://intranet` is not a candidate). */
 function isValidUrl(raw: string): boolean {
-  if (raw.startsWith('www.')) return true;
+  if (/^www\./i.test(raw)) return true;
   const afterScheme = raw.slice(raw.indexOf('://') + 3);
   const authority = afterScheme.split(/[/?#]/)[0];
   return authority.includes('.');
@@ -86,6 +119,31 @@ function isValidPhone(raw: string): boolean {
   return raw.startsWith('0');
 }
 
+/** Split an over-long span only at written separators before another local candidate.
+ * Preserve a valid whole candidate when grouping is ambiguous; never split a digit run.
+ * Newlines and '+' already terminate PHONE_RE spans.
+ */
+function phoneSpans(text: string): Span[] {
+  const out: Span[] = [];
+  for (const span of collect(PHONE_RE, text)) {
+    const whole = trimTrailing(span.value);
+    if (isValidPhone(whole)) {
+      out.push({ start: span.start, end: span.start + whole.length, value: whole });
+      continue;
+    }
+    let offset = 0;
+    for (const separator of span.value.matchAll(/[ \t]+(?=0[0-9])/g)) {
+      const value = trimTrailing(span.value.slice(offset, separator.index));
+      if (!isValidPhone(value)) continue;
+      out.push({ start: span.start + offset, end: span.start + offset + value.length, value });
+      offset = separator.index + separator[0].length;
+    }
+    const value = trimTrailing(span.value.slice(offset));
+    if (isValidPhone(value)) out.push({ start: span.start + offset, end: span.start + offset + value.length, value });
+  }
+  return out;
+}
+
 /**
  * Extract untrusted URL / email / phone candidates from pasted message text.
  * Never throws; never performs network I/O; claims no verification or language capability.
@@ -100,7 +158,7 @@ export function extractCandidates(text: string): ExtractionCandidates {
   // 1) URLs (highest precedence), with trailing sentence punctuation excluded.
   const urlSpans: Span[] = [];
   for (const span of collect(URL_RE, text)) {
-    const value = span.value.replace(TRAILING_PUNCTUATION_RE, '');
+    const value = trimTrailing(span.value);
     if (value.length === 0 || !isValidUrl(value)) continue;
     const trimmed: Span = { start: span.start, end: span.start + value.length, value };
     if (!overlaps(trimmed, taken)) {
@@ -119,20 +177,20 @@ export function extractCandidates(text: string): ExtractionCandidates {
   }
 
   // 3) Phone candidates, excluding any span already claimed.
-  const phoneSpans: Span[] = [];
-  for (const span of collect(PHONE_RE, text)) {
-    const value = span.value.replace(TRAILING_PUNCTUATION_RE, '');
+  const acceptedPhones: Span[] = [];
+  for (const span of phoneSpans(text)) {
+    const value = trimTrailing(span.value);
     if (value.length === 0 || !isValidPhone(value)) continue;
     const trimmed: Span = { start: span.start, end: span.start + value.length, value };
     if (!overlaps(trimmed, taken)) {
       taken.push(trimmed);
-      phoneSpans.push(trimmed);
+      acceptedPhones.push(trimmed);
     }
   }
 
   return {
     urls: uniqueInOrder(urlSpans),
     emails: uniqueInOrder(emailSpans),
-    phones: uniqueInOrder(phoneSpans),
+    phones: uniqueInOrder(acceptedPhones),
   };
 }

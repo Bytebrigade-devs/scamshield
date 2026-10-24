@@ -142,15 +142,115 @@ test('PH01-S evidence reflects the fixture-recorded spans (no invented evidence)
   assert.ok(excerpts.includes('assword'), 'R-M4-02/03 evidence should quote the password request');
 });
 
-test('contract: matches carry ruleId + excerpt only; no verdict/score/category field exists', () => {
+test('contract: matches carry evidence and offsets, with no verdict/score/category field', () => {
   const r = analyzeRules(PH01_S);
   assert.deepEqual(Object.keys(r), ['matches']);
   for (const m of r.matches) {
     const keys = Object.keys(m);
     assert.ok(keys.includes('ruleId') && keys.includes('excerpt'));
-    for (const k of keys) assert.ok(['ruleId', 'excerpt', 'contextNote'].includes(k), `unexpected field ${k}`);
+    for (const k of keys) assert.ok(['ruleId', 'excerpt', 'contextNote', 'start', 'end'].includes(k), `unexpected field ${k}`);
     assert.ok(typeof m.ruleId === 'string' && m.ruleId.startsWith('R-M4-'));
     assert.ok(typeof m.excerpt === 'string' && m.excerpt.length > 0);
+  }
+});
+
+test('negation applies to the requested action, not unrelated reassurance or verification', () => {
+  for (const text of [
+    'No problem send your password now.',
+    'There is no need to call support before you send your password now.',
+    'Do not call support but send your password now.',
+    'I cannot access my account so send your password now.',
+  ]) assert.ok(firedIds(text).includes('R-M4-02'), text);
+  for (const text of [
+    'Do not send your password now.',
+    'Never share your OTP.',
+    'This is not a place to enter your password.',
+    'We do not need your password.',
+    'There is no need to send your password.',
+  ]) assert.deepEqual(firedIds(text), [], text);
+});
+
+test('a prohibited secret cannot be paired with an instruction after a contrast', () => {
+  assert.deepEqual(firedIds('Do not send your password but send the parcel today.'), []);
+  const text = 'Do not send your password but do send your OTP.';
+  const match = analyzeRules(text).matches.find((m) => m.ruleId === 'R-M4-02');
+  assert.ok(match);
+  assert.equal(match.excerpt, 'OTP');
+  assert.equal(match.start, text.indexOf('OTP'));
+});
+
+test('an explicitly ignored supplier record does not suppress an invoice demand', () => {
+  const ids = firedIds('Invoice FI-300: pay LKR 5000 now and ignore the existing supplier record.');
+  assert.ok(ids.includes('R-M4-05'));
+  assert.ok(ids.includes('R-M4-06'));
+});
+
+test('an inability to video call does not negate a separate romance money request', () => {
+  assert.ok(firedIds('I cannot video call so send LKR 48000 now my darling.').includes('R-M4-04'));
+});
+
+test('depositing an employer cheque is not an upfront job-fee request', () => {
+  assert.ok(!firedIds(OT05_S).includes('R-M4-09'));
+});
+
+test('unrelated topics cannot supply prize context or suppress an invoice demand', () => {
+  assert.deepEqual(firedIds('The raffle prize is a book. Separately, pay the parking fee at the council office.'), []);
+  assert.ok(firedIds('Invoice FI-900: pay LKR 9500 now for a listing you never ordered. Independently, the library opens at noon.').includes('R-M4-05'));
+});
+
+test('evidence identifies the actual matching occurrence, including UTF-16 offsets', () => {
+  const text = '😀 Your password should stay secret. Send your OTP now.';
+  const match = analyzeRules(text).matches.find((m) => m.ruleId === 'R-M4-02');
+  assert.ok(match);
+  assert.equal(match.excerpt, 'OTP');
+  assert.equal(match.start, text.indexOf('OTP'));
+  assert.equal(match.end, text.indexOf('OTP') + 3);
+  assert.equal(text.slice(match.start, match.end), match.excerpt);
+});
+
+test('documented wording variants cover romance requests without firing on their warnings', () => {
+  const pairs = [
+    ['Darling, we have only chatted online. Please send LKR 35000 to my agent. Do not call the hospital.', 'Darling, do not send LKR 35000 to my agent. Please call the hospital.'],
+    ['Our online romance is real. Pay my visa release fee to this new agent today. The embassy cannot discuss it.', 'Our online romance is real. Do not pay my visa release fee to an agent.'],
+    ['Sweetheart, I cannot meet. Buy a gift card and send its redemption code to prove you care.', 'Sweetheart, do not buy a gift card or send its redemption code.'],
+    ['We will meet after months of online dating if you wire my ticket money today. I cannot join a call.', 'After months of online dating, do not wire ticket money to anyone.'],
+  ];
+  for (const [suspicious, warning] of pairs) {
+    assert.ok(firedIds(suspicious).includes('R-M4-04'), suspicious);
+    assert.ok(!firedIds(warning).includes('R-M4-04'), warning);
+  }
+});
+
+test('financial and employment variants remain rules, not verdicts', () => {
+  const cases = [
+    ['Unlock delivery by entering your card PIN at HTTPS://parcel.example/x.', 'R-M4-03'],
+    ['Voucher winner: enter your card number and security code to claim your gift.', 'R-M4-08'],
+    ['Earn weekly for home work. Send a starter-kit deposit to unlock guaranteed tasks.', 'R-M4-09'],
+    ['We send a cheque for equipment. Keep your fee and buy gift cards for the rest.', 'R-M4-10'],
+  ];
+  for (const [text, id] of cases) assert.ok(firedIds(text).includes(id), text);
+});
+
+test('a later inability to confirm a prize does not negate its requested reservation fee', () => {
+  assert.ok(firedIds('Prize desk: reserve your bicycle by transferring LKR 4000 to our wallet now. We cannot confirm your entry until the reservation fee arrives.').includes('R-M4-07'));
+});
+
+test('a conditional question about an amount due is not an invoice payment demand', () => {
+  assert.deepEqual(firedIds('An invoice review may be needed. Verify the account and order through your existing desk contact before deciding whether anything is due.'), []);
+});
+
+test('rule analysis and display-target checks never fetch a destination', () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (() => { calls += 1; throw new Error('Unexpected destination fetch'); }) as typeof fetch;
+  try {
+    assert.ok(analyzeRules(PH01_S).matches.length > 0);
+    const target = 'https://other.example/login';
+    const [match] = checkDisplayTarget('https://bank.example/login', target);
+    assert.equal(target.slice(match.start, match.end), match.excerpt);
+    assert.equal(calls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
 
