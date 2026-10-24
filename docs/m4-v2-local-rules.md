@@ -20,4 +20,4 @@ Plus Sinhala/Singlish cue extensions to the shared vocabularies (PRIZE/FEE_NOUN/
 
 ## Verification
 
-Repository suite on this branch: **84 tests pass** (31 preprocessing + 53 rule-engine), all network-free. Workspace-side sweep over the 52-pair/104-message fixture: 103/103 evaluated expectations satisfied, zero mismatches, one review-required case (workspace-only artifact). Full per-finding trail is in the owner workspace: `evidence/M4-review-response-20261024.md` and `evidence/M4-local-rules-adaptation-20261024.md`.
+Repository suite on this branch (after the same-day recheck round): **84 tests pass** (31 preprocessing + 53 rule-engine), all network-free. Workspace-side sweep over the 52-pair/104-message fixture: 103/103 evaluated expectations satisfied, zero mismatches, one review-required case (workspace-only artifact). Full per-finding trail is in the owner workspace: `evidence/M4-review-response-20261024.md` and `evidence/M4-local-rules-adaptation-20261024.md`.
