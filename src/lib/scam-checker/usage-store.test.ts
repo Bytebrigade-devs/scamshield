@@ -35,16 +35,59 @@ function denialOf(
   return store.admitCheck({ key: 'user-1', allowance }, now);
 }
 
-test('an empty store admits a check, and admissions alone never consume monthly/daily quota (NFR-M4-10)', () => {
+test('admissions reserve headroom; released reservations never consume quota (NFR-M4-10, review #3)', () => {
   const store = createInMemoryUsageStore();
-  // Burn through the burst window with admissions that never complete (5 total: NOW, NOW+1…).
+  // Five guardian admissions inside the burst window: each reserves one unit of
+  // monthly/daily headroom (review fix #3) and fills the burst window.
   for (let i = 0; i < DEFAULT_LIMITS.burstMax; i += 1) {
-    assert.equal(admitted(store, SENTINEL, NOW + i), true, `admission ${i + 1} inside the window is allowed`);
+    assert.equal(admitted(store, GUARDIAN, NOW + i), true, `admission ${i + 1} inside the window is allowed`);
   }
-  assert.equal(denialOf(store, SENTINEL, NOW + DEFAULT_LIMITS.burstMax)?.reason, 'rate-burst');
-  // Once the window slides, a fresh check is admitted and is NOT quota-denied: sentinel's
-  // daily cap is 5, so those five never-completed admissions clearly consumed nothing.
-  assert.equal(admitted(store, SENTINEL, NOW + MIN_MS + DEFAULT_LIMITS.burstMax + 1), true);
+  assert.equal(denialOf(store, GUARDIAN, NOW + DEFAULT_LIMITS.burstMax)?.reason, 'rate-burst');
+  // All five fail to complete and are released: counted usage must still be zero.
+  for (let i = 0; i < DEFAULT_LIMITS.burstMax; i += 1) store.releaseCheck({ key: 'user-1' });
+  // Once the burst window slides, a SENTINEL-shaped daily cap (5) is still fully available —
+  // proving the released reservations consumed nothing.
+  const sentinelAdmissions = createInMemoryUsageStore();
+  for (let i = 0; i < SENTINEL.daily; i += 1) {
+    sentinelAdmissions.admitCheck({ key: 'user-1', allowance: SENTINEL }, NOW + i);
+    sentinelAdmissions.releaseCheck({ key: 'user-1' });
+  }
+  assert.equal(
+    sentinelAdmissions.admitCheck({ key: 'user-1', allowance: SENTINEL }, NOW + MIN_MS + 1),
+    null,
+    'released reservations never consume daily quota (NFR-M4-10)',
+  );
+});
+
+test('review #3: simultaneous admissions cannot push completions past the limit (TOCTOU closed)', () => {
+  const store = createInMemoryUsageStore();
+  const allowance = { monthly: 3, daily: 3 };
+  // Five checks started at the SAME instant: only 3 may be admitted.
+  const results = [0, 1, 2, 3, 4].map(() => store.admitCheck({ key: 'user-1', allowance }, NOW));
+  assert.deepEqual(results.slice(0, 3), [null, null, null], 'the first three simultaneous checks are admitted');
+  assert.equal(results[3]?.reason, 'quota-monthly', 'the fourth is denied before it can complete');
+  // Confirming the three admitted checks lands exactly on the limit — never above it.
+  for (let i = 0; i < 3; i += 1) store.recordCompletion({ key: 'user-1' }, NOW + 1);
+  const denial = store.admitCheck({ key: 'user-1', allowance }, NOW + MIN_MS + 1);
+  assert.equal(denial?.reason, 'quota-monthly');
+});
+
+test('review #7: a trial monthly quota is anchored at first use and never resets at a calendar boundary', () => {
+  const store = createInMemoryUsageStore();
+  const trial = PLAN_ALLOWANCES.trial;
+  const lateOctober = Date.UTC(2026, 9, 31, 23, 0);
+  for (let i = 0; i < trial.monthly; i += 1) {
+    store.admitCheck({ key: 'trial-1', allowance: trial }, lateOctober + i);
+    store.recordCompletion({ key: 'trial-1' }, lateOctober + i);
+  }
+  assert.equal(store.admitCheck({ key: 'trial-1', allowance: trial }, lateOctober)?.reason, 'quota-monthly');
+  // The same trial, minutes after the calendar month rolls over: NO fresh quota.
+  const november = Date.UTC(2026, 10, 1, 0, 30);
+  assert.equal(
+    store.admitCheck({ key: 'trial-1', allowance: trial }, november)?.reason,
+    'quota-monthly',
+    'crossing a calendar-month boundary must not reset an anchored trial window',
+  );
 });
 
 test('monthly quota: completions are counted and the limit denies with quota-monthly', () => {

@@ -101,6 +101,56 @@ function makeDeps(
   return { deps, calls };
 }
 
+test('review follow-up: inherited object names never authorize a plan or call the provider', async () => {
+  for (const planId of ['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty']) {
+    const snapshot = { ...SENTINEL, planId };
+    assert.deepEqual(resolveAccess(snapshot, NOW), { allowed: false }, planId);
+    const { deps, calls } = makeDeps({ snapshot });
+    assert.deepEqual(await runCheck({ text: VALID_TEXT }, deps), {
+      kind: 'rejected', reason: 'access-blocked', message: ACCESS_BLOCKED_MESSAGE,
+    });
+    assert.equal(calls.length, 0);
+  }
+});
+
+test('review follow-up: exceptions release reserved slots without hiding the original failure', async () => {
+  for (const stage of ['extract', 'rules', 'budget', 'provider'] as const) {
+    let now = NOW;
+    const { deps } = makeDeps({ snapshot: SENTINEL, clock: { now: () => now } });
+    const failure = new Error(`${stage} failed`);
+    const broken = { ...deps };
+    if (stage === 'extract') broken.extract = () => { throw failure; };
+    if (stage === 'rules') broken.analyzeRules = () => { throw failure; };
+    if (stage === 'budget') broken.budget = { isProviderCallPermitted: () => { throw failure; } };
+    if (stage === 'provider') broken.provider = { analyze: async () => { throw failure; } };
+    for (let i = 0; i < 6; i += 1) {
+      await assert.rejects(runCheck({ text: VALID_TEXT }, broken), (error) => error === failure);
+      now += DEFAULT_LIMITS.burstWindowMs + 1;
+    }
+    const recovered = await runCheck({ text: VALID_TEXT }, deps);
+    assert.equal(recovered.kind, 'analysed', `${stage}: no failed check consumed a slot`);
+    if (recovered.kind === 'analysed') assert.equal(recovered.analysisStatus, 'completed');
+  }
+});
+
+test('review follow-up: a failed concurrent check releases only its own reservation', async () => {
+  const { deps } = makeDeps({ snapshot: SENTINEL });
+  for (let i = 0; i < 3; i += 1) deps.usage.recordCompletion({ key: SENTINEL.subjectKey }, NOW);
+  let finish: (attempt: ProviderAttempt) => void = () => {};
+  const pending = runCheck({ text: VALID_TEXT }, {
+    ...deps, provider: { analyze: () => new Promise((resolve) => { finish = resolve; }) },
+  });
+  await assert.rejects(runCheck({ text: VALID_TEXT }, {
+    ...deps, provider: { analyze: async () => { throw new Error('failed check'); } },
+  }), /failed check/);
+  const completed = await runCheck({ text: VALID_TEXT }, deps);
+  assert.equal(completed.kind, 'analysed');
+  const denied = await runCheck({ text: VALID_TEXT }, deps);
+  assert.equal(denied.kind, 'rejected', 'the pending check still reserves the final slot');
+  finish({ kind: 'ok', json: VALID_REPLY });
+  assert.equal((await pending).kind, 'analysed');
+});
+
 // ---- FS-M4-01 / FR-M4-01: server-side input validation ----
 
 test('FS-M4-01: empty, whitespace-only and non-string input are rejected before anything runs', async () => {

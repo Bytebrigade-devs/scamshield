@@ -28,3 +28,13 @@ node --test src/lib/scam-checker/preprocess.test.ts src/lib/scam-checker/rule-en
 The repository suite passes **85 tests** (52 pre-existing + 33 new), all network-free: provider interaction is stubbed and a guard test throws if the boundary itself touches `fetch`. The new tests pin the SRS acceptance scenarios by name (FS-M4-01/02/05/06/08/09, FR-M4-01/04, NFR-M4-01/02/09/10), including limit and limit+1 for the input cap and the no-call-after-denial checks.
 
 The owner workspace separately holds a pipeline-integration test wiring the real preprocessing and rule-engine libraries through this boundary, and the frozen fixture sweep. These workspace-only artifacts are not added to this repository. Live provider integration, the persistent usage store, entitlement wiring and full-checker acceptance remain outstanding.
+
+## Review-response fixes — 24 October 2026
+
+A seven-finding review was verified against the code; the three boundary findings are fixed in this commit:
+
+1. **Reply extraction (#1):** the adapter now extracts the model reply from the chat-completions envelope (`choices[0].message.content`, parsed as JSON) instead of returning the raw envelope, which `validateReply` could never accept; malformed envelopes are `bad-json` (FR-M4-04). The first live call would otherwise have been discarded as invalid.
+2. **Quota race (#3):** `admitCheck` reserves one unit of monthly/daily headroom, `recordCompletion` converts one reservation, and the new `UsagePort.releaseCheck` is called on every non-completed exit — simultaneous checks can no longer push completions past the limit, while admitted-but-failed checks still never consume quota (NFR-M4-10).
+3. **Trial window (#7):** the trial allowance anchors its monthly window at first use (`monthlyAnchor: 'first-use'`, 30-day periods), so crossing a calendar-month boundary no longer grants a fresh trial quota. Paid plans keep calendar-month windows.
+
+Repository suite after the fix: **92 tests pass** (52 pre-existing + 40 boundary tests, including the three review-fix regression tests). End-to-end proofs (stubbed fetch, no network): a realistic chat-completions envelope completes with a validated verdict plus rules evidence; 15 failed AI runs leave the 16th check admitted.

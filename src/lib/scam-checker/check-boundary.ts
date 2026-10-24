@@ -25,8 +25,8 @@
  *
  * Design rules (each pinned by check-boundary.test.ts):
  * 1. Zero imports — a pure, portable service. Stage functions, entitlement, usage, budget,
- *    provider and clock are all injected, so this file is byte-identical to the repository
- *    copy and never itself performs network I/O.
+ *    provider and clock are all injected, so repository handover needs no import-path
+ *    rewrite and this file never itself performs network I/O.
  * 2. The request carries ONLY `text`. There is no field through which a browser-supplied
  *    identifier could become authority (NFR-M4-02, FS-M4-08): identity and quota keying come
  *    solely from the server-side entitlement snapshot.
@@ -107,19 +107,26 @@ export const DEFAULT_LIMITS: BoundaryLimits = { inputCharCap: 2_000, burstWindow
 export interface Allowance {
   monthly: number;
   daily: number;
+  /**
+   * Review fix #7 (24 Oct 2026): 'first-use' anchors the monthly window at the subject's
+   * first recorded use (30-day periods) instead of the UTC calendar month, so a short
+   * window (the 7-day trial) cannot be granted a fresh monthly quota by crossing a
+   * calendar-month boundary. Absent → calendar-month windows (documented paid-plan draft).
+   */
+  monthlyAnchor?: 'first-use';
 }
 
 /**
  * Confirmed quotas (decision record §1): Sentinel 60/month · 5/day, Guardian 200 · 15,
- * Aegis 600 · 40, trial 15 checks / 7 days. Trial enforcement here is ≤ 15 per calendar
- * month as draft semantics — the 7-day trial window boundary itself is the entitlement
+ * Aegis 600 · 40, trial 15 checks / 7 days. Trial monthly quota is anchored at first use
+ * (review fix #7); the 7-day trial window boundary itself is the entitlement
  * layer's responsibility; exact duplicate/count policy remains OD-M4-06 (open).
  */
 export const PLAN_ALLOWANCES: Readonly<Record<string, Allowance>> = {
   sentinel: { monthly: 60, daily: 5 },
   guardian: { monthly: 200, daily: 15 },
   aegis: { monthly: 600, daily: 40 },
-  trial: { monthly: 15, daily: 15 },
+  trial: { monthly: 15, daily: 15, monthlyAnchor: 'first-use' },
 };
 
 // ---- ports ----
@@ -158,13 +165,24 @@ export interface UsageSubject {
 
 export interface UsagePort {
   /**
-   * Gate plus burst recording, atomically: null = admitted (the attempt is recorded in the
-   * burst window only); a denial records nothing. A denial must decline the provider call
+   * Gate plus burst recording, atomically: null = admitted. Review fix #3 (24 Oct 2026):
+   * an admission RESERVES one unit of monthly/daily headroom, so simultaneous checks can
+   * never push completions past the limit; the burst timestamp is recorded only when
+   * admitted, and a denial records nothing. A denial must decline the provider call
    * entirely (FS-M4-08).
    */
   admitCheck(subject: UsageSubject, now: number): UsageDenial | null;
-  /** Count one completed analysis (NFR-M4-10) — the ONLY entry point that consumes quota. */
+  /**
+   * Count one completed analysis (NFR-M4-10): converts one admission reservation into
+   * counted usage — the ONLY entry point that consumes quota.
+   */
   recordCompletion(subject: { key: string }, now: number): void;
+  /**
+   * Review fix #3: return one admission reservation unused. The boundary calls this on
+   * every non-completed exit (limited rules-only, unavailable), so admitted-but-failed
+   * checks never consume monthly/daily quota.
+   */
+  releaseCheck(subject: { key: string }): void;
 }
 
 export interface BudgetDecision {
@@ -274,9 +292,11 @@ export function resolveAccess(snapshot: EntitlementSnapshot | null, now: number)
   if (snapshot.status === 'active' || snapshot.status === 'trial') statusAllows = true;
   else if (snapshot.status === 'cancelled') statusAllows = withinEntitlement;
   if (!statusAllows || !withinEntitlement) return { allowed: false };
+  const planId = typeof snapshot.planId === 'string' ? snapshot.planId.trim().toLowerCase() : '';
+  if (snapshot.status !== 'trial' && !Object.hasOwn(PLAN_ALLOWANCES, planId)) return { allowed: false };
   const allowance = snapshot.status === 'trial'
     ? PLAN_ALLOWANCES.trial
-    : PLAN_ALLOWANCES[typeof snapshot.planId === 'string' ? snapshot.planId.trim().toLowerCase() : ''];
+    : PLAN_ALLOWANCES[planId];
   if (allowance === undefined) return { allowed: false };
   return { allowed: true, allowance };
 }
@@ -370,30 +390,38 @@ export async function runCheck(request: CheckRequest, deps: CheckDeps): Promise<
     return rejected(denial.reason === 'rate-burst' ? 'rate-denied' : 'quota-denied', denial.message);
   }
 
-  // 4) Stages 1–2 always run on an accepted check: pure local analysis, no network.
-  const candidates = deps.extract(text);
-  const rules = deps.analyzeRules(text);
+  let completed = false;
+  try {
+    // 4) Stages 1–2 always run on an accepted check: pure local analysis, no network.
+    const candidates = deps.extract(text);
+    const rules = deps.analyzeRules(text);
 
-  // 5) Provider (FS-M4-05): an unpermitted budget or a missing key disables the live call —
-  //    the user receives an explicitly labelled rules-only limited result instead.
-  if (!deps.budget.isProviderCallPermitted().permitted) {
-    return analysed('limited', 'rules_only', 'unknown_other', candidates, rules, null, [RULES_ONLY_LIMITATION]);
-  }
-  const attempt = await deps.provider.analyze(text);
-  if (attempt.kind === 'unconfigured') {
-    return analysed('limited', 'rules_only', 'unknown_other', candidates, rules, null, [RULES_ONLY_LIMITATION]);
-  }
-  // 6) One attempt only (owner decision 19 Oct 2026): no retry, no fallback model —
-  //    failure, timeout or invalid output ends in the honest unavailable state.
-  if (attempt.kind === 'failed') {
-    return analysed('unavailable', 'none', 'unknown_other', candidates, rules, null, [UNAVAILABLE_LIMITATION]);
-  }
-  const reply = validateReply(attempt.json);
-  if (reply === null) {
-    return analysed('unavailable', 'none', 'unknown_other', candidates, rules, null, [UNAVAILABLE_LIMITATION]);
-  }
+    // 5) Provider (FS-M4-05): an unpermitted budget or a missing key disables the live call —
+    //    the user receives an explicitly labelled rules-only limited result instead.
+    if (!deps.budget.isProviderCallPermitted().permitted) {
+      return analysed('limited', 'rules_only', 'unknown_other', candidates, rules, null, [RULES_ONLY_LIMITATION]);
+    }
+    const attempt = await deps.provider.analyze(text);
+    if (attempt.kind === 'unconfigured') {
+      return analysed('limited', 'rules_only', 'unknown_other', candidates, rules, null, [RULES_ONLY_LIMITATION]);
+    }
+    // 6) One attempt only (owner decision 19 Oct 2026): no retry, no fallback model —
+    //    failure, timeout or invalid output ends in the honest unavailable state.
+    if (attempt.kind === 'failed') {
+      return analysed('unavailable', 'none', 'unknown_other', candidates, rules, null, [UNAVAILABLE_LIMITATION]);
+    }
+    const reply = validateReply(attempt.json);
+    if (reply === null) {
+      return analysed('unavailable', 'none', 'unknown_other', candidates, rules, null, [UNAVAILABLE_LIMITATION]);
+    }
 
-  // 7) Only a completed analysis counts (NFR-M4-10); nothing above consumed quota.
-  deps.usage.recordCompletion({ key: snapshot.subjectKey }, deps.clock.now());
-  return analysed('completed', 'rules_and_ai', reply.category, candidates, rules, reply, []);
+    // 7) Only a completed analysis counts (NFR-M4-10); nothing above consumed quota.
+    deps.usage.recordCompletion({ key: snapshot.subjectKey }, deps.clock.now());
+    completed = true;
+    return analysed('completed', 'rules_and_ai', reply.category, candidates, rules, reply, []);
+  } finally {
+    // Release on normal partial results AND unexpected dependency exceptions. Exceptions
+    // still propagate to the caller; a failed check must not strand its reserved slot.
+    if (!completed) deps.usage.releaseCheck({ key: snapshot.subjectKey });
+  }
 }

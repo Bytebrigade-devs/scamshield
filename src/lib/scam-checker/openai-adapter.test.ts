@@ -42,6 +42,10 @@ function stubFetch(handler: (url: string, init: RecordedInit) => Promise<unknown
 const okJson = (payload: unknown) =>
   ({ ok: true, status: 200, text: async () => JSON.stringify(payload) });
 
+/** Realistic chat-completions envelope: the reply JSON rides in choices[0].message.content as a string. */
+const envelopeOf = (reply: unknown) =>
+  ({ id: 'chatcmpl-1', choices: [{ index: 0, message: { role: 'assistant', content: JSON.stringify(reply) } }] });
+
 test('FS-M4-05: an absent key returns unconfigured with zero fetch calls', async () => {
   const { calls, fetchImpl } = stubFetch(() => Promise.resolve(okJson({})));
   const provider = createOpenAIProvider({ apiKey: undefined, fetchImpl });
@@ -52,7 +56,7 @@ test('FS-M4-05: an absent key returns unconfigured with zero fetch calls', async
 
 test('FR-M4-04: a 2xx JSON reply is returned as ok — one call, key only in the Authorization header', async () => {
   const reply = { verdict: 'suspicious', category: 'phishing', taxonomy_version: '0.1.0-draft' };
-  const { calls, fetchImpl } = stubFetch(() => Promise.resolve(okJson(reply)));
+  const { calls, fetchImpl } = stubFetch(() => Promise.resolve(okJson(envelopeOf(reply))));
   const provider = createOpenAIProvider({ apiKey: API_KEY, fetchImpl });
   const attempt: ProviderAttempt = await provider.analyze('check this message');
 
@@ -68,6 +72,31 @@ test('FR-M4-04: a 2xx JSON reply is returned as ok — one call, key only in the
   assert.ok(payload.messages?.some((m) => m.role === 'user' && m.content === 'check this message'));
   // The key appears nowhere else in the request or the attempt.
   assert.ok(!JSON.stringify(attempt).includes(API_KEY));
+});
+
+// --- Review fix #1 (24 Oct 2026): the reply is extracted from choices[0].message.content ---
+
+test('review #1: a raw reply object at the top level is NOT the reply — envelope extraction is required', async () => {
+  const reply = { verdict: 'suspicious', taxonomy_version: '0.1.0-draft' };
+  const { fetchImpl } = stubFetch(() => Promise.resolve(okJson(reply)));
+  const attempt = await createOpenAIProvider({ apiKey: API_KEY, fetchImpl }).analyze('x');
+  assert.deepEqual(attempt, { kind: 'failed', failure: 'bad-json' });
+});
+
+test('review #1: malformed envelopes (no choices, empty choices, non-string content, bad inner JSON) are bad-json', async () => {
+  const cases: unknown[] = [
+    {},
+    { choices: [] },
+    { choices: [{ message: {} }] },
+    { choices: [{ message: { content: 42 } }] },
+    { choices: [{ message: { content: 'not inner json {' } }] },
+    'a plain string',
+  ];
+  for (const envelope of cases) {
+    const { fetchImpl } = stubFetch(() => Promise.resolve(okJson(envelope)));
+    const attempt = await createOpenAIProvider({ apiKey: API_KEY, fetchImpl }).analyze('x');
+    assert.deepEqual(attempt, { kind: 'failed', failure: 'bad-json' }, JSON.stringify(envelope));
+  }
 });
 
 test('a custom buildPayload and model are honoured (DRAFT payload seam for OD-M4-04)', async () => {

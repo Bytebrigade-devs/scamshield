@@ -68,6 +68,30 @@ function defaultPayload(text: string, model: string): unknown {
 }
 
 /**
+ * Review fix #1 (24 Oct 2026): a chat-completions envelope carries the model's reply in
+ * choices[0].message.content — with response_format json_object that content is a STRING
+ * containing the reply JSON, not the reply object itself. Returning the raw envelope made
+ * every successful call fail the boundary's validateReply. Extract and parse here; any
+ * other envelope shape is 'bad-json' (FR-M4-04), never a fabricated reply.
+ */
+function extractReplyContent(envelope: unknown): unknown | null {
+  if (typeof envelope !== 'object' || envelope === null || Array.isArray(envelope)) return null;
+  const choices = (envelope as { choices?: unknown }).choices;
+  if (!Array.isArray(choices) || choices.length === 0) return null;
+  const first = choices[0];
+  if (typeof first !== 'object' || first === null) return null;
+  const message = (first as { message?: unknown }).message;
+  if (typeof message !== 'object' || message === null) return null;
+  const content = (message as { content?: unknown }).content;
+  if (typeof content !== 'string' || content.trim().length === 0) return null;
+  try {
+    return JSON.parse(content) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Create the OpenAI ProviderPort. Server-side use only: the caller supplies the key from
  * server environment variables; this adapter exposes it nowhere else.
  */
@@ -103,7 +127,10 @@ export function createOpenAIProvider(options: OpenAIProviderOptions): ProviderPo
           return { kind: 'failed', failure: 'network' };
         }
         try {
-          return { kind: 'ok', json: JSON.parse(jsonText) as unknown };
+          const parsed: unknown = JSON.parse(jsonText);
+          const reply = extractReplyContent(parsed);
+          if (reply === null) return { kind: 'failed', failure: 'bad-json' };
+          return { kind: 'ok', json: reply };
         } catch {
           return { kind: 'failed', failure: 'bad-json' };
         }
