@@ -227,6 +227,7 @@ function negated(seg: Segment, cueStart: number, cue: Cue, value: string): boole
   // A new affirmative instruction ends the scope of an earlier prohibition.
   const prefix = seg.text.slice(from, cueStart - seg.start)
     .split(INSTRUCTION_BREAK_RE).at(-1) ?? '';
+  // Ignored or bypassed records are not affirmative verification context and must not suppress the invoice rule.
   if (cue.name === 'order-context' && /\b(?:ignore|skip|bypass|disregard)\b/i.test(prefix)) return true;
   if (/^(?:is\s+due|payable)$/i.test(value) && /\b(?:if|whether)\b/i.test(prefix)) return true;
   // Negating a different verb does not negate a fee/information noun: for example,
