@@ -1,8 +1,8 @@
-export type AdminRole = "admin" | "support" | "security_analyst";
+export type AdminRole = "admin" | "support" | "security_analyst" | "none";
 
-export type PlanTier = "Sentinel" | "Guardian" | "Aegis";
+export type PlanTier = "Guardian" | "Sentinel" | "Aegis" | "None";
 
-export type UserStatus = "Active" | "Trialing" | "Cancelled" | "Suspended";
+export type UserStatus = "Active" | "Trialing" | "Cancelled" | "Suspended" | "Not subscribed";
 
 export interface AdminUser {
   id: string;
@@ -41,7 +41,7 @@ export interface WeeklyData {
 }
 
 export interface PlanMixData {
-  plan: PlanTier | "Trialing" | "Cancelled";
+  plan: PlanTier | "Trialing" | "Cancelled" | "Not subscribed";
   count: number;
   color: string;
 }
@@ -59,23 +59,32 @@ export interface FunnelMetric {
   description: string;
   count: number;
   pctOfTotal: number;
+  dropOffPct?: number;
 }
 
 export interface CohortRow {
-  month: string;
-  m0: number;
-  m1: number;
-  m2: number;
-  m3: number;
-  m4: number;
+  cohort: string;
+  signups: number;
+  p1: number | null;
+  p2: number | null;
+  p3: number | null;
+  p4: number | null;
 }
 
 export interface ReferralStat {
   source: string;
-  type: "referral" | "campaign";
-  visits: number;
+  visits?: number;
   signups: number;
-  conversionPct: number;
+  paid: number;
+  conversionPct?: number;
+}
+
+export interface SupportMessage {
+  id: string;
+  sender: string;
+  senderType: "user" | "admin" | "system";
+  timestamp: string;
+  text: string;
 }
 
 export interface SupportTicket {
@@ -84,32 +93,52 @@ export interface SupportTicket {
   user: string;
   email: string;
   subject: string;
-  category: "Billing" | "Scam Feedback" | "Vault Access" | "General";
-  status: "Open" | "In Progress" | "Resolved";
-  priority: "High" | "Medium" | "Low";
-  createdAt: string;
-  notes: string;
-}
-
-export interface VerdictFeedback {
-  id: string;
-  checkId: string;
-  userEmail: string;
-  category: string;
-  systemVerdict: string;
-  userReaction: "False Positive" | "False Negative" | "Helpful" | "Disputed";
-  userComment: string;
-  status: "Pending Review" | "Reviewed" | "Flagged For Model Tuning";
-  createdAt: string;
+  category: "Billing" | "Checker" | "Account" | "Login" | "Vault";
+  status: "New" | "In progress" | "Waiting on user" | "Resolved";
+  priority: "High" | "Normal" | "Low";
+  age: string;
+  openedDate: string;
+  accountStatus: UserStatus;
+  messages: SupportMessage[];
+  relatedAuditEntry?: string;
 }
 
 export interface AuditLogEntry {
   id: string;
-  adminEmail: string;
-  role: string;
+  time: string;
+  admin: string;
   action: string;
-  targetUser: string;
-  details: string;
-  timestamp: string;
-  ipAddress: string;
+  target: string;
+  result: "Success" | "Denied";
+  reason: string;
+  ipAddress?: string;
+}
+
+export interface MonitoringComponent {
+  id: string;
+  name: string;
+  detail: string;
+  status: "Operational" | "Needs attention" | "Degraded" | "Offline" | "Unknown";
+}
+
+export interface MonitoringCheck {
+  id: string;
+  time: string;
+  name: string;
+  result: "Passed" | "1 timeout" | "Failed";
+}
+
+export interface SystemAlert {
+  id: string;
+  alertType: string;
+  severity: "High" | "Medium" | "Low";
+  timeDetected: string;
+  component: string;
+  relatedModule: string;
+  reason: string;
+  status: "Open" | "Acknowledged" | "Resolved";
+  whatWeKnow: string[];
+  timeline: { time: string; event: string }[];
+  suggestedSteps: string[];
+  relatedSupportTicketId?: string;
 }

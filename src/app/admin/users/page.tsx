@@ -1,398 +1,437 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Search,
-  Filter,
-  ShieldAlert,
-  UserX,
-  UserCheck,
-  PlusCircle,
-  AlertCircle,
-  FileText,
-  Lock,
-  ChevronRight,
-  Send,
-} from "lucide-react";
+import { Download, Search, ShieldCheck, ChevronDown, X } from "lucide-react";
 import { useAdmin } from "@/lib/admin-store";
 import { AdminUser, PlanTier, UserStatus } from "@/lib/types/admin";
 
-export default function UserManagementPage() {
-  const { users, currentRole, suspendUser, reactivateUser, addSupportNote } = useAdmin();
-
+export default function AdminUsersPage() {
+  const { users, suspendUser, reactivateUser, exportCsvData } = useAdmin();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPlan, setSelectedPlan] = useState<string>("All");
-  const [selectedStatus, setSelectedStatus] = useState<string>("All");
-  const [selectedUser, setSelectedUser] = useState<AdminUser>(users[0]);
-  const [newNote, setNewNote] = useState("");
-  const [actionModal, setActionModal] = useState<{
-    isOpen: boolean;
-    type: "suspend" | "reactivate";
-    user?: AdminUser;
-  }>({ isOpen: false, type: "suspend" });
-  const [actionReason, setActionReason] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [planFilter, setPlanFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [selectedUserId, setSelectedUserId] = useState<string>("usr-001");
 
-  // Filtered users
+  // Modal states
+  const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+  const [isReactivateModalOpen, setIsReactivateModalOpen] = useState(false);
+  const [modalReason, setModalReason] = useState("");
+  const [modalError, setModalError] = useState("");
+
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlan = selectedPlan === "All" || u.plan === selectedPlan;
-    const matchesStatus = selectedStatus === "All" || u.status === selectedStatus;
+    const matchesPlan = planFilter === "All" || u.plan === planFilter;
+    const matchesStatus = statusFilter === "All" || u.status === statusFilter;
     return matchesSearch && matchesPlan && matchesStatus;
   });
 
-  const handleOpenActionModal = (type: "suspend" | "reactivate", user: AdminUser) => {
-    setErrorMessage(null);
-    setActionReason("");
-    setActionModal({ isOpen: true, type, user });
+  const selectedUser = users.find((u) => u.id === selectedUserId) || users[0];
+
+  const handleOpenSuspend = () => {
+    setModalReason("");
+    setModalError("");
+    setIsSuspendModalOpen(true);
   };
 
-  const handleConfirmAction = () => {
-    if (!actionModal.user) return;
-    if (actionModal.type === "suspend") {
-      const res = suspendUser(actionModal.user.id, actionReason);
-      if (!res.success) {
-        setErrorMessage(res.error || "Action failed.");
-        return;
-      }
-    } else {
-      const res = reactivateUser(actionModal.user.id, actionReason);
-      if (!res.success) {
-        setErrorMessage(res.error || "Action failed.");
-        return;
-      }
+  const handleOpenReactivate = () => {
+    setModalReason("");
+    setModalError("");
+    setIsReactivateModalOpen(true);
+  };
+
+  const handleConfirmSuspend = () => {
+    if (!modalReason.trim()) {
+      setModalError("A reason is required to suspend an account.");
+      return;
     }
-    // Update active selection
-    const updated = users.find((u) => u.id === actionModal.user?.id);
-    if (updated) setSelectedUser(updated);
-    setActionModal({ isOpen: false, type: "suspend" });
+    const res = suspendUser(selectedUser.id, modalReason);
+    if (!res.success) {
+      setModalError(res.error || "Failed to suspend account");
+      return;
+    }
+    setIsSuspendModalOpen(false);
   };
 
-  const handleAddNote = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newNote.trim()) return;
-    addSupportNote(selectedUser.id, newNote);
-    setNewNote("");
+  const handleConfirmReactivate = () => {
+    if (!modalReason.trim()) {
+      setModalError("A reason is required to reactivate an account.");
+      return;
+    }
+    const res = reactivateUser(selectedUser.id, modalReason);
+    if (!res.success) {
+      setModalError(res.error || "Failed to reactivate account");
+      return;
+    }
+    setIsReactivateModalOpen(false);
   };
 
-  const getStatusBadge = (status: UserStatus) => {
+  const getStatusDot = (status: UserStatus) => {
     switch (status) {
       case "Active":
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border border-[#34d399] text-[#34d399]">
-            Active
-          </span>
-        );
+        return "bg-emerald-500";
       case "Trialing":
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border border-[#f59e0b] text-[#f59e0b]">
-            Trialing
-          </span>
-        );
-      case "Cancelled":
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border border-[#f59e0b] text-[#f59e0b]">
-            Cancelled
-          </span>
-        );
+        return "bg-teal-500";
       case "Suspended":
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border border-[#f06a6a] text-[#f06a6a]">
-            Suspended
-          </span>
-        );
+        return "bg-red-500";
+      default:
+        return "bg-slate-400";
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-[#eaf1f7]">User management</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs bg-[#13203a] text-[#8ea0b3] border border-[#1f2d45]">
-              M5-09 · M5-10
-            </span>
-          </div>
-          <p className="text-xs text-[#8ea0b3] mt-1">
-            Search registered accounts, review subscription status, add internal notes, and enforce policy moderation.
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Users</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Search, review and manage accounts. Synthetic data only.
           </p>
         </div>
+
+        <button
+          onClick={() => exportCsvData("Users")}
+          className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg px-3.5 py-2 text-sm font-medium transition shadow-sm self-start sm:self-auto"
+        >
+          <Download className="w-4 h-4 text-slate-500" />
+          <span>Export CSV</span>
+        </button>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-        <div className="sm:col-span-6 relative">
-          <Search className="w-4 h-4 text-[#8ea0b3] absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search name or email..."
-            className="w-full bg-[#13203a] border border-[#1f2d45] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#eaf1f7] placeholder-[#8ea0b3] focus:outline-none focus:border-[#2dd4bf]"
-          />
+      {/* Role Limits Banner */}
+      <div className="bg-teal-50/60 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
+        <ShieldCheck className="w-5 h-5 text-teal-700 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-teal-900">
+          <strong>Role limits:</strong> Support admins can view and suspend users but cannot see revenue or change roles. Every action is written to the audit log.
+        </p>
+      </div>
+
+      {/* Search and Filters Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-3 flex-1 max-w-2xl">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-72">
+            <input
+              type="text"
+              placeholder="Search by name or email"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3.5 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-600 shadow-sm"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          </div>
+
+          {/* Plan Filter */}
+          <div className="relative w-full sm:w-40">
+            <select
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value)}
+              className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3.5 py-2 pr-8 text-sm text-slate-700 focus:outline-none focus:border-teal-600 shadow-sm"
+            >
+              <option value="All">Plan: All</option>
+              <option value="Guardian">Guardian</option>
+              <option value="Sentinel">Sentinel</option>
+              <option value="Aegis">Aegis</option>
+              <option value="None">None</option>
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* Status Filter */}
+          <div className="relative w-full sm:w-40">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3.5 py-2 pr-8 text-sm text-slate-700 focus:outline-none focus:border-teal-600 shadow-sm"
+            >
+              <option value="All">Status: All</option>
+              <option value="Active">Active</option>
+              <option value="Trialing">Trialing</option>
+              <option value="Cancelled">Cancelled</option>
+              <option value="Suspended">Suspended</option>
+              <option value="Not subscribed">Not subscribed</option>
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
         </div>
 
-        <div className="sm:col-span-3">
-          <select
-            value={selectedPlan}
-            onChange={(e) => setSelectedPlan(e.target.value)}
-            className="w-full bg-[#13203a] border border-[#1f2d45] rounded-xl px-3 py-2.5 text-xs text-[#eaf1f7] focus:outline-none focus:border-[#2dd4bf]"
-          >
-            <option value="All">All plans (All)</option>
-            <option value="Sentinel">Sentinel</option>
-            <option value="Guardian">Guardian</option>
-            <option value="Aegis">Aegis</option>
-          </select>
-        </div>
-
-        <div className="sm:col-span-3">
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full bg-[#13203a] border border-[#1f2d45] rounded-xl px-3 py-2.5 text-xs text-[#eaf1f7] focus:outline-none focus:border-[#2dd4bf]"
-          >
-            <option value="All">All statuses (All)</option>
-            <option value="Active">Active</option>
-            <option value="Trialing">Trialing</option>
-            <option value="Cancelled">Cancelled</option>
-            <option value="Suspended">Suspended</option>
-          </select>
+        <div className="text-xs text-slate-500 font-medium">
+          Showing {filteredUsers.length} of 120 users
         </div>
       </div>
 
-      {/* User Directory Table */}
-      <div className="rounded-xl bg-[#0e1726] border border-[#1f2d45] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-[#1f2d45] text-[#8ea0b3] bg-[#0b1322]">
-                <th className="py-3 px-4 font-medium">User</th>
-                <th className="py-3 px-4 font-medium">Plan</th>
-                <th className="py-3 px-4 font-medium">Status</th>
-                <th className="py-3 px-4 font-medium">Joined</th>
-                <th className="py-3 px-4 font-medium">Scam Checks</th>
-                <th className="py-3 px-4 font-medium text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1f2d45]">
-              {filteredUsers.length === 0 ? (
+      {/* Main Split Content: Table on Left + Detail Panel on Right */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* User Table (8 cols) */}
+        <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-[#8ea0b3]">
-                    No users matching criteria.
-                  </td>
+                  <th className="px-5 py-3.5">User</th>
+                  <th className="px-4 py-3.5">Plan</th>
+                  <th className="px-4 py-3.5">Status</th>
+                  <th className="px-3 py-3.5 text-center">Checks</th>
+                  <th className="px-3 py-3.5 text-center">Vault</th>
+                  <th className="px-4 py-3.5 text-right">Action</th>
                 </tr>
-              ) : (
-                filteredUsers.map((u) => {
-                  const isSelected = selectedUser.id === u.id;
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredUsers.map((user) => {
+                  const isSelected = user.id === selectedUser?.id;
                   return (
                     <tr
-                      key={u.id}
-                      onClick={() => setSelectedUser(u)}
-                      className={`hover:bg-[#13203a]/50 cursor-pointer transition ${
-                        isSelected ? "bg-[#13203a]/80" : ""
+                      key={user.id}
+                      onClick={() => setSelectedUserId(user.id)}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? "bg-teal-50/40" : "hover:bg-slate-50/80"
                       }`}
                     >
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-[#eaf1f7]">{u.name}</div>
-                        <div className="text-[11px] text-[#8ea0b3]">{u.email}</div>
+                      <td className="px-5 py-3.5">
+                        <div className="font-semibold text-slate-900">{user.name}</div>
+                        <div className="text-xs text-slate-500">{user.email}</div>
                       </td>
-                      <td className="py-3 px-4 font-medium text-[#eaf1f7]">{u.plan}</td>
-                      <td className="py-3 px-4">{getStatusBadge(u.status)}</td>
-                      <td className="py-3 px-4 text-[#8ea0b3]">{u.joined}</td>
-                      <td className="py-3 px-4 font-semibold text-[#eaf1f7]">{u.checksCount}</td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="px-4 py-3.5 text-slate-700">
+                        {user.plan === "None" ? "None" : user.plan}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="inline-flex items-center gap-1.5 text-xs text-slate-700">
+                          <span className={`w-2 h-2 rounded-full ${getStatusDot(user.status)}`}></span>
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3.5 text-center text-slate-700 font-medium">
+                        {user.checksCount}
+                      </td>
+                      <td className="px-3 py-3.5 text-center text-slate-700 font-medium">
+                        {user.vaultCount}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
                         <button
                           type="button"
-                          className="px-2.5 py-1 rounded bg-[#13203a] text-[#2dd4bf] hover:bg-[#2dd4bf]/20 border border-[#1f2d45] font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedUserId(user.id);
+                          }}
+                          className={`text-xs font-semibold px-2.5 py-1 rounded transition ${
+                            isSelected
+                              ? "text-teal-800 bg-teal-100/60"
+                              : "text-teal-700 hover:text-teal-800 hover:bg-teal-50"
+                          }`}
                         >
-                          {isSelected ? "Inspecting" : "Open"}
+                          View
                         </button>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Selected User Record Inspection Drawer (M5-09 / M5-10) */}
-      {selectedUser && (
-        <div className="p-6 rounded-xl bg-[#0e1726] border border-[#1f2d45] space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#1f2d45]">
+        {/* User Detail Card (5 cols) */}
+        {selectedUser && (
+          <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-xl border border-slate-200 p-6 shadow-sm sticky top-6 space-y-6">
             <div>
-              <div className="text-sm font-semibold text-[#eaf1f7] flex items-center gap-2">
-                <span>User record · {selectedUser.name}</span>
-                {getStatusBadge(selectedUser.status)}
-              </div>
-              <p className="text-xs text-[#8ea0b3] mt-0.5">ID: {selectedUser.id}</p>
+              <h2 className="text-xl font-bold text-slate-900">{selectedUser.name}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{selectedUser.email}</p>
             </div>
 
-            {/* Moderation Controls (RBAC Enforcement) */}
-            <div className="flex items-center gap-2">
+            <div className="divide-y divide-slate-100 text-sm">
+              <div className="py-2.5 flex items-center justify-between">
+                <span className="text-slate-500">Plan</span>
+                <span className="font-semibold text-slate-900">
+                  {selectedUser.plan}
+                  {selectedUser.billingAmount > 0 ? `, LKR ${selectedUser.billingAmount}` : ""}
+                </span>
+              </div>
+              <div className="py-2.5 flex items-center justify-between">
+                <span className="text-slate-500">Status</span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-slate-900">
+                  <span className={`w-2 h-2 rounded-full ${getStatusDot(selectedUser.status)}`}></span>
+                  {selectedUser.status}
+                </span>
+              </div>
+              <div className="py-2.5 flex items-center justify-between">
+                <span className="text-slate-500">Renews</span>
+                <span className="font-medium text-slate-900">{selectedUser.renewal}</span>
+              </div>
+              <div className="py-2.5 flex items-center justify-between">
+                <span className="text-slate-500">Joined</span>
+                <span className="font-medium text-slate-900">{selectedUser.joined}</span>
+              </div>
+              <div className="py-2.5 flex items-center justify-between">
+                <span className="text-slate-500">Checks this month</span>
+                <span className="font-semibold text-slate-900">{selectedUser.checksCount}</span>
+              </div>
+              <div className="py-2.5 flex items-center justify-between">
+                <span className="text-slate-500">Vault entries</span>
+                <span className="font-semibold text-slate-900">
+                  {selectedUser.vaultCount} (count only)
+                </span>
+              </div>
+            </div>
+
+            {/* Support notes */}
+            <div>
+              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">
+                Support notes
+              </div>
+              {selectedUser.supportNotes && selectedUser.supportNotes.length > 0 ? (
+                <div className="space-y-1 mt-1 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  {selectedUser.supportNotes.map((note, idx) => (
+                    <div key={idx}>• {note}</div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">No open support notes for this user.</p>
+              )}
+            </div>
+
+            {/* Zero Knowledge Privacy Callout */}
+            <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 border border-slate-200">
+              Passwords, vault entries and pasted messages are never shown to admins.
+            </div>
+
+            {/* Suspend / Reactivate Action Buttons */}
+            <div className="space-y-2 pt-2">
               {selectedUser.status === "Suspended" ? (
-                <button
-                  onClick={() => handleOpenActionModal("reactivate", selectedUser)}
-                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#2dd4bf] text-[#0b1322] hover:bg-[#5eead4] transition flex items-center gap-1.5"
-                >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  Reactivate Account
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleOpenActionModal("suspend", selectedUser)}
-                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-[#f06a6a] text-[#f06a6a] hover:bg-[#f06a6a]/15 transition flex items-center gap-1.5"
-                >
-                  <UserX className="w-3.5 h-3.5" />
-                  Suspend
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            <div className="p-3 rounded-lg bg-[#13203a] border border-[#1f2d45] space-y-1">
-              <span className="text-[#8ea0b3]">Email Address</span>
-              <div className="font-medium text-[#eaf1f7] truncate">{selectedUser.email}</div>
-            </div>
-            <div className="p-3 rounded-lg bg-[#13203a] border border-[#1f2d45] space-y-1">
-              <span className="text-[#8ea0b3]">Plan & Price</span>
-              <div className="font-medium text-[#eaf1f7]">
-                {selectedUser.plan} · LKR {selectedUser.billingAmount} / mo
-              </div>
-            </div>
-            <div className="p-3 rounded-lg bg-[#13203a] border border-[#1f2d45] space-y-1">
-              <span className="text-[#8ea0b3]">Next Renewal / Expiry</span>
-              <div className="font-medium text-[#eaf1f7]">{selectedUser.renewal}</div>
-            </div>
-            <div className="p-3 rounded-lg bg-[#13203a] border border-[#1f2d45] space-y-1">
-              <span className="text-[#8ea0b3]">Scam Checks Run</span>
-              <div className="font-medium text-[#eaf1f7]">{selectedUser.checksCount} total checks</div>
-            </div>
-          </div>
-
-          {/* Internal Support Notes Section */}
-          <div className="space-y-3 pt-2">
-            <h3 className="text-xs font-semibold text-[#eaf1f7] flex items-center gap-2">
-              <FileText className="w-3.5 h-3.5 text-[#2dd4bf]" />
-              Internal Support Notes ({selectedUser.supportNotes.length})
-            </h3>
-
-            {/* Add note input */}
-            <form onSubmit={handleAddNote} className="flex gap-2">
-              <input
-                type="text"
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Add an internal note regarding this account..."
-                className="flex-1 bg-[#13203a] border border-[#1f2d45] rounded-lg px-3 py-2 text-xs text-[#eaf1f7] placeholder-[#8ea0b3] focus:outline-none focus:border-[#2dd4bf]"
-              />
-              <button
-                type="submit"
-                className="px-3 py-2 bg-[#2dd4bf] text-[#0b1322] rounded-lg text-xs font-semibold hover:bg-[#5eead4] transition flex items-center gap-1"
-              >
-                <Send className="w-3.5 h-3.5" />
-                Add Note
-              </button>
-            </form>
-
-            {/* Note items */}
-            <div className="space-y-1.5 max-h-36 overflow-y-auto">
-              {selectedUser.supportNotes.length === 0 ? (
-                <div className="text-xs text-[#8ea0b3] italic">No support notes recorded yet.</div>
-              ) : (
-                selectedUser.supportNotes.map((note, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 rounded bg-[#13203a]/60 border border-[#1f2d45] text-xs text-[#eaf1f7]"
+                <>
+                  <button
+                    onClick={handleOpenReactivate}
+                    className="w-full py-2.5 px-4 rounded-lg bg-[#0F766E] hover:bg-[#115E59] text-white text-sm font-semibold transition shadow-sm"
                   >
-                    • {note}
-                  </div>
-                ))
+                    Reactivate account
+                  </button>
+                  <button
+                    disabled
+                    className="w-full py-2.5 px-4 rounded-lg bg-slate-100 text-slate-400 text-sm font-medium cursor-not-allowed"
+                  >
+                    Suspend account (already suspended)
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleOpenSuspend}
+                    className="w-full py-2.5 px-4 rounded-lg bg-[#B91C1C] hover:bg-[#991B1B] text-white text-sm font-semibold transition shadow-sm"
+                  >
+                    Suspend account
+                  </button>
+                  <button
+                    disabled
+                    className="w-full py-2.5 px-4 rounded-lg bg-slate-100 text-slate-400 text-sm font-medium cursor-not-allowed"
+                  >
+                    Reactivate (account is active)
+                  </button>
+                </>
               )}
             </div>
-          </div>
 
-          {/* Privacy Guarantee Banner */}
-          <div className="p-3.5 rounded-lg bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 flex items-start gap-2.5 text-xs text-[#8ea0b3]">
-            <Lock className="w-4 h-4 text-[#2dd4bf] flex-shrink-0 mt-0.5" />
-            <p className="leading-relaxed">
-              <strong className="text-[#eaf1f7]">Hidden by design:</strong> Vault passwords, secret notes, and pasted scam message content are zero-knowledge and never accessible to administrators. Support role can view records; only Admin can suspend/reactivate accounts. Every action generates an immutable audit log entry.
+            <p className="text-[11px] text-slate-400 text-center">
+              Suspending asks for a reason and is recorded in the audit log.
             </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Moderation Confirmation Modal */}
-      {actionModal.isOpen && actionModal.user && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0e1726] border border-[#1f2d45] rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-2 rounded-lg ${
-                  actionModal.type === "suspend"
-                    ? "bg-[#f06a6a]/15 text-[#f06a6a]"
-                    : "bg-[#2dd4bf]/15 text-[#2dd4bf]"
-                }`}
-              >
-                <ShieldAlert className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-[#eaf1f7]">
-                  {actionModal.type === "suspend" ? "Suspend Account" : "Reactivate Account"}
-                </h3>
-                <p className="text-xs text-[#8ea0b3]">Target: {actionModal.user.email}</p>
-              </div>
-            </div>
-
-            {errorMessage && (
-              <div className="p-3 rounded bg-[#f06a6a]/15 border border-[#f06a6a] text-xs text-[#f06a6a] flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
-
-            <div className="space-y-1.5 text-xs">
-              <label className="text-[#eaf1f7] font-medium">Audit Reason / Justification</label>
-              <textarea
-                value={actionReason}
-                onChange={(e) => setActionReason(e.target.value)}
-                rows={3}
-                placeholder={
-                  actionModal.type === "suspend"
-                    ? "E.g., Automated API request abuse, fraudulent behavior detected..."
-                    : "E.g., Account cleared after security verification..."
-                }
-                className="w-full bg-[#13203a] border border-[#1f2d45] rounded-lg p-2.5 text-xs text-[#eaf1f7] placeholder-[#8ea0b3] focus:outline-none focus:border-[#2dd4bf]"
-              />
-              <p className="text-[11px] text-[#8ea0b3]">
-                This reason will be immutably stamped into the system audit trail (M5-11).
+      {/* Page 13: Suspend User Modal */}
+      {isSuspendModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Suspend {selectedUser.name}?</h3>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                This account loses access immediately. Vault data is not deleted. You can reactivate the account later.
               </p>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div>
+              <label htmlFor="suspend-reason" className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Reason (required)
+              </label>
+              <textarea
+                id="suspend-reason"
+                rows={3}
+                value={modalReason}
+                onChange={(e) => setModalReason(e.target.value)}
+                placeholder="Explain why this account is being suspended"
+                className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
+              />
+              {modalError && <p className="text-xs text-red-600 mt-1">{modalError}</p>}
+            </div>
+
+            <div className="text-xs text-slate-500">
+              This action is written to the audit log.
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setActionModal({ isOpen: false, type: "suspend" })}
-                className="px-3.5 py-2 rounded-lg text-xs font-medium text-[#8ea0b3] hover:bg-[#13203a] transition"
+                onClick={() => setIsSuspendModalOpen(false)}
+                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium transition"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleConfirmAction}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
-                  actionModal.type === "suspend"
-                    ? "bg-[#f06a6a] text-white hover:bg-rose-600"
-                    : "bg-[#2dd4bf] text-[#0b1322] hover:bg-[#5eead4]"
-                }`}
+                onClick={handleConfirmSuspend}
+                className="px-4 py-2 rounded-lg bg-[#B91C1C] hover:bg-[#991B1B] text-white text-sm font-medium transition"
               >
-                Confirm {actionModal.type === "suspend" ? "Suspension" : "Reactivation"}
+                Suspend account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Page 14: Reactivate User Modal */}
+      {isReactivateModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Reactivate {selectedUser.name}?</h3>
+              <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                This account regains access to its plan and tools right away. Vault data was kept while the account was suspended.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="reactivate-reason" className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Reason (required)
+              </label>
+              <textarea
+                id="reactivate-reason"
+                rows={3}
+                value={modalReason}
+                onChange={(e) => setModalReason(e.target.value)}
+                placeholder="Explain why this account is being reactivated"
+                className="w-full bg-white border border-slate-300 rounded-xl p-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+              />
+              {modalError && <p className="text-xs text-red-600 mt-1">{modalError}</p>}
+            </div>
+
+            <div className="text-xs text-slate-500">
+              This action is written to the audit log.
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsReactivateModalOpen(false)}
+                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReactivate}
+                className="px-4 py-2 rounded-lg bg-[#0F766E] hover:bg-[#115E59] text-white text-sm font-medium transition"
+              >
+                Reactivate account
               </button>
             </div>
           </div>

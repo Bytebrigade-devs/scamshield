@@ -1,204 +1,163 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  ShieldAlert,
-  ShieldCheck,
-  AlertTriangle,
-  Info,
-  CheckCircle,
-  HelpCircle,
-  TrendingUp,
-  Layers,
-  ArrowRight,
-} from "lucide-react";
-import { useAdmin } from "@/lib/admin-store";
+import React from "react";
+import { AlertCircle, Shield, Lock, CheckCircle2, ChevronRight } from "lucide-react";
 
-export default function SafetyScoreCoordinatorPage() {
-  const { users } = useAdmin();
-
-  // Score brackets
-  const safeCount = users.filter((u) => u.safetyScore && u.safetyScore >= 80).length;
-  const fairCount = users.filter((u) => u.safetyScore && u.safetyScore >= 60 && u.safetyScore < 80).length;
-  const atRiskCount = users.filter((u) => u.safetyScore && u.safetyScore < 60).length;
-  const uncalculatedCount = users.filter((u) => u.safetyScore === null || u.safetyScore === undefined).length;
-
+export default function AdminSafetyScorePage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-[#eaf1f7]">
-              Digital Safety Score — Admin View
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs bg-[#2dd4bf]/20 text-[#2dd4bf] border border-[#2dd4bf]/40">
-              Module 6 Coordination · M6-05
-            </span>
-          </div>
-          <p className="text-xs text-[#8ea0b3] mt-1">
-            Coordinating three safe module summaries (M2 Account Security + M3 Vault Health + M4 Scam Activity) into an aggregate score.
-          </p>
-        </div>
-      </div>
-
-      {/* Coordinator Responsibilities Banner */}
-      <div className="p-4 rounded-xl bg-[#0e1726] border border-[#1f2d45] space-y-2 text-xs">
-        <div className="flex items-center gap-2 font-semibold text-[#2dd4bf]">
-          <Layers className="w-4 h-4" />
-          <span>Module 6 Team Agreement (Confirmed 18 October 2026)</span>
-        </div>
-        <p className="text-[#8ea0b3] leading-relaxed">
-          Module 6 is shared across all five teammates. Vishmi (@Vish-Himaya) coordinates the design assembly (M6-09), calculation logic, and the admin aggregate view (M6-05). Each owner provides an isolated summary card.
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Digital Safety Score</h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          Admin aggregation view. Draft design for layout review.
         </p>
       </div>
 
-      {/* Score Health Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-xl bg-[#0e1726] border border-[#1f2d45] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#8ea0b3]">
-            <span>Optimal (&ge; 80)</span>
-            <ShieldCheck className="w-4 h-4 text-[#34d399]" />
-          </div>
-          <div className="text-3xl font-bold text-[#34d399]">{safeCount}</div>
-          <div className="text-[11px] text-[#8ea0b3]">Strong password hygiene & 2FA</div>
-        </div>
-
-        <div className="p-5 rounded-xl bg-[#0e1726] border border-[#1f2d45] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#8ea0b3]">
-            <span>Fair (60 - 79)</span>
-            <ShieldAlert className="w-4 h-4 text-[#f59e0b]" />
-          </div>
-          <div className="text-3xl font-bold text-[#f59e0b]">{fairCount}</div>
-          <div className="text-[11px] text-[#8ea0b3]">E.g. Reused passwords detected</div>
-        </div>
-
-        <div className="p-5 rounded-xl bg-[#0e1726] border border-[#1f2d45] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#8ea0b3]">
-            <span>At Risk (&lt; 60)</span>
-            <AlertTriangle className="w-4 h-4 text-[#f06a6a]" />
-          </div>
-          <div className="text-3xl font-bold text-[#f06a6a]">{atRiskCount}</div>
-          <div className="text-[11px] text-[#8ea0b3]">Multiple weak credentials</div>
-        </div>
-
-        <div className="p-5 rounded-xl bg-[#0e1726] border border-[#1f2d45] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#8ea0b3]">
-            <span>Pending Calculation</span>
-            <HelpCircle className="w-4 h-4 text-[#8ea0b3]" />
-          </div>
-          <div className="text-3xl font-bold text-[#eaf1f7]">{uncalculatedCount}</div>
-          <div className="text-[11px] text-[#8ea0b3]">Missing vault or account signals</div>
+      {/* Amber Warning Notice: Formula not approved */}
+      <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0 mt-1.5"></span>
+        <div className="text-sm text-amber-950">
+          <strong className="font-semibold">Formula not approved</strong> — No weights or thresholds are approved, so no real scores are shown. A missing input is never shown as safe.
         </div>
       </div>
 
-      {/* Three Input Signals Breakdown */}
-      <div className="p-5 rounded-xl bg-[#0e1726] border border-[#1f2d45] space-y-4">
-        <h2 className="text-sm font-semibold text-[#eaf1f7]">
-          The Three Safe Inputs (Zero Private Data Boundary)
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          {/* Input 1: Vault Health (M3) */}
-          <div className="p-4 rounded-lg bg-[#13203a] border border-[#1f2d45] space-y-2">
+      {/* 3 Pillar Component Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Pillar 1: Password health */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[#eaf1f7]">1. Password Health (M3)</span>
-              <span className="text-[10px] text-[#2dd4bf] font-mono">Owner: Prashni</span>
+              <h2 className="text-base font-bold text-slate-900">Password health</h2>
+              <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                Under review
+              </span>
             </div>
-            <p className="text-[#8ea0b3] leading-relaxed">
-              Provides counts of reused, weak, and leaked credentials. <strong>Never transmits passwords, notes, or encryption keys.</strong>
+            <div className="text-xs text-slate-400 mt-0.5 font-medium">Module 3</div>
+            <p className="text-xs text-slate-600 mt-3 leading-relaxed">
+              Counts only: weak and reused totals. Never passwords, sites or notes.
             </p>
-            <div className="pt-2 text-[11px] text-[#34d399] font-medium">✓ Input format agreed</div>
           </div>
 
-          {/* Input 2: Account Security (M2) */}
-          <div className="p-4 rounded-lg bg-[#13203a] border border-[#1f2d45] space-y-2">
+          <div className="pt-6 border-t border-slate-100 mt-6">
+            <div className="text-xl font-bold text-slate-400">Not scored yet</div>
+          </div>
+        </div>
+
+        {/* Pillar 2: Account security */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[#eaf1f7]">2. Account Security (M2)</span>
-              <span className="text-[10px] text-[#2dd4bf] font-mono">Owner: Lahiru</span>
+              <h2 className="text-base font-bold text-slate-900">Account security</h2>
+              <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                Under review
+              </span>
             </div>
-            <p className="text-[#8ea0b3] leading-relaxed">
-              Provides authentication strength, 2FA status, and session age. <strong>Subscription tier or payment never influences the score.</strong>
+            <div className="text-xs text-slate-400 mt-0.5 font-medium">Module 2</div>
+            <p className="text-xs text-slate-600 mt-3 leading-relaxed">
+              Account-security facts only. Plan, price and payment never affect the score.
             </p>
-            <div className="pt-2 text-[11px] text-[#34d399] font-medium">✓ Boundary enforced</div>
           </div>
 
-          {/* Input 3: Scam Activity (M4) */}
-          <div className="p-4 rounded-lg bg-[#13203a] border border-[#1f2d45] space-y-2">
+          <div className="pt-6 border-t border-slate-100 mt-6">
+            <div className="text-xl font-bold text-slate-400">Not scored yet</div>
+          </div>
+        </div>
+
+        {/* Pillar 3: Scam activity */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[#eaf1f7]">3. Scam Activity (M4)</span>
-              <span className="text-[10px] text-[#2dd4bf] font-mono">Owner: Svishwa</span>
+              <h2 className="text-base font-bold text-slate-900">Scam activity</h2>
+              <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                Non-scoring proposal
+              </span>
             </div>
-            <p className="text-[#8ea0b3] leading-relaxed">
-              Provides check counts and detected category indicators. Currently marked <strong>non-scoring</strong> until protective accuracy is reviewed.
+            <div className="text-xs text-slate-400 mt-0.5 font-medium">Module 4</div>
+            <p className="text-xs text-slate-600 mt-3 leading-relaxed">
+              Availability and limitations only. Running more checks never raises the score.
             </p>
-            <div className="pt-2 text-[11px] text-[#f59e0b] font-medium">⏳ Model under review</div>
+          </div>
+
+          <div className="pt-6 border-t border-slate-100 mt-6">
+            <div className="text-xl font-bold text-slate-400">Not scored yet</div>
           </div>
         </div>
       </div>
 
-      {/* Cohort Safety Score Table */}
-      <div className="rounded-xl bg-[#0e1726] border border-[#1f2d45] overflow-hidden">
-        <div className="p-4 border-b border-[#1f2d45] flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[#eaf1f7]">
-            Active User Safety Score Snapshot
-          </h2>
-          <span className="text-xs text-[#8ea0b3]">Formula Version: 1.0 (Draft)</span>
+      {/* Per-user score view */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="p-5 border-b border-slate-100">
+          <h2 className="text-base font-bold text-slate-900">Per–user score view</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Components shown separately. Synthetic users, counts only.
+          </p>
         </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-[#1f2d45] text-[#8ea0b3] bg-[#0b1322]">
-                <th className="py-3 px-4 font-medium">User</th>
-                <th className="py-3 px-4 font-medium">Plan</th>
-                <th className="py-3 px-4 font-medium">Calculated Score</th>
-                <th className="py-3 px-4 font-medium">Rating</th>
-                <th className="py-3 px-4 font-medium">Primary Recommendation</th>
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <tr>
+                <th className="px-5 py-3.5">User</th>
+                <th className="px-4 py-3.5">Password health</th>
+                <th className="px-4 py-3.5">Account security</th>
+                <th className="px-4 py-3.5">Scam activity</th>
+                <th className="px-4 py-3.5 text-right">Score</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1f2d45]">
-              {users.map((u) => {
-                const score = u.safetyScore;
-                let rating = "Not scored yet";
-                let badgeClass = "text-[#8ea0b3] border-[#1f2d45]";
-                let recommendation = "Perform initial security check";
-
-                if (score !== null && score !== undefined) {
-                  if (score >= 80) {
-                    rating = "Optimal";
-                    badgeClass = "text-[#34d399] border-[#34d399]/40 bg-[#34d399]/10";
-                    recommendation = "Keep up periodic vault reviews";
-                  } else if (score >= 60) {
-                    rating = "Fair";
-                    badgeClass = "text-[#f59e0b] border-[#f59e0b]/40 bg-[#f59e0b]/10";
-                    recommendation = "Change 2 reused passwords in vault";
-                  } else {
-                    rating = "At Risk";
-                    badgeClass = "text-[#f06a6a] border-[#f06a6a]/40 bg-[#f06a6a]/10";
-                    recommendation = "Enable 2FA and replace weak credentials";
-                  }
-                }
-
-                return (
-                  <tr key={u.id} className="hover:bg-[#13203a]/50">
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-[#eaf1f7]">{u.name}</div>
-                      <div className="text-[11px] text-[#8ea0b3]">{u.email}</div>
-                    </td>
-                    <td className="py-3 px-4 text-[#8ea0b3]">{u.plan}</td>
-                    <td className="py-3 px-4 font-mono font-bold text-sm text-[#eaf1f7]">
-                      {score !== null && score !== undefined ? `${score}/100` : "—"}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${badgeClass}`}>
-                        {rating}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-[#8ea0b3]">{recommendation}</td>
-                  </tr>
-                );
-              })}
+            <tbody className="divide-y divide-slate-100">
+              <tr className="hover:bg-slate-50/70 transition">
+                <td className="px-5 py-3.5 font-semibold text-slate-900">Nimal P.</td>
+                <td className="px-4 py-3.5 text-slate-700">2 reused, 1 weak</td>
+                <td className="px-4 py-3.5 text-slate-700">Login protection on</td>
+                <td className="px-4 py-3.5 text-slate-400 italic">Not scored yet</td>
+                <td className="px-4 py-3.5 text-right font-medium text-slate-400">Not scored yet</td>
+              </tr>
+              <tr className="hover:bg-slate-50/70 transition">
+                <td className="px-5 py-3.5 font-semibold text-slate-900">Sachini R.</td>
+                <td className="px-4 py-3.5 text-slate-400">Not available</td>
+                <td className="px-4 py-3.5 text-slate-400">Not available</td>
+                <td className="px-4 py-3.5 text-slate-400 italic">Not scored yet</td>
+                <td className="px-4 py-3.5 text-right font-medium text-slate-400">Not scored yet</td>
+              </tr>
+              <tr className="hover:bg-slate-50/70 transition">
+                <td className="px-5 py-3.5 font-semibold text-slate-900">Kasun D.</td>
+                <td className="px-4 py-3.5 text-slate-400">Not available</td>
+                <td className="px-4 py-3.5 text-slate-400">Not available</td>
+                <td className="px-4 py-3.5 text-slate-400 italic">Not scored yet</td>
+                <td className="px-4 py-3.5 text-right font-medium text-slate-400">Not scored yet</td>
+              </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Rules the aggregation must follow card */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+        <h2 className="text-base font-bold text-slate-900 mb-4">
+          Rules the aggregation must follow
+        </h2>
+
+        <div className="divide-y divide-slate-100 text-sm">
+          <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="font-medium text-slate-900">Missing input</span>
+            <span className="text-slate-600 text-sm">Shown as &quot;Not scored yet&quot;, never as zero or safe</span>
+          </div>
+
+          <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="font-medium text-slate-900">Subscription</span>
+            <span className="text-slate-600 text-sm">Plan, price and payment status never change the score</span>
+          </div>
+
+          <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="font-medium text-slate-900">Scam checks</span>
+            <span className="text-slate-600 text-sm">Running more checks never raises safety</span>
+          </div>
+
+          <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="font-medium text-slate-900">Privacy</span>
+            <span className="text-slate-600 text-sm">No passwords, notes or raw messages reach this view</span>
+          </div>
         </div>
       </div>
     </div>

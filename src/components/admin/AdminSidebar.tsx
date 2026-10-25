@@ -1,134 +1,123 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ShieldAlert,
+  LayoutDashboard,
   Users,
   BarChart3,
-  ClipboardList,
+  Mail,
+  FileText,
+  Shield,
+  Activity,
+  ShieldAlert,
   ShieldCheck,
-  Radar,
-  Lock,
-  ArrowRightLeft,
-  RotateCcw,
+  UserCheck,
+  KeyRound,
 } from "lucide-react";
 import { useAdmin } from "@/lib/admin-store";
 import { AdminRole } from "@/lib/types/admin";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const { currentRole, setCurrentRole, adminEmail, resetToDefaults } = useAdmin();
+  const { currentRole, setCurrentRole, adminName } = useAdmin();
 
   const navItems = [
-    { name: "Overview", href: "/admin", icon: BarChart3, tag: "M5-14" },
-    { name: "Users", href: "/admin/users", icon: Users, tag: "M5-09" },
-    { name: "Analytics", href: "/admin/analytics", icon: BarChart3, tag: "M5-05" },
-    { name: "Scam Intelligence", href: "/admin/scams", icon: Radar, tag: "M5-04" },
-    { name: "Support & Audit", href: "/admin/support-audit", icon: ClipboardList, tag: "M5-11" },
-    { name: "Safety Scores (M6)", href: "/admin/safety-scores", icon: ShieldAlert, tag: "M6-05" },
+    { name: "Overview", href: "/admin", icon: LayoutDashboard },
+    { name: "Users", href: "/admin/users", icon: Users },
+    { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+    { name: "Support inbox", href: "/admin/support-inbox", icon: Mail },
+    { name: "Audit log", href: "/admin/audit-log", icon: FileText },
+    { name: "Safety score", href: "/admin/safety-scores", icon: Shield },
+    { name: "Monitoring", href: "/admin/monitoring", icon: Activity },
   ];
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-[#0b1322] border-r border-[#1f2d45] flex flex-col min-h-screen text-[#8ea0b3]">
-      {/* Brand Header */}
-      <div className="p-5 border-b border-[#1f2d45]">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-teal-500/10 border border-[#2dd4bf] flex items-center justify-center text-[#2dd4bf]">
-            <ShieldCheck className="h-5 w-5" />
+    <aside className="w-60 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col justify-between min-h-screen">
+      {/* Top Section */}
+      <div>
+        {/* Brand Header */}
+        <div className="p-6 pb-5 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
+            <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-base font-bold text-[#eaf1f7] tracking-tight">ScamShield</div>
-            <div className="text-xs text-[#2dd4bf] font-medium">Admin & Operations (M5)</div>
+            <h1 className="text-base font-bold text-slate-900 leading-tight">ScamShield</h1>
+            <p className="text-xs text-slate-500 font-medium">Admin console</p>
           </div>
         </div>
-        <div className="mt-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#13203a] border border-[#1f2d45] text-[11px] text-[#8ea0b3]">
-          <span className="w-2 h-2 rounded-full bg-[#34d399] animate-pulse"></span>
-          <span>Synthetic seed data · Mock payments</span>
+
+        {/* Navigation Items */}
+        <nav className="px-3 space-y-1 mt-1">
+          {navItems.map((item) => {
+            const isActive =
+              item.href === "/admin"
+                ? pathname === "/admin"
+                : pathname.startsWith(item.href);
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-teal-50 text-teal-800 font-semibold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <Icon
+                  className={`w-4 h-4 ${
+                    isActive ? "text-teal-700" : "text-slate-400"
+                  }`}
+                />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Governance / Roles Link */}
+        <div className="px-3 pt-4 border-t border-slate-100 mt-4">
+          <Link
+            href="/admin/roles"
+            className={`flex items-center gap-3 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+              pathname === "/admin/roles"
+                ? "bg-teal-50 text-teal-800 font-semibold"
+                : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+            }`}
+          >
+            <KeyRound className="w-3.5 h-3.5 text-slate-400" />
+            <span>Roles and permissions</span>
+          </Link>
         </div>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="p-3 space-y-1.5 flex-1">
-        <div className="px-3 py-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-          Administration
+      {/* Bottom Footer: User Status & Role Switcher */}
+      <div className="p-4 border-t border-slate-100 bg-slate-50/60 m-3 rounded-xl">
+        <div className="text-xs text-slate-500">Signed in as</div>
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-sm font-semibold text-slate-900">{adminName}</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500" title="Online"></span>
         </div>
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? "bg-[#2dd4bf]/15 text-[#2dd4bf] border border-[#2dd4bf]/30"
-                  : "text-[#8ea0b3] hover:text-[#eaf1f7] hover:bg-[#13203a]/60"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Icon className={`h-4 w-4 ${isActive ? "text-[#2dd4bf]" : "text-[#8ea0b3]"}`} />
-                <span>{item.name}</span>
-              </div>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#13203a] text-slate-400 border border-[#1f2d45]">
-                {item.tag}
-              </span>
-            </Link>
-          );
-        })}
+        <div className="text-[11px] text-slate-400 mt-0.5">Synthetic data only</div>
 
-        <div className="pt-4 px-3 py-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-          Evaluation Sandbox
-        </div>
-        
-        {/* Role Switcher for Viva Demo */}
-        <div className="mx-2 p-3 rounded-xl bg-[#0e1726] border border-[#1f2d45] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#eaf1f7]">
-            <span className="font-semibold flex items-center gap-1.5">
-              <ArrowRightLeft className="w-3.5 h-3.5 text-[#2dd4bf]" />
-              Role Simulator
-            </span>
-            <span className="text-[10px] text-[#2dd4bf]">RBAC M5-10</span>
-          </div>
+        {/* Interactive Role Switcher for Presentation & Viva */}
+        <div className="mt-3 pt-2 border-t border-slate-200">
+          <label htmlFor="role-select" className="text-[11px] font-medium text-slate-600 block mb-1">
+            Simulate Role:
+          </label>
           <select
+            id="role-select"
             value={currentRole}
             onChange={(e) => setCurrentRole(e.target.value as AdminRole)}
-            className="w-full text-xs bg-[#13203a] border border-[#1f2d45] rounded-md px-2.5 py-1.5 text-[#eaf1f7] focus:outline-none focus:border-[#2dd4bf]"
+            className="w-full text-xs bg-white border border-slate-200 rounded-md px-2 py-1 text-slate-800 focus:outline-none focus:border-teal-600"
           >
-            <option value="admin">Admin (Full Access)</option>
-            <option value="support">Support (View & Note only)</option>
-            <option value="security_analyst">Security Analyst (Read Only)</option>
+            <option value="admin">Super admin (Full access)</option>
+            <option value="support">Support admin (Role limits)</option>
+            <option value="none">No admin role (Deny view)</option>
           </select>
-          <p className="text-[10px] text-[#8ea0b3] leading-relaxed">
-            {currentRole === "admin"
-              ? "All actions enabled: suspend, reactivate, exports."
-              : currentRole === "support"
-              ? "Support mode: can add notes, suspension disabled."
-              : "Analyst mode: read-only metrics, no moderation."}
-          </p>
-        </div>
-      </nav>
-
-      {/* Admin User Badge & Footer */}
-      <div className="p-4 border-t border-[#1f2d45] space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="text-xs">
-            <div className="text-[11px] text-[#8ea0b3]">Signed in as</div>
-            <div className="text-sm font-semibold text-[#eaf1f7] truncate max-w-[130px]">{adminEmail}</div>
-            <div className="text-[11px] text-[#2dd4bf] mt-0.5">Role: {currentRole.toUpperCase()} · M5-01</div>
-          </div>
-          <button
-            onClick={() => resetToDefaults()}
-            title="Reset seed data to defaults"
-            className="p-1.5 rounded-md hover:bg-[#13203a] text-[#8ea0b3] hover:text-[#2dd4bf] transition"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="pt-2 border-t border-[#1f2d45]/60 flex items-center gap-2 text-[11px] text-slate-400">
-          <Lock className="w-3.5 h-3.5 text-[#2dd4bf]" />
-          <span>Zero-Knowledge vault boundaries enforced</span>
         </div>
       </div>
     </aside>
