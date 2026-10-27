@@ -14,6 +14,10 @@
  * rules matched and quotes evidence spans; it produces NO verdict, score, category or incident
  * finding, and a matched keyword alone never confirms an incident.
  *
+ * ID namespace (review finding, 27 Oct 2026): the R-M4-xx IDs above are catalogue rule-hypothesis
+ * IDs (R-M4-01…20), NOT the Final report's requirement IDs (R-M4-01…18). E.g. catalogue R-M4-13
+ * is the prize/reward claim-link rule; report R-M4-13 is the own-history requirement.
+ *
  * Language position (owner decision 24 Oct 2026, superseding the 18 Oct English-only
  * settlement): cues add Sinhala-script tokens and a conservative Singlish starter set, with
  * NO accuracy or coverage claim. Sinhala cues use script lookbehinds — JS `\b` is ASCII-only
