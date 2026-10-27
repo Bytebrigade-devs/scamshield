@@ -43,6 +43,25 @@ Node 22.13+ and pnpm 11.25.0. Run `pnpm install`, then `pnpm dev`. Open `http://
 
 Routes in the other modules are not created here. Overview and scam-checker navigation explain their pending integration rather than sending visitors to nonexistent pages.
 
+## Functional requirement traceability
+
+These IDs refer to the interim report's Module 3 FR01–FR08. A working demo interaction is not completion of its production security requirement.
+
+| Requirement | Route / interaction | Implemented and deferred work |
+| --- | --- | --- |
+| FR01 — login CRUD, validation and delete confirmation | `/vault`, `/vault/new`, `/vault/login/:id`, `/vault/login/:id/edit` | In-memory CRUD, field validation and confirmation implemented. Authenticated encrypted persistence deferred. |
+| FR02 — search/filter and interface states | `/vault` filters; `/vault/states` | Search/filter and empty/validation states work. Loading and backend failure states are labelled visual previews. |
+| FR03 — masked-by-default reveal/hide/copy after access checks | Login details and secure-note reveal/copy actions | Mask/reveal/hide and clipboard permission handling implemented for fictional data. Server-side access checks and account re-verification deferred. |
+| FR04 — folders and bulk actions | `/vault/folders`, selected rows in `/vault` | Create/rename/delete folders and bulk move/delete implemented; deleting a folder preserves its items in Unfiled. |
+| FR05 — password generation with secure randomness | `/vault/generator`, generator in add/edit form | Web Crypto rejection sampling and unbiased shuffle implemented; selected character groups are guaranteed. |
+| FR06 — strength, exact reuse and bundled top-10,000 list | `/vault/health`, list badges and form estimate | Exact reuse and preview strength implemented. Only a five-item synthetic common-password sample is bundled; the full list and production estimator remain outstanding. |
+| FR07 — encrypted secure notes and content-free activity | `/vault/notes`, `/vault/activity` | Demo notes and content-free activity implemented. Encryption, authenticated access and durable storage deferred. |
+| FR08 — count summaries to M6 and entry counts to M5 | Health/count displays in `/vault` and `/vault/health` | Displays are local only; no M5/M6 service contract or publishing implemented. Future summaries contain counts, never passwords, note contents or keys. |
+
+## Integration decision still required before merge
+
+PR #22 and PR #12 introduce competing application foundations. The M2/M5 owners must agree the Next.js/React/Tailwind versions, package manager, root-page owner and merge order. No agreement is implied by this frontend implementation. The current `/` → `/vault` redirect is a temporary demo entry point and must be replaced by the agreed landing/funnel route during integration. Do not merge either competing scaffold until this decision is recorded.
+
 ## Structure
 
 - `src/app/globals.css`: shared semantic light/dark tokens and central font.
@@ -61,6 +80,10 @@ Routes in the other modules are not created here. Overview and scam-checker navi
 Light is default. Shared dark tokens are implemented at `[data-theme="dark"]` on the root for review, with no invented preference persistence or automatic system selection. Typography uses the locally bundled variable font; its OFL licence is in `public/fonts/OFL.txt`. Controls use 12px radii, cards 16px, visible keyboard focus, 44px primary touch targets and reduced-motion handling. Native modal dialogs trap focus, support Escape and restore focus. Inputs have visible labels and inline validation.
 
 ## Intentional differences from static copy
+
+- Typography follows the shared guide over the density of the PDF: 16px body, 14px minimum metadata/controls, 22–24px section headings and 18px card headings.
+- Font loading uses one root `@font-face` declaration and the locally licensed font; it does not add per-module font loaders.
+- Dark rendering remains a preview awaiting the design steward's acceptance. Browser checks do not constitute design approval.
 
 - Sample score 82/100 is visibly labelled illustrative, not a calculation or probability.
 - Frontend success messages say session-only storage; they do not claim encryption has been implemented.
