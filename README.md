@@ -1,5 +1,9 @@
 # ScamShield
 
+**Current M2 interim mode: frontend-only with dummy data.** Run `npm run dev` and open `/pricing` or `/account/subscription`. No backend configuration is needed. See [Frontend demo guide](docs/FRONTEND-DEMO.md) for presentation flows, dummy card details and reset controls. The older Supabase setup below is for the retained backend implementation.
+
+Module 2 interim setup and demo: [docs/M2-INTERIM.md](docs/M2-INTERIM.md). User stories and diagrams: [docs/M2-DESIGN.md](docs/M2-DESIGN.md).
+
 Digital safety platform combining a **password vault**, an **AI-powered scam checker** (OpenAI), and a **Digital Safety Score** — with a marketing funnel, mocked subscription paywall, and admin back office.
 
 IS2901 Software Development Project · Group **Byte Brigade** · University of Moratuwa, FIT · 2026–2027
@@ -19,11 +23,13 @@ IS2901 Software Development Project · Group **Byte Brigade** · University of M
 | # | Module | Owner |
 |---|--------|-------|
 | 1 | Landing Page, Onboarding & Growth | TBD |
-| 2 | Signup, Paywall & Subscription | TBD |
+| 2 | Signup, Paywall & Subscription | Lahiru Achintha (@lahiruachintha23-bit) |
 | 3 | Password Vault | TBD |
-| 4 | AI Scam Checker | TBD |
+| 4 | AI Scam Checker | Svishwa (@Svishwa2004) |
 | 5 | Admin Dashboard, Analytics & Operations | TBD |
-| 6 | Digital Safety Score | flexible (own / share / split) |
+| 6 | Digital Safety Score | shared across modules (coordinator TBD) |
+
+*M2 and M4 assigned 17 Oct 2026. M1, M3, M5 and the M6 coordinator are decided at the ownership meeting.*
 
 ## Workflow Rules (all members)
 

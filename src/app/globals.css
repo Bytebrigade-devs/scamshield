@@ -1,3 +1,327 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * ScamShield design tokens — source: docs/THEME-AND-TYPOGRAPHY.md (v1.1, team-approved).
+ * Three layers (guide §7): primitive → semantic → component.
+ * Components and Tailwind classes must use the semantic/component aliases, never raw hex.
+ */
+:root {
+  /* ---------- 1. Primitive ---------- */
+  --navy-900: #0f172a;
+  --teal-50: #f0fdfa;
+  --teal-700: #0f766e;
+  --teal-800: #115e59;
+  --teal-900: #134e4a;
+  --slate-50: #f8fafc;
+  --slate-200: #e2e8f0;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --white: #ffffff;
+  --green-50: #f0fdf4;
+  --green-200: #bbf7d0;
+  --green-700: #15803d;
+  --amber-50: #fffbeb;
+  --amber-200: #fde68a;
+  --amber-700: #b45309;
+  --red-50: #fef2f2;
+  --red-200: #fecaca;
+  --red-700: #b91c1c;
+  --red-800: #991b1b;
+  --radius-12: 12px;
+  --radius-16: 16px;
+
+  /* ---------- 2. Semantic (guide §2) ---------- */
+  --color-brand: var(--navy-900);
+  --color-primary: var(--teal-700);
+  --color-on-primary: var(--white);
+  --color-primary-hover: var(--teal-800);
+  --color-primary-active: var(--teal-900);
+  --color-primary-subtle: var(--teal-50);
+  --color-background: var(--slate-50);
+  --color-surface: var(--white);
+  --color-text: var(--navy-900);
+  --color-text-muted: var(--slate-600);
+  --color-border-subtle: var(--slate-200);
+  --color-border-control: var(--slate-500);
+  --color-success: var(--green-700);
+  --color-warning: var(--amber-700);
+  --color-danger: var(--red-700);
+  --color-disabled-bg: var(--slate-200);
+  --color-disabled-text: var(--slate-500);
+
+  /* PROPOSED (not yet in the guide — needs team approval via §7):
+     destructive hover/pressed state and tinted alert surfaces. */
+  --color-danger-hover: var(--red-800);
+  --color-success-subtle: var(--green-50);
+  --color-success-border: var(--green-200);
+  --color-warning-subtle: var(--amber-50);
+  --color-warning-border: var(--amber-200);
+  --color-danger-subtle: var(--red-50);
+  --color-danger-border: var(--red-200);
+
+  --font-body: var(--font-plus-jakarta), "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --radius-control: var(--radius-12);
+  --radius-card: var(--radius-16);
+  --shadow-surface: 0 4px 16px rgb(15 23 42 / 0.06);
+  --duration-feedback: 180ms;
+
+  /* ---------- 3. Component (guide §4, §5) ---------- */
+  --button-radius: var(--radius-control);
+  --button-height: 44px;
+  --button-height-lg: 48px;
+  --button-primary-bg: var(--color-primary);
+  --button-primary-bg-hover: var(--color-primary-hover);
+  --button-primary-bg-active: var(--color-primary-active);
+  --input-radius: var(--radius-control);
+  --input-height: 44px;
+  --card-radius: var(--radius-card);
+  --focus-ring: 3px solid var(--color-primary);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    color: var(--color-brand);
+  }
+  :focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* ----- Buttons: smooth, not brick-like (guide §4) ----- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: var(--button-height);
+    padding: 0 20px;
+    border: 1px solid transparent;
+    border-radius: var(--button-radius);
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      background-color var(--duration-feedback) ease-out,
+      border-color var(--duration-feedback) ease-out,
+      color var(--duration-feedback) ease-out,
+      box-shadow var(--duration-feedback) ease-out;
+  }
+  .btn:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+  .btn-lg {
+    min-height: var(--button-height-lg);
+    padding: 0 24px;
+  }
+  .btn-block {
+    width: 100%;
+  }
+
+  .btn-primary {
+    background-color: var(--button-primary-bg);
+    color: var(--color-on-primary);
+  }
+  .btn-primary:hover {
+    background-color: var(--button-primary-bg-hover);
+  }
+  .btn-primary:active {
+    background-color: var(--button-primary-bg-active);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-surface);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  .btn-secondary:hover {
+    background-color: var(--color-primary-subtle);
+  }
+  .btn-secondary:active {
+    background-color: var(--color-primary-subtle);
+    border-color: var(--color-primary-active);
+    color: var(--color-primary-active);
+  }
+
+  .btn-text {
+    background-color: transparent;
+    color: var(--color-primary);
+    padding: 0 12px;
+  }
+  .btn-text:hover {
+    background-color: var(--color-primary-subtle);
+  }
+  .btn-text:active {
+    color: var(--color-primary-active);
+  }
+
+  .btn-danger {
+    background-color: var(--color-danger);
+    color: var(--color-on-primary);
+  }
+  .btn-danger:hover {
+    background-color: var(--color-danger-hover);
+  }
+
+  /* Disabled: shared tokens, no hover/press feedback, no whole-component opacity. */
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    background-color: var(--color-disabled-bg);
+    border-color: transparent;
+    color: var(--color-disabled-text);
+    cursor: not-allowed;
+  }
+  /* Loading keeps the variant colours but blocks interaction. */
+  .btn[aria-busy="true"] {
+    cursor: progress;
+  }
+
+  /* ----- Inputs (guide §5) ----- */
+  .field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-text);
+  }
+  .input {
+    width: 100%;
+    min-height: var(--input-height);
+    padding: 0 14px;
+    border: 1px solid var(--color-border-control);
+    border-radius: var(--input-radius);
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 1rem;
+    transition:
+      border-color var(--duration-feedback) ease-out,
+      box-shadow var(--duration-feedback) ease-out;
+  }
+  .input::placeholder {
+    color: var(--color-text-muted);
+  }
+  .input:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+    border-color: var(--color-primary);
+  }
+  .input[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+  .field-hint {
+    margin-top: 6px;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+  .field-error {
+    margin-top: 6px;
+    font-size: 0.875rem;
+    color: var(--color-danger);
+  }
+
+  /* ----- Cards / panels ----- */
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow-surface);
+    padding: 24px;
+  }
+
+  /* ----- Alerts: colour + icon + text, never colour alone ----- */
+  .alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid;
+    border-radius: var(--radius-control);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .alert-success {
+    color: var(--color-success);
+    background-color: var(--color-success-subtle);
+    border-color: var(--color-success-border);
+  }
+  .alert-warning {
+    color: var(--color-warning);
+    background-color: var(--color-warning-subtle);
+    border-color: var(--color-warning-border);
+  }
+  .alert-danger {
+    color: var(--color-danger);
+    background-color: var(--color-danger-subtle);
+    border-color: var(--color-danger-border);
+  }
+
+  /* ----- Links ----- */
+  .link {
+    color: var(--color-primary);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color var(--duration-feedback) ease-out;
+  }
+  .link:hover {
+    color: var(--color-primary-hover);
+  }
+
+  /* ----- Misc ----- */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 9999px;
+    animation: ss-spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+}
+
+@keyframes ss-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Respect reduced motion: keep state feedback, drop non-essential motion. */
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .input,
+  .link {
+    transition: none;
+  }
+  .spinner {
+    animation-duration: 1.6s;
+  }
+}
