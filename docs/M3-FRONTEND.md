@@ -4,7 +4,7 @@ Implementation for `feat/m3-password-vault`, based on ScamShield-Module-3-All-Fr
 
 ## Run
 
-Node 22.13+ and pnpm 11.25.0. Run `pnpm install`, then `pnpm dev`. Open `http://127.0.0.1:3000/vault`. No keys or database setup required.
+Use validated Node 24.19.0 (pinned in `.nvmrc`) and pnpm 11.25.0. The declared engine minimum is Node 22.13.0; other allowed versions are not all individually verified. Run `pnpm install`, then `pnpm dev`. Open `http://127.0.0.1:3000/vault`. No keys or database setup required.
 
 ## Frame coverage
 

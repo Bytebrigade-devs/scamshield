@@ -42,7 +42,7 @@ Every module's UI must follow the shared team spec: see [docs/THEME-AND-TYPOGRAP
 
 ## Run the Module 3 frontend
 
-Use Node.js 22.13+ (Node 24 also works) and pnpm 11.25.0:
+Use the validated Node.js 24.19.0 version pinned in `.nvmrc` and pnpm 11.25.0. The package engine declares a minimum of Node 22.13.0; it is not a claim that every allowed version was tested.
 
 ```bash
 pnpm install
@@ -60,7 +60,7 @@ pnpm typecheck
 pnpm lint
 pnpm test:vault
 pnpm build
-# With the development server running and Microsoft Edge installed:
+# With Microsoft Edge installed; Playwright starts its own local server:
 pnpm test:browser
 ```
 

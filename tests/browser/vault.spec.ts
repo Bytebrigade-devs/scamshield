@@ -4,7 +4,7 @@ test("list search, filters, pagination and add/edit/delete journey", async ({ pa
   await page.goto("/vault");
   await expect(page.getByRole("heading",{name:"Password vault",exact:true})).toBeVisible();
   await expect(page.getByText("Showing 1–6 of 24 logins")).toBeVisible();
-  await page.screenshot({path:"test-results/vault-desktop.png",fullPage:true});
+  await page.screenshot({path:"test-results/vault-desktop.png",fullPage:true,caret:"initial"});
   await page.getByLabel("Search vault").fill("Netflix");
   await expect(page.getByText("Showing 1–1 of 1 logins")).toBeVisible();
   await page.getByLabel("Search vault").fill("not-a-record");
@@ -23,7 +23,7 @@ test("list search, filters, pagination and add/edit/delete journey", async ({ pa
   await expect(page.getByRole("dialog",{name:"Login saved"})).toBeVisible();
   await page.getByRole("button",{name:"Done",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Test example",exact:true})).toBeVisible();
-  await page.screenshot({path:"test-results/login-details.png",fullPage:true});
+  await page.screenshot({path:"test-results/login-details.png",fullPage:true,caret:"initial"});
   await page.getByRole("button",{name:"Show password",exact:true}).click();
   await expect(page.getByLabel("Password",{exact:true})).toHaveAttribute("type","text");
   await page.getByRole("button",{name:"Hide password",exact:true}).click();
@@ -45,7 +45,7 @@ test("folders, bulk move and deletion preserve records", async ({ page }) => {
   await page.getByRole("button",{name:"Move items",exact:true}).click();
   await page.getByRole("link",{name:"Folders",exact:true}).click();
   await page.getByRole("button",{name:"New folder",exact:true}).click();
-  await page.screenshot({path:"test-results/folder-dialog.png",fullPage:true});
+  await page.screenshot({path:"test-results/folder-dialog.png",fullPage:true,caret:"initial"});
   await page.getByLabel("Folder name *").fill("Banking");
   await page.getByRole("button",{name:"Create folder",exact:true}).click();
   await page.getByRole("button",{name:"Manage Banking"}).click();
@@ -63,7 +63,7 @@ test("notes are masked, editable and removable", async ({ page }) => {
   await page.goto("/vault/notes");
   await expect(page.getByRole("heading",{name:"Note content hidden"})).toBeVisible();
   await page.getByRole("button",{name:"Reveal note"}).click();
-  await page.screenshot({path:"test-results/secure-notes.png",fullPage:true});
+  await page.screenshot({path:"test-results/secure-notes.png",fullPage:true,caret:"initial"});
   await expect(page.getByText(/Recovery instructions are stored/)).toBeVisible();
   await page.getByRole("button",{name:"Hide note"}).click();
   await page.getByRole("button",{name:"New note",exact:true}).click();
@@ -79,7 +79,7 @@ test("notes are masked, editable and removable", async ({ page }) => {
 test("generator transfers output to form without putting it in URL or storage", async ({ page }) => {
   await page.goto("/vault/generator");
   await page.getByRole("button",{name:"Generate password",exact:true}).click();
-  await page.screenshot({path:"test-results/generator.png",fullPage:true});
+  await page.screenshot({path:"test-results/generator.png",fullPage:true,caret:"initial"});
   const generated = await page.locator(".generator-value strong").innerText();
   expect(generated).toHaveLength(16);
   await page.getByRole("button",{name:"Use in login",exact:true}).click();
@@ -122,7 +122,7 @@ test("mobile views reflow without horizontal overflow", async ({ page }) => {
     await page.goto(route);
     await expect(page.locator("h1")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.screenshot({path:`test-results/mobile-${route.replaceAll("/","-")}.png`,fullPage:true});
+    await page.screenshot({path:`test-results/mobile-${route.replaceAll("/","-")}.png`,fullPage:true,caret:"initial"});
   }
   await page.goto("/vault");
   await page.getByRole("button",{name:"Open navigation"}).click();
@@ -139,7 +139,7 @@ test("all supplied screen families render, including dark-token preview", async 
   await page.goto("/vault");
   await page.evaluate(() => document.documentElement.dataset.theme = "dark");
   expect(await page.locator("body").evaluate(el => getComputedStyle(el).backgroundColor)).toBe("rgb(15, 23, 42)");
-  await page.screenshot({path:"test-results/vault-dark.png",fullPage:true});
+  await page.screenshot({path:"test-results/vault-dark.png",fullPage:true,caret:"initial"});
 });
 
 test("shared typography and secondary controls hold in both theme previews", async ({ page }) => {
@@ -159,4 +159,18 @@ test("shared typography and secondary controls hold in both theme previews", asy
   await expect(button).toHaveCSS("color", "rgb(45, 212, 191)");
   await expect(button).toHaveCSS("border-top-color", "rgb(45, 212, 191)");
   await expect(button).toHaveCSS("background-color", "rgb(30, 41, 59)");
+});
+
+test("backend states and fixed scores remain visibly labelled as previews", async ({ page }) => {
+  for (const route of ["/vault", "/vault/health"]) {
+    await page.goto(route);
+    await expect(page.getByText("Illustrative score · not calculated", {exact:true})).toBeVisible();
+  }
+  await page.goto("/vault/states");
+  for (const title of ["Opening your vault…", "Unable to load your vault", "This item is unavailable", "Your session has ended", "We could not save your changes"]) {
+    const card = page.locator("section").filter({has:page.getByRole("heading", {name:title, exact:true})});
+    await expect(card).toContainText("Preview — no server contacted.");
+  }
+  await page.getByRole("button", {name:"Try again", exact:true}).click();
+  await expect(page.getByText("Preview — no server contacted. The retry interaction completed locally.", {exact:true})).toBeVisible();
 });

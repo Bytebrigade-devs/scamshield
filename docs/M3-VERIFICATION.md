@@ -1,13 +1,13 @@
 # Module 3 frontend verification
 
-Verified on 27 October 2026 using Node 24, pnpm 11.25.0, Next.js 16.4.3 and Microsoft Edge on Windows.
+Verified on 27 October 2026 using Node 24.19.0, pnpm 11.25.0, Next.js 16.4.3 and Microsoft Edge on Windows. `.nvmrc` pins this tested Node version; the broader package engine range is a minimum compatibility declaration.
 
 | Check | Result |
 | --- | --- |
 | TypeScript (`tsc --noEmit`) | Passed |
 | ESLint | Passed, no warnings |
 | Vault model tests | 6 passed |
-| Playwright browser suite | 10 passed after review corrections |
+| Playwright browser suite | 11 passed after follow-up review corrections |
 | Production build (`next build --webpack`) | Passed |
 | Git whitespace check | Passed |
 
@@ -21,9 +21,15 @@ The original C: drive ran low on space. Validation ran from a source copy at `D:
 
 Slow registry downloads required locally cached official package archives. The committed lockfile uses normal registry resolutions and contains no machine-specific archive overrides. Lint used `NODE_PATH` only to compensate for the temporary local archive installation; this is not a committed application requirement. The optional `unrs-resolver` fallback install script is explicitly disabled; the supplied platform binary worked during lint validation.
 
-Both development and production scripts select Webpack to match the verified build. Browser tests require a running local server at port 3000 and Microsoft Edge. Run `pnpm test:browser` after starting `pnpm dev` in another terminal.
+Both development and production scripts select Webpack to match the verified build. With Microsoft Edge installed, run `pnpm test:browser`: Playwright's `webServer` starts the local development server, waits for `/vault` on port 3000, and shuts down the server it started after testing. Local runs may reuse an existing server; CI disables reuse to avoid testing a stale build. The suite retains the Edge channel. Wiring M3 browser tests into the repository's CI workflow and provisioning its browser runner remain M2's integration work; this configuration alone does not claim CI execution.
 
 ## Remaining integration work
+
+### Review 5669498806 corrections
+
+`.nvmrc` now pins the observed Node 24.19.0 runtime. Both manual lock and idle timeout call the same memoized `clearAndLock()` callback, including data/draft/toast reset and clipboard-timer cancellation. Every backend loading/failure/session preview visibly states that no server was contacted. Both fixed score displays use the same adjacent “Illustrative score · not calculated” wording.
+
+The full 11-test Edge suite passed with `CI=1` locally, proving the new Playwright `webServer` starts a server without reusing a pre-existing process. The manual/idle lock regressions and new preview/disclaimer assertions passed. Lint, TypeScript, all six model tests and the production Webpack build also passed. The configured two-minute per-test limit matches the tested timeout on this Windows machine. This is local verification, not a GitHub Actions run. Screenshots preserve input caret styles to avoid modifying the page while React hydrates; the focused mobile recheck passed without that hydration warning.
 
 ### PR #22 review follow-up — 27 October 2026
 
