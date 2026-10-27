@@ -197,6 +197,22 @@ test('an unstitched alphanumeric wrap keeps the verbatim first-line fragment', (
 
 // --- PR #13 review response — F2: trailing-punctuation trim is balance-aware ---
 
+test('review hardening: sentence punctuation cannot be embedded in a stitched URL reading', () => {
+  for (const punctuation of ['.', ',', ')']) {
+    const result = extractCandidates(`See https://a.example/path${punctuation}\n/next`);
+    assert.deepEqual(result.urls, ['https://a.example/path']);
+    assert.equal(result.wrappedCandidates, undefined, 'punctuation terminates the candidate rather than moving inside a guessed URL');
+  }
+});
+
+test('review follow-up: punctuation on any wrapped line terminates further stitching', () => {
+  for (const punctuation of ['.', ',', ')']) {
+    const result = extractCandidates(`https://a.example/path\n/next${punctuation}\n/again`);
+    assert.deepEqual(result.urls, ['https://a.example/path']);
+    assert.deepEqual(result.wrappedCandidates, ['https://a.example/path/next']);
+  }
+});
+
 test('balanced parentheses stay in the URL candidate (Wikipedia-style titles)', () => {
   const r = extractCandidates('see https://en.wikipedia.org/wiki/Scam_(disambiguation) ok');
   assert.deepEqual(r.urls, ['https://en.wikipedia.org/wiki/Scam_(disambiguation)']);

@@ -13,8 +13,8 @@
  * 1. NO live provider call is authorized by this work: X-09 (written funding arrangement,
  *    verified cap/alert) stays open, so the provider is an injected port. This module never
  *    fetches, holds no key and reads no environment.
- * 2. The reply schema below is a DRAFT structural contract — verdict labels, semantics and
- *    confidence remain OD-M4-04 (open). Only structure is validated, never truth, and an
+ * 2. The reply schema below is a DRAFT contract — the transport allow-list does not settle
+ *    verdict semantics or confidence (OD-M4-04 open). Validation never proves truth, and an
  *    invalid reply is never "repaired" into a successful AI result.
  * 3. No verdict/score/category is attributed to rule matches (stage-2 design rule); a
  *    completed verdict comes only from a validated provider reply.
@@ -51,6 +51,8 @@ export interface StageCandidates {
   urls: string[];
   emails: string[];
   phones: string[];
+  /** Untrusted stitched readings, disclosed separately from verbatim URL spans. */
+  wrappedCandidates?: string[];
 }
 
 /** Stage-2 rule evidence (shape of rule-engine `RuleMatch`). NO verdict/score/category, by design. */
@@ -174,7 +176,10 @@ export interface UsagePort {
   admitCheck(subject: UsageSubject, now: number): UsageDenial | null;
   /**
    * Count one completed analysis (NFR-M4-10): converts one admission reservation into
-   * counted usage — the ONLY entry point that consumes quota.
+   * counted usage — the ONLY entry point that consumes quota. This operation MUST be
+   * atomic: throwing means no mutation was committed, and the reservation is still held
+   * for releaseCheck. A future persistent implementation must transact/reconcile internally;
+   * it cannot throw after committing and leave the boundary guessing whether to release.
    */
   recordCompletion(subject: { key: string }, now: number): void;
   /**
@@ -221,9 +226,17 @@ export type AnalysisMode = 'rules_and_ai' | 'rules_only' | 'none';
 
 export type RejectionReason = 'invalid-input' | 'access-blocked' | 'quota-denied' | 'rate-denied';
 
-/** DRAFT structural reply (OD-M4-04 open): field presence/types only — semantics unvalidated. */
+/** Draft transport labels, not a safety guarantee or an approved classification taxonomy. */
+export const DRAFT_VERDICT_LABELS = [
+  'suspicious', 'potentially suspicious', 'no obvious indicators', 'high risk', 'undetermined',
+] as const;
+export type VerdictLabel = typeof DRAFT_VERDICT_LABELS[number];
+export const MAX_VERDICT_CHARS = 64;
+export const MAX_REASON_CHARS = 1_000;
+
+/** DRAFT reply (OD-M4-04 open): bounded structure and transport labels, never verified truth. */
 export interface ValidatedReply {
-  verdictLabel: string;
+  verdictLabel: VerdictLabel;
   category: CategoryId;
   reason: string | null;
 }
@@ -304,7 +317,7 @@ export function resolveAccess(snapshot: EntitlementSnapshot | null, now: number)
 // ---- FR-M4-04 structural reply validation (DRAFT schema, OD-M4-04 open) ----
 
 /**
- * Validates only object shape, required field presence/primitive types, the supported
+ * Validates bounded object fields, the draft verdict transport allow-list, the supported
  * taxonomy version (an unsupported version is rejected at the boundary — X-13 §2.2) and the
  * X-13 category mapping with the `unknown_other` fallback (X-13 §2.1: absent, unrecognized
  * or ambiguous category output is never a "safe" label and never fails open to free text).
@@ -313,22 +326,25 @@ export function resolveAccess(snapshot: EntitlementSnapshot | null, now: number)
 export function validateReply(json: unknown): ValidatedReply | null {
   if (typeof json !== 'object' || json === null || Array.isArray(json)) return null;
   const reply = json as Record<string, unknown>;
-  if (typeof reply.verdict !== 'string' || reply.verdict.trim().length === 0) return null;
+  if (typeof reply.verdict !== 'string' || reply.verdict.length > MAX_VERDICT_CHARS) return null;
+  const verdictLabel = reply.verdict.trim().toLowerCase();
+  if (!(DRAFT_VERDICT_LABELS as readonly string[]).includes(verdictLabel)) return null;
   if (
     typeof reply.taxonomy_version !== 'string' ||
     !SUPPORTED_TAXONOMY_VERSIONS.includes(reply.taxonomy_version)
   ) {
     return null;
   }
-  if (reply.reason !== undefined && reply.reason !== null && typeof reply.reason !== 'string') return null;
+  if (reply.reason !== undefined && reply.reason !== null &&
+    (typeof reply.reason !== 'string' || reply.reason.length > MAX_REASON_CHARS)) return null;
   let category: CategoryId = 'unknown_other';
-  if (reply.category !== undefined) {
+  if (reply.category !== undefined && reply.category !== null) {
     if (typeof reply.category !== 'string') return null;
     const normalized = reply.category.trim().toLowerCase();
     if (CATEGORY_IDS.includes(normalized)) category = normalized as CategoryId;
   }
   return {
-    verdictLabel: reply.verdict.trim(),
+    verdictLabel: verdictLabel as VerdictLabel,
     category,
     reason: typeof reply.reason === 'string' ? reply.reason : null,
   };

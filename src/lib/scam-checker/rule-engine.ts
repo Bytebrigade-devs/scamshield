@@ -142,11 +142,14 @@ const INVEST_CTX_RE =
 const DOUBLING_RE =
   /\b(?:doubl\w*|guaranteed\s+(?:returns?|profits?)|risk[- ]free)\b|(?<![\u0D80-\u0DFF])දෙගුණ/iu;
 const SHORTENER_RE =
-  /\b(?:https?:\/\/)?(?:www\.)?(?:bit\.ly|tinyurl\.com|t\.me|wa\.me|cutt\.ly|is\.gd|goo\.gl|shorturl\.at|rb\.gy|rebrand\.ly|tiny\.cc)\//i;
+  /(?<![\p{L}\p{N}_.@/?:=&#%+-])(?:(?:https?:\/\/|www\.)[^\s"'<>]+|(?:bit\.ly|tinyurl\.com|t\.me|wa\.me|cutt\.ly|is\.gd|goo\.gl|shorturl\.at|rb\.gy|rebrand\.ly|tiny\.cc)[^\s"'<>]*)/iu;
+const SHORTENER_HOST_RE = /^(?:www\.)?(?:bit\.ly|tinyurl\.com|t\.me|wa\.me|cutt\.ly|is\.gd|goo\.gl|shorturl\.at|rb\.gy|rebrand\.ly|tiny\.cc)$/i;
 const HOSTILE_SHAPE_RE =
   /\b(?:https?:\/\/|www\.)[^\s"'<>]+|\b[\w-]+-(?:verify|secure|pay|claim|release|renewal|redelivery|delivery|login|support)-[\w-]+\.(?:com|net|org|top|xyz|online|info|men|help)\b|\b[\w.-]+\.apk\b/i;
 const HOSTILE_TLD_RE = /\.(?:top|xyz|online|men|help|cfd|cam|one|icu|buzz)$/i;
 const LOOKALIKE_HOST_RE = /(?:^|\.)[\w-]+-(?:verify|secure|pay|claim|release|renewal|redelivery|delivery|login|support)-[\w-]+\.(?:com|net|org|top|xyz|online|info|men|help)$/i;
+// This generic shape is NOT a brand comparison: benign names such as my-pay-later.com
+// also match. Keep this acceptance heuristic evidence-only, never an impersonation claim.
 // Review fix #2: the former TRUSTED_DOMAIN_RE whole-message suppressor was removed — one
 // official link must never hide a suspicious link elsewhere in the same message. Domain
 // flags inspect parsed hostnames, never usernames, paths or queries. APK attachments are
@@ -159,7 +162,10 @@ const LOOKALIKE_HOST_RE = /(?:^|\.)[\w-]+-(?:verify|secure|pay|claim|release|ren
 // include a link would fire — evidence for review, never a verdict (documented limitation).
 const LOAN_CTX_RE =
   /\bloans?\b|\bcredit\b|\bno\s+collateral\b|instant\s+(?:approval|loan|cash)|approval\s+in\s+\d+|\b(?:ikmanin|dakwa|danma)\b|(?<![\u0D80-\u0DFF])ණය/iu;
-const LOAN_AMOUNT_RE = /\b(?:lkr|rs\.?|rupees?)\s*[\d,.\s]*\d|\b\d[\d,\s]{4,}\d\b/i;
+// Currency and amount must be on one line; bound the numeric token rather than bridging
+// paragraphs. Grouped amounts such as Rs. 250 000 remain valid; bare large amounts stay
+// a documented heuristic, not proof that a number is money.
+const LOAN_AMOUNT_RE = /\b(?:lkr|rs\.?|rupees?)[ \t]{0,3}\d(?:[\d,.]|[ \t](?=\d)){0,19}(?![\d,.])|(?<![\d,.])\b\d[\d, \t]{4,18}\d\b(?![\d,.])/i;
 
 // ---- rule table: catalogue hypotheses R-M4-01…R-M4-10 (v0.1) + R-M4-13…20 (v0.2 draft) ----
 
@@ -384,12 +390,27 @@ function hasHostileShape(value: string): boolean {
   }
 }
 
+function hasShortenerHost(value: string): boolean {
+  try {
+    const candidate = value.replace(/[.,;:!?)}\]]+$/, '');
+    const hasScheme = /^https?:\/\//i.test(candidate);
+    const url = new URL(hasScheme ? candidate : `https://${candidate}`);
+    // Bare email tokens are not URLs, even if their mail host is itself a shortener.
+    // Consume the complete token (including Unicode/suffixes) before host validation.
+    if (!hasScheme && url.username.length > 0) return false;
+    return SHORTENER_HOST_RE.test(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function cueSpans(text: string, segs: Segment[], cue: Cue): Span[] {
   const out: Span[] = [];
   for (const m of text.matchAll(new RegExp(cue.re.source, cue.re.flags.includes('g') ? cue.re.flags : cue.re.flags + 'g'))) {
     const start = m.index ?? 0;
     const value = m[0];
     if (cue.name === 'hostile-link-shape' && !hasHostileShape(value)) continue;
+    if (cue.name === 'shortened-url' && !hasShortenerHost(value)) continue;
     if (cue.guarded) {
       const seg = segs.find((s) => start >= s.start && start < s.start + s.text.length);
       if (seg && negated(seg, start, cue, value)) continue;

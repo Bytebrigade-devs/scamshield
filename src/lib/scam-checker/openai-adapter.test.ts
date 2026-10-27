@@ -40,7 +40,7 @@ function stubFetch(handler: (url: string, init: RecordedInit) => Promise<unknown
 }
 
 const okJson = (payload: unknown) =>
-  ({ ok: true, status: 200, text: async () => JSON.stringify(payload) });
+  new Response(JSON.stringify(payload), { status: 200 });
 
 /** Realistic chat-completions envelope: the reply JSON rides in choices[0].message.content as a string. */
 const envelopeOf = (reply: unknown) =>
@@ -109,15 +109,15 @@ test('a custom buildPayload and model are honoured (DRAFT payload seam for OD-M4
   });
   await provider.analyze('hello');
   const payload = JSON.parse(calls[0].init.body ?? '{}') as Record<string, unknown>;
-  assert.deepEqual(payload, { model: 'candidate-model', custom: true, text: 'hello' });
+  assert.deepEqual(payload, { model: 'candidate-model', custom: true, text: 'hello', max_completion_tokens: 1_000 });
 });
 
 test('FR-M4-04: a non-2xx status is http-error and an unparseable body is bad-json — never ok', async () => {
-  const http = stubFetch(() => Promise.resolve({ ok: false, status: 500, text: async () => 'server error' }));
+  const http = stubFetch(() => Promise.resolve(new Response('server error', { status: 500 })));
   const httpAttempt = await createOpenAIProvider({ apiKey: API_KEY, fetchImpl: http.fetchImpl }).analyze('x');
   assert.deepEqual(httpAttempt, { kind: 'failed', failure: 'http-error' });
 
-  const bad = stubFetch(() => Promise.resolve({ ok: true, status: 200, text: async () => 'not json {' }));
+  const bad = stubFetch(() => Promise.resolve(new Response('not json {', { status: 200 })));
   const badAttempt = await createOpenAIProvider({ apiKey: API_KEY, fetchImpl: bad.fetchImpl }).analyze('x');
   assert.deepEqual(badAttempt, { kind: 'failed', failure: 'bad-json' });
 });
@@ -140,4 +140,89 @@ test('FS-M4-06: a deadline abort is a timeout failure with exactly one attempt',
   const attempt = await provider.analyze('slow provider');
   assert.deepEqual(attempt, { kind: 'failed', failure: 'timeout' });
   assert.equal(calls.length, 1, 'no second attempt after a timeout — no retry, no fallback model');
+});
+
+test('review hardening: whitespace-only keys disable fetch and surrounding whitespace is removed', async () => {
+  const { calls, fetchImpl } = stubFetch(() => Promise.resolve(okJson(envelopeOf({ verdict: 'suspicious' }))));
+  for (const apiKey of ['', ' ', '\r\n\t']) {
+    assert.deepEqual(await createOpenAIProvider({ apiKey, fetchImpl }).analyze('x'), { kind: 'unconfigured' });
+  }
+  assert.equal(calls.length, 0);
+  await createOpenAIProvider({ apiKey: ` ${API_KEY}\n`, fetchImpl }).analyze('x');
+  assert.equal(calls[0].init.headers?.authorization, `Bearer ${API_KEY}`);
+});
+
+test('review hardening: default and custom payloads cannot remove or increase the output-token bound', async () => {
+  for (const buildPayload of [undefined, () => ({ model: 'candidate', max_completion_tokens: 100_000 })]) {
+    const { calls, fetchImpl } = stubFetch(() => Promise.resolve(okJson(envelopeOf({ verdict: 'suspicious' }))));
+    await createOpenAIProvider({ apiKey: API_KEY, fetchImpl, buildPayload }).analyze('x');
+    assert.equal(JSON.parse(calls[0].init.body ?? '{}').max_completion_tokens, 1_000);
+    if (!buildPayload) {
+      const payload = JSON.parse(calls[0].init.body ?? '{}');
+      assert.match(payload.messages[0].content, /0\.1\.0-draft/);
+      assert.match(payload.messages[0].content, /no obvious indicators/i);
+    }
+  }
+});
+
+test('review hardening: oversized streamed responses are cancelled before parsing regardless of Content-Length', async () => {
+  for (const advertised of [undefined, '1']) {
+    let cancelled = false;
+    let chunks = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (chunks === 8) { controller.close(); return; }
+        chunks += 1;
+        controller.enqueue(new Uint8Array(32_768).fill(120));
+      },
+      cancel() { cancelled = true; },
+    });
+    const { calls, fetchImpl } = stubFetch(() => Promise.resolve(new Response(body, {
+      headers: advertised ? { 'content-length': advertised } : {},
+    })));
+    const attempt = await createOpenAIProvider({ apiKey: API_KEY, fetchImpl }).analyze('x');
+    assert.deepEqual(attempt, { kind: 'failed', failure: 'bad-json' });
+    assert.ok(cancelled, 'do not buffer the remaining body');
+    assert.ok(chunks <= 4, 'only a bounded prefix, plus stream prefetch, is read');
+    assert.equal(calls.length, 1);
+  }
+});
+
+test('review hardening: response byte limit accepts exactly 64 KiB and rejects one byte more', async () => {
+  const reply = { verdict: 'suspicious' };
+  const json = JSON.stringify(envelopeOf(reply));
+  for (const extra of [0, 1]) {
+    const padded = json + ' '.repeat(65_536 + extra - new TextEncoder().encode(json).length);
+    const { fetchImpl } = stubFetch(() => Promise.resolve(new Response(padded)));
+    const attempt = await createOpenAIProvider({ apiKey: API_KEY, fetchImpl }).analyze('x');
+    assert.deepEqual(attempt, extra ? { kind: 'failed', failure: 'bad-json' } : { kind: 'ok', json: reply });
+  }
+});
+
+test('review hardening: split UTF-8 chunks decode intact within the byte cap', async () => {
+  const reply = { verdict: 'suspicious', reason: 'සිංහල 😀' };
+  const bytes = new TextEncoder().encode(JSON.stringify(envelopeOf(reply)));
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const byte of bytes) controller.enqueue(Uint8Array.of(byte));
+      controller.close();
+    },
+  });
+  const { fetchImpl } = stubFetch(() => Promise.resolve(new Response(body)));
+  assert.deepEqual(await createOpenAIProvider({ apiKey: API_KEY, fetchImpl }).analyze('x'), { kind: 'ok', json: reply });
+});
+
+test('review hardening: a deadline during body reading is a timeout, and a broken body is a network failure', async () => {
+  const slow = stubFetch((_url, init) => Promise.resolve(new Response(new ReadableStream({
+    start(controller) {
+      init.signal?.addEventListener('abort', () => controller.error(new Error('aborted')), { once: true });
+    },
+  }))));
+  assert.deepEqual(await createOpenAIProvider({ apiKey: API_KEY, fetchImpl: slow.fetchImpl, deadlineMs: 10 }).analyze('x'),
+    { kind: 'failed', failure: 'timeout' });
+  const broken = stubFetch(() => Promise.resolve(new Response(new ReadableStream({
+    start(controller) { controller.error(new Error('connection lost')); },
+  }))));
+  assert.deepEqual(await createOpenAIProvider({ apiKey: API_KEY, fetchImpl: broken.fetchImpl }).analyze('x'),
+    { kind: 'failed', failure: 'network' });
 });

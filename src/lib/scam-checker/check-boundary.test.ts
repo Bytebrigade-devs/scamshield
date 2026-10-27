@@ -395,15 +395,64 @@ test('FR-M4-04: validateReply rejects non-objects, missing fields and bad types 
   assert.equal(validateReply([VALID_REPLY]), null);
   assert.equal(validateReply(42), null);
   assert.equal(validateReply({ verdict: '', taxonomy_version: TAXONOMY_VERSION }), null);
-  assert.equal(validateReply({ verdict: 'x', taxonomy_version: TAXONOMY_VERSION, reason: 7 }), null);
-  assert.deepEqual(validateReply({ verdict: ' x ', category: 'Phishing', taxonomy_version: TAXONOMY_VERSION }), {
-    verdictLabel: 'x',
+  assert.equal(validateReply({ verdict: 'suspicious', taxonomy_version: TAXONOMY_VERSION, reason: 7 }), null);
+  assert.deepEqual(validateReply({ verdict: ' suspicious ', category: 'Phishing', taxonomy_version: TAXONOMY_VERSION }), {
+    verdictLabel: 'suspicious',
     category: 'phishing',
     reason: null,
   });
 });
 
 // ---- FS-M4-06 / NFR-M4-10: one attempt; failures never count ----
+
+test('review hardening: only draft assessment labels can complete, never free-text safety assurances', async () => {
+  for (const verdict of ['suspicious', 'Potentially suspicious', 'No obvious indicators', 'High risk', 'Undetermined']) {
+    assert.ok(validateReply({ ...VALID_REPLY, verdict }), verdict);
+  }
+  for (const verdict of ['safe', 'legitimate', 'clean', 'This message is 100% safe', 'suspicious<script>', 'x'.repeat(100_000)]) {
+    assert.equal(validateReply({ ...VALID_REPLY, verdict }), null, verdict.slice(0, 80));
+    const { deps } = makeDeps({ providerAttempt: { kind: 'ok', json: { ...VALID_REPLY, verdict } } });
+    const outcome = await runCheck({ text: VALID_TEXT }, deps);
+    assert.equal(outcome.kind, 'analysed');
+    if (outcome.kind === 'analysed') assert.equal(outcome.analysisStatus, 'unavailable');
+    assert.equal(deps.usage.admitCheck({ key: GUARDIAN.subjectKey, allowance: { monthly: 1, daily: 1 } }, NOW), null,
+      'invalid replies release their reservation and consume no quota');
+  }
+});
+
+test('review hardening: reason length is bounded without truncation and null category maps to unknown_other', () => {
+  assert.equal(validateReply({ ...VALID_REPLY, reason: 'x'.repeat(1_000) })?.reason?.length, 1_000);
+  assert.equal(validateReply({ ...VALID_REPLY, reason: 'x'.repeat(1_001) }), null);
+  assert.equal(validateReply({ ...VALID_REPLY, category: null })?.category, 'unknown_other');
+  for (const category of [42, {}, []]) assert.equal(validateReply({ ...VALID_REPLY, category }), null);
+});
+
+test('review hardening: wrapped candidates remain visible through the public boundary contract', async () => {
+  const candidates: StageCandidates = { ...FAKE_CANDIDATES, wrappedCandidates: ['https://account-verify.example/restore'] };
+  const { deps } = makeDeps();
+  deps.extract = () => candidates;
+  const outcome = await runCheck({ text: VALID_TEXT }, deps);
+  assert.equal(outcome.kind, 'analysed');
+  if (outcome.kind === 'analysed') assert.deepEqual(outcome.candidates.wrappedCandidates, candidates.wrappedCandidates);
+});
+
+test('review hardening: an atomic completion failure releases its reservation without releasing a concurrent one', async () => {
+  const usage = createInMemoryUsageStore();
+  for (let i = 0; i < 3; i += 1) usage.recordCompletion({ key: SENTINEL.subjectKey }, NOW);
+  let finish: (attempt: ProviderAttempt) => void = () => {};
+  const { deps } = makeDeps({ snapshot: SENTINEL, usage });
+  const pending = runCheck({ text: VALID_TEXT }, {
+    ...deps, provider: { analyze: () => new Promise((resolve) => { finish = resolve; }) },
+  });
+  const failure = new Error('completion transaction rolled back');
+  await assert.rejects(runCheck({ text: VALID_TEXT }, {
+    ...deps, usage: { ...usage, recordCompletion: () => { throw failure; } },
+  }), (error) => error === failure);
+  assert.equal((await runCheck({ text: VALID_TEXT }, deps)).kind, 'analysed');
+  assert.equal((await runCheck({ text: VALID_TEXT }, deps)).kind, 'rejected');
+  finish({ kind: 'ok', json: VALID_REPLY });
+  assert.equal((await pending).kind, 'analysed');
+});
 
 test('FS-M4-06: a timeout makes exactly one provider attempt — no retry, no fallback model', async () => {
   const { deps, calls } = makeDeps({ providerAttempt: { kind: 'failed', failure: 'timeout' } });

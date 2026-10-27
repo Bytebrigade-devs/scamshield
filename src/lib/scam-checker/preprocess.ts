@@ -137,6 +137,9 @@ function stitchLineWrapped(text: string, spans: Span[]): { spans: Span[]; stitch
     let value = span.value;
     let end = span.end;
     for (;;) {
+      // Check every line, not just the initial span. Trimming before the next join
+      // would hide a sentence boundary and invent "path/next./again" readings.
+      if (trimTrailing(value) !== value) break;
       const m = WRAPPED_CONTINUATION_RE.exec(text.slice(end));
       if (!m) break;
       const continuation = m[1];
@@ -215,7 +218,8 @@ export function extractCandidates(text: string): ExtractionCandidates {
   //    (newline removed) is disclosed separately via `wrappedCandidates` — a joined value
   //    is not a substring of the input and must never pose as a raw span.
   const urlSpans: Span[] = [];
-  for (const span of collect(URL_RE, text)) {
+  const rawUrlSpans = collect(URL_RE, text);
+  for (const span of rawUrlSpans) {
     const value = trimTrailing(span.value);
     if (value.length === 0 || !isValidUrl(value)) continue;
     const trimmed: Span = { start: span.start, end: span.start + value.length, value };
@@ -224,7 +228,7 @@ export function extractCandidates(text: string): ExtractionCandidates {
       urlSpans.push(trimmed);
     }
   }
-  const wrappedReadings = stitchLineWrapped(text, collect(URL_RE, text))
+  const wrappedReadings = stitchLineWrapped(text, rawUrlSpans)
     .stitched.map((value) => trimTrailing(value))
     .filter((value) => value.length > 0 && isValidUrl(value) && !urlSpans.some((s) => s.value === value));
 

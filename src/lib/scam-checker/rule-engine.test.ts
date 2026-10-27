@@ -329,6 +329,56 @@ test('every v0.2 excerpt is a literal substring of its submitted text', () => {
 
 // ---- R-M4-11 stub: explicit display/target metadata only (shortener/threshold OPEN) ----
 
+test('review hardening: shortener hosts match without paths, but never inside unrelated URLs or email addresses', () => {
+  for (const text of ['bit.ly', 'Visit bit.ly.', 'https://bit.ly?x=1', 'https://BIT.LY#offer', '(bit.ly/abc)', 'www.tinyurl.com/abc']) {
+    assert.ok(firedIds(text).includes('R-M4-18'), text);
+  }
+  for (const text of ['notbit.ly/abc', 'https://bit.ly.example/abc', 'https://example.com/bit.ly/abc',
+    'user@bit.ly/abc', 'https://bit.ly@ordinary.example/path', 'https://example.com/?next=bit.ly/abc',
+    'https://example.com/#bit.ly/abc', 'https://example.com/path(bit.ly/abc)']) {
+    assert.ok(!firedIds(text).includes('R-M4-18'), text);
+  }
+});
+
+test('review hardening: loan amounts stay on one line and preserve grouped currency amounts', () => {
+  for (const gap of ['\n', '\r\n', '\n\n\n\n']) {
+    const text = `Instant loan: LKR${gap}5,000 at https://lender.example/apply`;
+    assert.ok(!firedIds(text).includes('R-M4-20'), JSON.stringify(text));
+  }
+  for (const amount of ['LKR 5,000', 'Rs. 250 000', 'LKR\t300 000', 'LKR 2,000,000', 'LKR 5000.50', '300000']) {
+    assert.ok(firedIds(`Instant loan ${amount} at https://lender.example/apply`).includes('R-M4-20'), amount);
+  }
+});
+
+test('review follow-up: complete email and Unicode hostname tokens cannot be truncated into shorteners', () => {
+  for (const text of ['bit.ly+tag@example.com', 'bit.ly+tag@bit.ly', 'bit.ly.例子.com/abc',
+    'user+bit.ly@example.com', 'කbit.ly/abc', 'bit.ly+suffix', 'bit.ly%2eexample.com/abc']) {
+    assert.ok(!firedIds(text).includes('R-M4-18'), text);
+  }
+  for (const text of ['bit.ly/abc?email=user@example.com', 'https://user@bit.ly/abc']) {
+    const match = analyzeRules(text).matches.find((m) => m.ruleId === 'R-M4-18');
+    assert.ok(match, text);
+    assert.equal(text.slice(match.start, match.end), match.excerpt);
+  }
+});
+
+test('review coverage: ask-for demands match nearby secrets, not ordinary requests or prohibitions', () => {
+  for (const text of ['Mark asked for your password to restore the account', 'The agent is asking for your OTP']) {
+    assert.ok(firedIds(text).includes('R-M4-02'), text);
+  }
+  for (const text of ['She asked for directions and he walked her home', 'Never ask for your password', 'If asked for your OTP, never share it.']) {
+    assert.deepEqual(firedIds(text), [], text);
+  }
+});
+
+test('review coverage: generic hyphenated host shapes are evidence only, not proof of impersonation', () => {
+  const result = analyzeRules('Track your parcel at https://my-pay-later.com/track');
+  assert.deepEqual(result.matches.map((match) => match.ruleId), ['R-M4-19']);
+  assert.equal(result.matches[0].contextNote, 'hostile-link-shape');
+  assert.ok(!('verdict' in result.matches[0]));
+  assert.deepEqual(firedIds('Read https://login-support.open.ac.uk/x'), []);
+});
+
 test('R-M4-11 stub: display/target mismatch fires; identical or absent metadata is silent', () => {
   const mismatch = checkDisplayTarget('secure bank login', 'http://account-verify.example/restore');
   assert.deepEqual(mismatch.map((m) => m.ruleId), ['R-M4-11']);
