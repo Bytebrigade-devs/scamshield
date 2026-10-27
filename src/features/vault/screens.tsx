@@ -35,7 +35,7 @@ export function VaultScreen({ segments }: { segments: string[] }) {
 function AllItems() {
   const vault = useVault(); const attention = vault.logins.filter(login => healthOf(login, vault.logins) !== "strong").length;
   return <><Heading title="Password vault" description="A safer home for your passwords, notes and everyday accounts." action={<Link className="v-button v-button--primary" href="/vault/new"><Plus size={17} />Add item</Link>} />
-    <div className="stats-grid"><Stat number={vault.logins.length} label="Saved logins" /><Stat number={vault.notes.length.toString().padStart(2,"0")} label="Secure notes" /><Stat number={attention.toString().padStart(2,"0")} label="Need attention" warning /><Card><p className="stat-number text-primary">82<span className="text-xl">/100</span></p><p className="stat-label">Password health</p><p className="stat-small">Illustrative score · not calculated</p></Card></div>
+    <div className="stats-grid"><Stat number={vault.logins.length} label="Saved logins" /><Stat number={vault.notes.length.toString().padStart(2,"0")} label="Secure notes" /><Stat number={attention.toString().padStart(2,"0")} label="Need attention" warning /><Card><p className="stat-number text-primary">{vault.logins.length ? <>82<span className="text-xl">/100</span></> : "—"}</p><p className="stat-label">Password health</p><p className="stat-small">Illustrative score · not calculated</p></Card></div>
     {!!attention && <div className="warning-banner"><TriangleAlert size={19} /><p>{attention} passwords need attention. Small changes can make your accounts safer.</p><Link className="v-button v-button--secondary" href="/vault/health">Review health</Link></div>}
     <LoginList />
   </>;

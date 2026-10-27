@@ -25,8 +25,8 @@
   --shadow-surface:0 4px 16px rgb(0 0 0 / .20);
 }
 @theme inline {
-  --color-brand:var(--color-brand); --color-primary:var(--color-primary);
-  --color-background:var(--color-background); --color-surface:var(--color-surface);
+  --color-vault-brand:var(--color-brand); --color-vault-primary:var(--color-primary);
+  --color-vault-background:var(--color-background); --color-vault-surface:var(--color-surface);
   --font-sans:var(--font-body);
 }
 * { box-sizing:border-box; }
