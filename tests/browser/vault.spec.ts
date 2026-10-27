@@ -141,3 +141,22 @@ test("all supplied screen families render, including dark-token preview", async 
   expect(await page.locator("body").evaluate(el => getComputedStyle(el).backgroundColor)).toBe("rgb(15, 23, 42)");
   await page.screenshot({path:"test-results/vault-dark.png",fullPage:true});
 });
+
+test("shared typography and secondary controls hold in both theme previews", async ({ page }) => {
+  await page.goto("/vault");
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({width, height:1000});
+    await expect(page.locator("body")).toHaveCSS("font-size", "16px");
+    await expect(page.locator(".stat-small").first()).toHaveCSS("font-size", "14px");
+    const button = page.getByRole("link", {name:"Review health", exact:true});
+    await expect(button).toHaveCSS("font-size", "14px");
+    await expect(button).toHaveCSS("color", "rgb(15, 118, 110)");
+    await expect(button).toHaveCSS("border-top-color", "rgb(15, 118, 110)");
+    await expect(button).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  }
+  await page.evaluate(() => document.documentElement.dataset.theme = "dark");
+  const button = page.getByRole("link", {name:"Review health", exact:true});
+  await expect(button).toHaveCSS("color", "rgb(45, 212, 191)");
+  await expect(button).toHaveCSS("border-top-color", "rgb(45, 212, 191)");
+  await expect(button).toHaveCSS("background-color", "rgb(30, 41, 59)");
+});
