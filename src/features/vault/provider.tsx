@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createDemoData, removeFolder, type Login, type SecureNote, type Folder, type Activity } from "./model";
 
@@ -16,20 +16,28 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   function record(action: string, category: Activity["category"], description = "Frontend demo action") {
     setData(old => ({ ...old, activity: [{ id: crypto.randomUUID(), action, description, category, at: new Date().toISOString() }, ...old.activity] }));
   }
-  function lock() { setLocked(true); setData({ logins: [], notes: [], folders: [], activity: [] }); setGeneratedDraft(""); setToast(""); if (copyTimer.current) clearTimeout(copyTimer.current); router.replace("/vault/locked"); }
+  const clearAndLock = useCallback(() => {
+    setLocked(true);
+    setData({ logins: [], notes: [], folders: [], activity: [] });
+    setGeneratedDraft("");
+    setToast("");
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = null;
+    router.replace("/vault/locked");
+  }, [router]);
   function unlock() { setData(createDemoData()); setLocked(false); router.replace("/vault"); }
   useEffect(() => {
     if (locked) return;
     let timeout: ReturnType<typeof setTimeout>;
-    const reset = () => { clearTimeout(timeout); timeout = setTimeout(() => { setLocked(true); setData({ logins: [], notes: [], folders: [], activity: [] }); setGeneratedDraft(""); setToast(""); if (copyTimer.current) clearTimeout(copyTimer.current); router.replace("/vault/locked"); }, 5 * 60 * 1000); };
+    const reset = () => { clearTimeout(timeout); timeout = setTimeout(clearAndLock, 5 * 60 * 1000); };
     reset(); const events = ["pointerdown", "keydown", "scroll"] as const;
     events.forEach(event => window.addEventListener(event, reset, { passive: true }));
     return () => { clearTimeout(timeout); events.forEach(event => window.removeEventListener(event, reset)); };
-  }, [locked, router]);
+  }, [locked, clearAndLock]);
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(""), 5000); return () => clearTimeout(id); }, [toast]);
   useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
   const value: VaultContext = {
-    ...data, locked, lock, unlock, toast, notify, generatedDraft, setGeneratedDraft,
+    ...data, locked, lock: clearAndLock, unlock, toast, notify, generatedDraft, setGeneratedDraft,
     folderName: id => data.folders.find(folder => folder.id === id)?.name ?? "Unfiled",
     saveLogin(login) { setData(old => ({ ...old, logins: old.logins.some(item => item.id === login.id) ? old.logins.map(item => item.id === login.id ? login : item) : [login, ...old.logins] })); record("Login saved", "login"); },
     saveNote(note) { setData(old => ({ ...old, notes: old.notes.some(item => item.id === note.id) ? old.notes.map(item => item.id === note.id ? note : item) : [note, ...old.notes] })); record("Secure note saved", "note"); },
