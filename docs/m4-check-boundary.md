@@ -4,6 +4,8 @@ These zero-dependency TypeScript libraries implement M4-02: the server-side boun
 
 No live provider call is made or authorized by this code: X-09 (written funding arrangement, verified provider-side cap/alert) remains open. The adapter is inert without a server-supplied key.
 
+**ID namespace:** `R-M4-xx` IDs here are catalogue rule-hypothesis IDs (`R-M4-01…20`), not the Final report's requirement IDs (`R-M4-01…18`). E.g. catalogue `R-M4-13` is the prize/reward claim-link rule; report `R-M4-13` is the own-history requirement (SRS `FR-M4-13`).
+
 ## Behavior
 
 - `runCheck({ text }, deps)` in `check-boundary.ts` validates input server-side (FR-M4-01; a 2,000-character cap with an edit/reduce instruction — never silent truncation), resolves access per the access-policy mapping (active/trial allow; cancelled strictly until expiry; suspended/past-due/expired/unverifiable block), gates usage, runs the injected stages 1–2, then makes exactly one provider attempt. Missing key or unpermitted budget yields an explicitly labelled rules-only limited result; provider failure, timeout or invalid output yields unavailable. Invalid replies are never "repaired" into completed results.
@@ -27,7 +29,7 @@ node --test src/lib/scam-checker/preprocess.test.ts src/lib/scam-checker/rule-en
 
 The current repository suite passes **141 tests** (91 stage-library + 50 boundary/adapter/store), verified locally with Node **v24.22.1**, all network-free: provider interaction is stubbed and a guard test throws if the boundary itself touches `fetch`. Tests pin the SRS acceptance scenarios by name (FS-M4-01/02/05/06/08/09, FR-M4-01/04, NFR-M4-01/02/09/10), including limit and limit+1 for the input cap and the no-call-after-denial checks. The original 85-test baseline and the 124-test review round below are historical counts, not current totals.
 
-`.github/workflows/m4-tests.yml` runs the same command on Windows and Linux with Node 24.22.1, read-only permissions and SHA-pinned actions. There are no dependencies to install. Adding the workflow does not mean GitHub CI has run or passed; that requires publishing the branch.
+`.github/workflows/m4-tests.yml` runs the same command on Windows and Linux with Node 24.22.1, read-only permissions and SHA-pinned actions. There are no dependencies to install. **GitHub CI verified:** the `M4 library tests` workflow passed on this branch on 27 October 2026 (run 40463593725, 26 s, ubuntu + windows).
 
 The owner workspace separately holds a pipeline-integration test wiring the real preprocessing and rule-engine libraries through this boundary, and the frozen fixture sweep. These workspace-only artifacts are not added to this repository. Live provider integration, the persistent usage store, entitlement wiring and full-checker acceptance remain outstanding.
 

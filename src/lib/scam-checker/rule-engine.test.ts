@@ -16,6 +16,9 @@
  * of a DRAFT rule library implementing those hypotheses. Output is "which rules matched +
  * quoted evidence spans" — never a verdict, score, category or incident claim.
  *
+ * ID namespace: R-M4-xx in this suite are catalogue rule-hypothesis IDs (R-M4-01…20), NOT the
+ * Final report's requirement IDs (R-M4-01…18; report R-M4-13 = own-history requirement).
+ *
  * Runner: Node built-in `node --test` (zero dependencies) — M4-19/X-06 PROPOSED convention.
  */
 import { test } from 'node:test';
