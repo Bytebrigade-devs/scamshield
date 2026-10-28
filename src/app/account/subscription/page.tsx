@@ -39,7 +39,7 @@ export default function SubscriptionPage() {
   }, []);
 
   async function cancel() {
-    if (!confirm("Cancel Premium and return to the Free plan?")) return;
+    if (!confirm("Are you sure you want to cancel your recurring subscription?")) return;
     const s = await call("DELETE");
     if (s) setSub(s);
   }
@@ -49,33 +49,65 @@ export default function SubscriptionPage() {
     router.push("/");
   }
 
-  if (loading) return <main className="p-8">Loading...</main>;
+  if (loading) return <main className="p-8 text-center text-sm text-slate-500">Loading subscription details...</main>;
 
   return (
     <main className="mx-auto max-w-md p-8">
-      <h1 className="text-2xl font-bold">Your subscription</h1>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-      {!sub ? (
-        <p className="mt-4">
-          No plan selected yet. <Link href="/pricing" className="text-blue-600 underline">Choose a plan</Link>
-        </p>
-      ) : (
-        <div className="mt-4 rounded-lg border bg-white p-4 text-sm">
-          <p>Plan: <b className="capitalize">{sub.plan}</b></p>
-          <p>Status: <b className="capitalize">{sub.status}</b></p>
-          {sub.billing_cycle && <p>Billing: {sub.billing_cycle}</p>}
-          {sub.renews_at && <p>Renews: {new Date(sub.renews_at).toLocaleDateString()}</p>}
-          {sub.cancelled_at && <p>Cancelled: {new Date(sub.cancelled_at).toLocaleDateString()}</p>}
-          <div className="mt-4 flex gap-2">
-            {sub.plan === "premium" ? (
-              <button onClick={cancel} className="rounded border px-3 py-1">Cancel subscription</button>
-            ) : (
-              <Link href="/pricing" className="rounded bg-blue-600 px-3 py-1 text-white">Upgrade</Link>
-            )}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-slate-900">Your Subscription</h1>
+        {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        {!sub ? (
+          <div className="mt-4">
+            <p className="text-sm text-slate-600">No active plan recorded.</p>
+            <Link
+              href="/pricing"
+              className="mt-3 inline-block rounded-xl bg-teal-700 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-800"
+            >
+              Choose a plan
+            </Link>
           </div>
-        </div>
-      )}
-      <button onClick={logout} className="mt-6 text-sm text-slate-500 underline">Log out</button>
+        ) : (
+          <div className="mt-4 space-y-3 text-sm">
+            <div className="flex justify-between py-2 border-b border-slate-100">
+              <span className="text-slate-500">Plan</span>
+              <span className="font-bold text-slate-900">{sub.plan}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-slate-100">
+              <span className="text-slate-500">Status</span>
+              <span className="font-semibold text-teal-800 uppercase text-xs">{sub.status}</span>
+            </div>
+            {sub.billing_cycle && (
+              <div className="flex justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-500">Cycle</span>
+                <span className="capitalize text-slate-700">{sub.billing_cycle}</span>
+              </div>
+            )}
+            {sub.renews_at && (
+              <div className="flex justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-500">Renews</span>
+                <span className="text-slate-700">{new Date(sub.renews_at).toLocaleDateString()}</span>
+              </div>
+            )}
+
+            <div className="pt-4 flex gap-3">
+              {sub.status !== "cancelled" && (
+                <button
+                  onClick={cancel}
+                  className="flex-1 rounded-xl border border-red-300 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                >
+                  Cancel subscription
+                </button>
+              )}
+              <button
+                onClick={logout}
+                className="flex-1 rounded-xl border border-slate-300 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </main>
   );
 }

@@ -33,7 +33,7 @@ The **Admin Dashboard, Analytics and Operations** module (Module 5) serves as th
 - Real-time websocket streaming alerts.
 
 ### Safety & Privacy Non-Negotiables
-> **Zero-Knowledge Boundary:** The platform strictly adheres to zero-knowledge isolation. Stored vault credentials, secret notes, and private encryption keys from Module 3 are cryptographically masked and never accessible to administrators. Similarly, raw user message texts, email bodies, and phone numbers submitted to Module 4 are never saved in admin tables; only anonymous taxonomy tags and metadata are charted. All payment processing is synthetically simulated.
+> **Zero Raw-Content Access:** The platform strictly adheres to zero raw-content access. Stored vault credentials and secret notes from Module 3 are held under server-side AES-256-GCM custody and are never accessible to administrators. Similarly, raw user message texts, email bodies, and phone numbers submitted to Module 4 are never saved in admin tables; only anonymous canonical X-13 taxonomy tags and metadata are charted. All payment processing is synthetically simulated.
 
 ---
 
@@ -42,8 +42,7 @@ The **Admin Dashboard, Analytics and Operations** module (Module 5) serves as th
 ### 2.1 Stakeholders and System Context
 - **Primary Actors:**
   - **System Administrator:** Full access to all dashboards, user moderation, role assignment, automated alerts, recommended action execution, and audit logs.
-  - **Support Agent:** Read-only access to user profiles, support ticket resolution, internal support notes, and scam verdict disputes. Restricted from suspending accounts.
-  - **Security Analyst:** Read-only access to platform telemetry, threat vector distributions, 7-day anomaly trends, and immutable audit log inspection.
+  - **Support Agent:** Read-only access to user profiles, support ticket resolution, internal support notes, and scam verdict disputes. Restricted from suspending accounts.
 - **System Dependencies:**
   - **Module 1 (Landing & Onboarding):** Onboarding step telemetry, funnel progression, and referral tracking.
   - **Module 2 (Auth & Paywall):** User profiles, subscription tier status, and simulated billing events.
@@ -74,7 +73,7 @@ The **Admin Dashboard, Analytics and Operations** module (Module 5) serves as th
 
 ### 2.3 Non-Functional Requirements
 - **Security:** Strict Role-Based Access Control verified on every route; Supabase Row Level Security (RLS) blocks all `UPDATE` and `DELETE` queries on `public.audit_logs`.
-- **Privacy:** Strict Zero-Knowledge boundary: stored passwords, plaintext vault notes, and pasted scam message content are never fetched or displayed.
+- **Privacy:** Strict Zero Raw-Content boundary: stored passwords, plaintext vault notes, and pasted scam message content are never fetched or displayed.
 - **Usability:** Professional navy–teal dark mode interface compliant with WCAG AA contrast standards, responsive on desktop and tablet screens.
 - **Explainability:** Anomaly detection and recommended actions are governed by transparent, deterministic rule matrices rather than opaque black-box models.
 - **Maintainability:** Next.js 14 modular App Router structure, shared TypeScript interfaces, and Git feature-branch workflows.
@@ -244,7 +243,7 @@ Developing an administrative control room requires continuous alignment with the
 | **Vishmi Himaya (245027T)** | Module 5 Lead Owner (Admin & Operations) | Figma designs (`m5-designs/`), Next.js routes (`/admin/*`), Recharts charts, CSV export (M5-07) |
 | **Vishmi Himaya (245027T)** | Advanced Operational Control | Automated Alerts, 7-Day Baseline Anomaly Detection, Rule-Based Recommendation Engine |
 | **Vishmi Himaya (245027T)** | Security & Governance (RBAC & Audit) | RBAC role simulator, moderation modal with audit reason, `public.audit_logs` schema & RLS (M5-10/11) |
-| **Vishmi Himaya (245027T)** | Module 6 Coordinator (Safety Score) | Safety Score aggregation logic & Admin Score View (`/admin/safety-scores` · M6-05) |
+| **Vishmi Himaya (245027T)** | Module 6 Contributor (Admin Score View) | Safety Score admin cohort view (`/admin/safety-scores` · M6-05); overall M6 Coordinator is Suraji (@SurajiSaundarya, reassigned 25 Oct 2026) |
 | **Vishmi Himaya (245027T)** | Second Hat: Seed Data & Testing | 100+ user synthetic dataset generator (M5-15) in `src/lib/seed-data.ts` |
 
 ---

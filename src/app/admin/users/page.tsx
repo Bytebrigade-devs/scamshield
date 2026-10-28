@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Download, Search, ShieldCheck, ChevronDown, X } from "lucide-react";
+import { Download, Search, ShieldCheck, ChevronDown, AlertCircle } from "lucide-react";
 import { useAdmin } from "@/lib/admin-store";
-import { AdminUser, PlanTier, UserStatus } from "@/lib/types/admin";
+import { UserStatus } from "@/lib/types/admin";
 
 export default function AdminUsersPage() {
-  const { users, suspendUser, reactivateUser, exportCsvData } = useAdmin();
+  const { currentRole, users, suspendUser, reactivateUser, exportCsvData } = useAdmin();
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -30,6 +30,10 @@ export default function AdminUsersPage() {
   const selectedUser = users.find((u) => u.id === selectedUserId) || users[0];
 
   const handleOpenSuspend = () => {
+    if (currentRole !== "admin") {
+      alert("Role limit: Support admins cannot suspend accounts (Super admin required per FR-M5-10).");
+      return;
+    }
     setModalReason("");
     setModalError("");
     setIsSuspendModalOpen(true);
@@ -104,7 +108,7 @@ export default function AdminUsersPage() {
       <div className="bg-teal-50/60 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
         <ShieldCheck className="w-5 h-5 text-teal-700 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-teal-900">
-          <strong>Role limits:</strong> Support admins can view and suspend users but cannot see revenue or change roles. Every action is written to the audit log.
+          <strong>Role limits (FR-M5-10):</strong> Support admins can view users and answer tickets, but cannot suspend accounts, see revenue, or change roles. Every action is written to the audit log.
         </p>
       </div>
 
@@ -245,7 +249,7 @@ export default function AdminUsersPage() {
                 <span className="text-slate-500">Plan</span>
                 <span className="font-semibold text-slate-900">
                   {selectedUser.plan}
-                  {selectedUser.billingAmount > 0 ? `, LKR ${selectedUser.billingAmount}` : ""}
+                  {selectedUser.billingAmount > 0 ? `, LKR ${selectedUser.billingAmount.toLocaleString()}` : ""}
                 </span>
               </div>
               <div className="py-2.5 flex items-center justify-between">
@@ -291,7 +295,7 @@ export default function AdminUsersPage() {
               )}
             </div>
 
-            {/* Zero Knowledge Privacy Callout */}
+            {/* Privacy Callout */}
             <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 border border-slate-200">
               Passwords, vault entries and pasted messages are never shown to admins.
             </div>
@@ -315,12 +319,27 @@ export default function AdminUsersPage() {
                 </>
               ) : (
                 <>
-                  <button
-                    onClick={handleOpenSuspend}
-                    className="w-full py-2.5 px-4 rounded-lg bg-[#B91C1C] hover:bg-[#991B1B] text-white text-sm font-semibold transition shadow-sm"
-                  >
-                    Suspend account
-                  </button>
+                  {currentRole === "support" ? (
+                    <div className="space-y-1.5">
+                      <button
+                        disabled
+                        className="w-full py-2.5 px-4 rounded-lg bg-slate-200 text-slate-500 text-sm font-medium cursor-not-allowed"
+                        title="Role limit: Support admins cannot suspend accounts (FR-M5-10)"
+                      >
+                        Suspend account (Super admin only)
+                      </button>
+                      <p className="text-[11px] text-amber-700 text-center">
+                        Role limit: Support role cannot suspend accounts.
+                      </p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleOpenSuspend}
+                      className="w-full py-2.5 px-4 rounded-lg bg-[#B91C1C] hover:bg-[#991B1B] text-white text-sm font-semibold transition shadow-sm"
+                    >
+                      Suspend account
+                    </button>
+                  )}
                   <button
                     disabled
                     className="w-full py-2.5 px-4 rounded-lg bg-slate-100 text-slate-400 text-sm font-medium cursor-not-allowed"

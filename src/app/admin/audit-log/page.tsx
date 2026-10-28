@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Download, Search, ChevronDown, ShieldCheck, Lock } from "lucide-react";
+import { Download, Search, ChevronDown, Lock } from "lucide-react";
 import { useAdmin } from "@/lib/admin-store";
 
 export default function AdminAuditLogPage() {
@@ -33,7 +33,7 @@ export default function AdminAuditLogPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Audit log</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Every admin action is recorded and cannot be edited. Synthetic data only.
+            Every admin action is recorded in the operational log. Simulated session records for preview.
           </p>
         </div>
 
@@ -175,7 +175,7 @@ export default function AdminAuditLogPage() {
           <div className="flex items-center gap-2">
             <Lock className="w-3.5 h-3.5 text-teal-700" />
             <span>
-              <strong>Tamper-Proof Guarantee:</strong> UPDATE and DELETE permissions are permanently revoked on public.audit_logs.
+              <strong>Audit Trail:</strong> Simulated in preview session storage; production schema enforces PostgreSQL RLS with revoked UPDATE/DELETE privileges.
             </span>
           </div>
           <span className="text-[11px] text-slate-400">IS2901 M5 Compliance</span>

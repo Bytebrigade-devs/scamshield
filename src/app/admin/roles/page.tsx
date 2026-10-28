@@ -8,7 +8,8 @@ export default function AdminRolesPage() {
     { name: "View signups, plans and status", support: "Allowed", super: "Allowed" },
     { name: "View usage and category charts (counts only)", support: "Allowed", super: "Allowed" },
     { name: "Search and open user records", support: "Allowed", super: "Allowed" },
-    { name: "Suspend or reactivate accounts", support: "Allowed", super: "Allowed" },
+    { name: "Suspend accounts", support: "Not allowed", super: "Allowed" }, // FR-M5-10
+    { name: "Reactivate accounts", support: "Allowed", super: "Allowed" },
     { name: "Reply to support requests", support: "Allowed", super: "Allowed" },
     { name: "View mock revenue", support: "Not allowed", super: "Allowed" },
     { name: "Change admin roles", support: "Not allowed", super: "Allowed" },
@@ -41,7 +42,7 @@ export default function AdminRolesPage() {
             <h2 className="text-base font-bold text-slate-900">Super admin</h2>
           </div>
           <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-            Full access to business views, including revenue, plus user actions and role changes.
+            Full access to business views, including revenue, user suspension moderation, and role management.
           </p>
         </div>
 
@@ -51,7 +52,7 @@ export default function AdminRolesPage() {
             <h2 className="text-base font-bold text-slate-900">Support admin</h2>
           </div>
           <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-            Can view and suspend users and answer support requests. Cannot see revenue or change roles.
+            Can view users and answer support requests. Cannot suspend accounts, view revenue, or change roles (FR-M5-10).
           </p>
         </div>
       </div>
@@ -113,7 +114,7 @@ export default function AdminRolesPage() {
         <div className="p-4 bg-slate-50/70 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Lock className="w-3.5 h-3.5 text-teal-700" />
-            <span>Strict Zero-Knowledge boundary: sensitive credentials never leave client encryption.</span>
+            <span>Zero raw-content boundary: sensitive credentials never leave client encryption.</span>
           </div>
           <span className="text-[11px] text-slate-400">Team Decision M5-10</span>
         </div>

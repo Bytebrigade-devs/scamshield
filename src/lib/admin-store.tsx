@@ -40,16 +40,23 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [currentRole, setCurrentRole] = useState<AdminRole>("admin");
-  const adminName = currentRole === "admin" ? "Super admin" : currentRole === "support" ? "Support admin" : "Standard user";
-  const adminEmail = currentRole === "admin"
-    ? "superadmin@scamshield.test"
-    : currentRole === "support"
-    ? "support@scamshield.test"
-    : "user@example.test";
+  const adminName =
+    currentRole === "admin"
+      ? "Super admin"
+      : currentRole === "support"
+      ? "Support admin"
+      : "Standard user";
+
+  const adminEmail =
+    currentRole === "admin"
+      ? "superadmin@scamshield.test"
+      : currentRole === "support"
+      ? "support@scamshield.test"
+      : "user@example.test";
 
   const [users, setUsers] = useState<AdminUser[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("scamshield_m5_users_v2");
+      const saved = localStorage.getItem("scamshield_m5_users_v3");
       if (saved) {
         try { return JSON.parse(saved); } catch (e) { /* fallback */ }
       }
@@ -59,7 +66,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("scamshield_m5_audit_v2");
+      const saved = localStorage.getItem("scamshield_m5_audit_v3");
       if (saved) {
         try { return JSON.parse(saved); } catch (e) { /* fallback */ }
       }
@@ -69,7 +76,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("scamshield_m5_tickets_v2");
+      const saved = localStorage.getItem("scamshield_m5_tickets_v3");
       if (saved) {
         try { return JSON.parse(saved); } catch (e) { /* fallback */ }
       }
@@ -79,7 +86,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const [systemAlerts, setSystemAlerts] = useState<SystemAlert[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("scamshield_m5_alerts_v2");
+      const saved = localStorage.getItem("scamshield_m5_alerts_v3");
       if (saved) {
         try { return JSON.parse(saved); } catch (e) { /* fallback */ }
       }
@@ -91,25 +98,25 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("scamshield_m5_users_v2", JSON.stringify(users));
+      localStorage.setItem("scamshield_m5_users_v3", JSON.stringify(users));
     }
   }, [users]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("scamshield_m5_audit_v2", JSON.stringify(auditLogs));
+      localStorage.setItem("scamshield_m5_audit_v3", JSON.stringify(auditLogs));
     }
   }, [auditLogs]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("scamshield_m5_tickets_v2", JSON.stringify(supportTickets));
+      localStorage.setItem("scamshield_m5_tickets_v3", JSON.stringify(supportTickets));
     }
   }, [supportTickets]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("scamshield_m5_alerts_v2", JSON.stringify(systemAlerts));
+      localStorage.setItem("scamshield_m5_alerts_v3", JSON.stringify(systemAlerts));
     }
   }, [systemAlerts]);
 
@@ -130,13 +137,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setAuditLogs((prev) => [newEntry, ...prev]);
   };
 
+  // FR-M5-10: Only Super admin can suspend accounts. Support role is rejected.
   const suspendUser = (userId: string, reason: string) => {
-    if (currentRole !== "admin" && currentRole !== "support") {
-      logAudit("Suspended account", `User ID: ${userId}`, "Denied", "Unauthorized role");
-      return { success: false, error: "Only admins can suspend accounts." };
+    const targetUser = users.find((u) => u.id === userId);
+    const targetName = targetUser ? targetUser.name : `User ID: ${userId}`;
+
+    if (currentRole !== "admin") {
+      logAudit("Suspended account", targetName, "Denied", "Role limit: Support admin cannot suspend accounts (FR-M5-10)");
+      return {
+        success: false,
+        error: "Role limit: Only Super admin can suspend accounts (FR-M5-10). Support admins cannot perform destructive moderation.",
+      };
     }
 
-    const targetUser = users.find((u) => u.id === userId);
     if (!targetUser) return { success: false, error: "User not found" };
 
     setUsers((prev) =>
@@ -154,17 +167,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    logAudit("Suspended account", targetUser.name, "Success", reason);
+    logAudit("Suspended account", targetName, "Success", reason);
     return { success: true };
   };
 
   const reactivateUser = (userId: string, reason: string) => {
+    const targetUser = users.find((u) => u.id === userId);
+    const targetName = targetUser ? targetUser.name : `User ID: ${userId}`;
+
     if (currentRole !== "admin" && currentRole !== "support") {
-      logAudit("Reactivated account", `User ID: ${userId}`, "Denied", "Unauthorized role");
+      logAudit("Reactivated account", targetName, "Denied", "Unauthorized role");
       return { success: false, error: "Only admins can reactivate accounts." };
     }
 
-    const targetUser = users.find((u) => u.id === userId);
     if (!targetUser) return { success: false, error: "User not found" };
 
     setUsers((prev) =>
@@ -182,7 +197,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    logAudit("Reactivated account", targetUser.name, "Success", reason || "Issue resolved");
+    logAudit("Reactivated account", targetName, "Success", reason || "Issue resolved");
     return { success: true };
   };
 
@@ -259,10 +274,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const resetToDefaults = () => {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("scamshield_m5_users_v2");
-      localStorage.removeItem("scamshield_m5_audit_v2");
-      localStorage.removeItem("scamshield_m5_tickets_v2");
-      localStorage.removeItem("scamshield_m5_alerts_v2");
+      localStorage.removeItem("scamshield_m5_users_v3");
+      localStorage.removeItem("scamshield_m5_audit_v3");
+      localStorage.removeItem("scamshield_m5_tickets_v3");
+      localStorage.removeItem("scamshield_m5_alerts_v3");
     }
     setUsers(initialUsers);
     setAuditLogs(initialAuditLogs);

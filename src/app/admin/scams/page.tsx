@@ -1,23 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  Radar,
-  ShieldAlert,
-  AlertTriangle,
-  Clock,
-  Sparkles,
-  Lock,
-  Layers,
-  CheckCircle2,
-} from "lucide-react";
 import { initialScamCategories } from "@/lib/seed-data";
-
-const confidenceDistribution = [
-  { name: "High Concern (Scam)", value: 685, color: "#B91C1C" },
-  { name: "Medium Suspicion", value: 165, color: "#B45309" },
-  { name: "Low Risk Detected", value: 50, color: "#15803D" },
-];
 
 const dailyVolume = [
   { day: "Oct 06", count: 48 },
@@ -40,11 +24,11 @@ export default function ScamIntelligencePage() {
               Scam Intelligence & Threat Feed
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs bg-teal-50 text-teal-800 border border-teal-200 font-medium">
-              M5-04 · X-13 Taxonomy
+              M5-04 · Canonical X-13 Taxonomy
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Taxonomy breakdown and confidence telemetry from Module 4 AI evaluations. Zero customer messages stored.
+            Standardized threat taxonomy breakdown from Module 4 AI evaluations. Zero raw customer messages stored.
           </p>
         </div>
       </div>
@@ -54,7 +38,7 @@ export default function ScamIntelligencePage() {
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
           <div className="text-sm font-medium text-slate-600">Total checks classified</div>
           <div className="text-3xl font-bold text-slate-900 mt-2">900</div>
-          <div className="text-xs text-slate-500 mt-1">Across 4 standard categories</div>
+          <div className="text-xs text-slate-500 mt-1">Categorized under X-13 contract</div>
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
@@ -64,9 +48,9 @@ export default function ScamIntelligencePage() {
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-          <div className="text-sm font-medium text-slate-600">High-risk flagged</div>
+          <div className="text-sm font-medium text-slate-600">High-concern flagged</div>
           <div className="text-3xl font-bold text-red-600 mt-2">727</div>
-          <div className="text-xs text-slate-500 mt-1">80.8% trigger warning alerts</div>
+          <div className="text-xs text-slate-500 mt-1">Triggered security warnings</div>
         </div>
       </div>
 
@@ -75,7 +59,7 @@ export default function ScamIntelligencePage() {
         <div className="p-5 border-b border-slate-100">
           <h2 className="text-base font-bold text-slate-900">Shared taxonomy breakdown (X-13)</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Categories negotiated between Module 4 AI Checker and Module 5 Analytics.
+            Standard threat taxonomy agreed between Module 4 AI Checker and Module 5 Analytics.
           </p>
         </div>
 
@@ -84,7 +68,7 @@ export default function ScamIntelligencePage() {
             <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
                 <th className="px-5 py-3">Category</th>
-                <th className="px-4 py-3">Code</th>
+                <th className="px-4 py-3">X-13 Contract Code</th>
                 <th className="px-4 py-3 text-right">Volume</th>
                 <th className="px-4 py-3 text-right">Share</th>
                 <th className="px-5 py-3 text-right">High Concern</th>

@@ -4,8 +4,8 @@
 - **Project:** IS2901 Software Development Project · ScamShield
 - **Group:** Byte Brigade · University of Moratuwa, Faculty of Information Technology
 - **Module Owner:** Vishmi Himaya (@Vish-Himaya) · Index No: 245027T
-- **Module 6 Coordinator:** Vishmi Himaya
-- **Status:** Complete Baseline Architecture & Interactive Implementation
+- **Module 6 Coordinator:** Suraji (@SurajiSaundarya) *(reassigned 25 Oct 2026)*; M5 Owner contributes Admin Cohort Safety Score View
+- **Status:** Interactive Simulation & Design Specification (Draft for Review)
 - **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Recharts, Supabase (PostgreSQL + Auth)
 
 ---
@@ -14,10 +14,10 @@
 
 Module 5 serves as **"The Control Room"** of the ScamShield digital safety platform. While end users interact with the marketing funnel (M1), account authentication (M2), password vault (M3), and scam checker (M4), administrators require a high-reliability operational hub to:
 1. **Monitor Business Vitality:** Track subscriber acquisition, conversion rates, mock MRR/ARR, and churn across subscription tiers (*Sentinel*, *Guardian*, *Aegis*).
-2. **Observe AI Threat Telemetry:** Analyze real-time volume of scanned suspicious content, threat category distribution (*CAT-PHISH*, *CAT-JOB*, *CAT-PARCEL*), and AI model confidence distributions without storing private message text.
+2. **Observe AI Threat Telemetry:** Analyze real-time volume of scanned suspicious content, threat category distribution (*phishing*, *romance_scam*, *fake_invoice*, *prize_lottery_scam*, *unknown_other*), and AI model confidence distributions without storing private message text.
 3. **Execute User Moderation & Support:** Search user accounts, apply account suspensions/reactivations with mandatory audit justifications, manage support tickets, and review user-reported verdict disputes.
-4. **Enforce Governance & Auditability:** Ensure Role-Based Access Control (RBAC) and maintain an append-only, tamper-proof audit trail for all administrative operations.
-5. **Coordinate Module 6 (Digital Safety Score):** Aggregate summary health cards from M2, M3, and M4 into an administrative cohort health overview.
+4. **Enforce Governance & Auditability:** Ensure Role-Based Access Control (RBAC) and maintain an append-only audit trail for administrative operations.
+5. **Support Module 6 (Digital Safety Score):** Aggregate summary indicators from M2, M3, and M4 into an administrative cohort health overview.
 
 ---
 
@@ -26,64 +26,42 @@ Module 5 serves as **"The Control Room"** of the ScamShield digital safety platf
 ### Section A: Security & Access Control
 * **FR-M5-01: Protected Admin Area**
   * The administrative interface shall reside under protected routes (`/admin/*`).
-  * Access shall be gated by role claims (`admin`, `support`, `security_analyst`). Unauthenticated or standard users attempting access shall be redirected to login.
+  * Access shall be gated by role claims (`admin`, `support`). Unauthenticated or standard users attempting access shall be displayed an access-denied barrier.
 * **FR-M5-10: Role-Based Access Control (RBAC)**
-  * *Admin Role:* Full privileges (user suspension, account reactivation, internal notes, data export).
-  * *Support Role:* Read access to user profiles and support tickets; ability to add support notes. Account suspension and destructive moderation actions are disabled.
-  * *Security Analyst Role:* Read-only access to aggregated analytics, threat intelligence, and audit trails.
+  * *Super Admin Role:* Full privileges (user suspension, account reactivation, support replies, CSV data export).
+  * *Support Admin Role:* Read access to user profiles and support tickets; ability to reply to tickets and reactivate resolved accounts. Destructive moderation (account suspension), role modification, and revenue views are strictly disabled.
 
 ### Section B: Business & Growth Intelligence
 * **FR-M5-02: User Registration & Status Tracking**
   * Display real-time count of total registered users, current subscription plans, and status breakdown (*Active*, *Trialing*, *Cancelled*, *Suspended*).
 * **FR-M5-03: Mock Revenue Analytics**
-  * Calculate and display Monthly Recurring Revenue (MRR) based on active subscriber plan pricing (e.g. Guardian at LKR 990, Aegis at LKR 1,890, Sentinel at LKR 490).
+  * Calculate and display Monthly Recurring Revenue (MRR) based on active subscriber plan pricing (*Sentinel* at LKR 490, *Guardian* at LKR 990, *Aegis* at LKR 1,990).
 * **FR-M5-05: Funnel Drop-Off Analytics**
   * Visualize user progression through M1 funnel steps: Landing View $\to$ Funnel Started $\to$ Funnel Finished $\to$ Account Created. Calculate stage conversion ratios.
 * **FR-M5-06: Subscription Cohort Retention**
-  * Present monthly cohort retention heatmaps (M0 through M4) indicating subscriber longevity and churn velocity.
+  * Present 5-day signup cohort retention heatmaps indicating subscriber longevity and churn velocity.
 * **FR-M5-07: Data Export**
-  * Provide one-click client/server CSV export functionality for customer records, billing status, and scam statistics.
+  * Provide one-click CSV export functionality for user account records and administrative audit logs.
 * **FR-M5-08: Growth & Referral Attribution**
-  * Track and report visits, signups, and conversion percentages generated by viral referral links and A/B campaign variants.
+  * Track and report visits, signups, and conversion percentages generated by referral links and campaign sources.
 
 ### Section C: AI Threat Intelligence & Platform Usage
 * **FR-M5-04: Scam Check Telemetry & Category Distribution**
-  * Graph check volume over time and breakdown scans by standardized X-13 taxonomy codes (*Phishing*, *Job/Fee Scam*, *Parcel/Delivery*, *Other/Limited*).
+  * Graph check volume over time and breakdown scans by standardized X-13 canonical taxonomy codes (*phishing*, *romance_scam*, *fake_invoice*, *prize_lottery_scam*, *unknown_other*).
 * **FR-M5-04B: AI Confidence Distribution**
-  * Classify scam checks into High Concern, Medium Suspicion, and Low Risk categories to evaluate AI pipeline performance.
+  * Classify scam checks into High Concern, Medium Suspicion, and Low Risk categories to evaluate AI pipeline performance without storing message bodies.
 
 ### Section D: Operations & Governance
 * **FR-M5-09: User Search & Moderation**
   * Provide real-time filtering by user name, email, plan tier, and account status.
   * Allow authorized administrators to suspend or reactivate accounts with a mandatory written justification.
-* **FR-M5-11: Immutable Audit Trail**
-  * Automatically log every sensitive administrative action (timestamp, administrator email, role, action code, target user, detailed reason, IP address).
-  * The audit log shall be append-only; update and delete operations are forbidden by database policy.
-* **FR-M5-12: Support Inbox & AI Verdict Feedback**
-  * Centralize user support inquiries with status management (*Open*, *In Progress*, *Resolved*).
-  * Provide a dedicated interface to review user disputes on scam verdicts (false positives / false negatives).
-* **FR-M5-14: Combined Platform Health Overview**
-  * Surface an executive snapshot dashboard summarizing key performance indicators and alerts requiring immediate team attention.
-* **FR-M5-15: Synthetic Seed Dataset Generator**
-  * Provide a regenerable, realistic synthetic dataset enabling testing and evaluator demonstration without risking private customer data.
+* **FR-M5-11: Audit Trail**
+  * Automatically log administrative actions (timestamp, administrator name, action, target user, detailed reason, IP address).
 
 ---
 
-## 3. Strict Security & Privacy Boundaries (Non-Negotiables)
+## 3. Privacy & Architectural Boundaries
 
-1. **Zero-Knowledge Password Vault Boundary:** Admins never have access to stored passwords, plaintext vault notes, or encryption keys. Inspecting a user record displays only account metadata (email, subscription plan, joined date, check counts).
-2. **Zero-Content Scam Analysis Boundary:** Raw message bodies, pasted emails, phone numbers, and extracted contact lists submitted to M4 are never passed to M5. Only anonymous category codes (`X-13`) and timestamps travel to analytics.
-3. **No Real Financial Data:** All payment processing, credit card details, and billing events are mocked. No real cardholder data is collected, stored, or processed.
-4. **Independence of Safety Score from Payment:** Subscription tier, payment amount, or upgrade status never inflates a user's Digital Safety Score (M6).
-
----
-
-## 4. Cross-Module Data Interfaces
-
-| Source | Target | Data Passed | Purpose |
-|:---|:---|:---|:---|
-| **M1** | **M5** | Funnel step events, referral codes, A/B tags | Funnel drop-off and referral attribution |
-| **M2** | **M5** | User profiles, subscription plans, status changes, mock revenue | User directory, MRR calculation, churn monitoring |
-| **M3** | **M5** | System-wide vault entry counts | Adoption and usage health monitoring |
-| **M4** | **M5** | Scam check counts, X-13 category codes, confidence ratings | AI threat intelligence and workload monitoring |
-| **M5** | **M6** | Cohort aggregation engine & Admin score view | System-wide safety scoring insights |
+1. **Zero Raw-Content Storage:** Admins never view stored passwords, secure notes, or vault secrets. Module 3 manages password vault records in server-side AES-256-GCM custody; Module 5 receives only count metadata (e.g. `vault_items_count`).
+2. **De-identified AI Telemetry:** Raw message texts, phone numbers, or pasted content submitted to Module 4 are never routed to Module 5. Only sanitized X-13 category codes and verdict tags are aggregated.
+3. **Mock Billing Safety:** All subscription prices (LKR 490, 990, 1,990) and transactions are simulated. No real credit card or gateway connections exist.

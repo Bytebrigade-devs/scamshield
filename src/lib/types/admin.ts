@@ -1,4 +1,4 @@
-export type AdminRole = "admin" | "support" | "security_analyst" | "none";
+export type AdminRole = "admin" | "support" | "none";
 
 export type PlanTier = "Guardian" | "Sentinel" | "Aegis" | "None";
 
@@ -14,7 +14,7 @@ export interface AdminUser {
   checksCount: number;
   vaultCount: number;
   renewal: string;
-  billingAmount: number; // LKR
+  billingAmount: number; // LKR: Sentinel: 490, Guardian: 990, Aegis: 1990
   supportNotes: string[];
   safetyScore?: number | null;
 }
@@ -46,9 +46,17 @@ export interface PlanMixData {
   color: string;
 }
 
+// X-13 Canonical Threat Taxonomy Codes
+export type X13TaxonomyCode =
+  | "phishing"
+  | "romance_scam"
+  | "fake_invoice"
+  | "prize_lottery_scam"
+  | "unknown_other";
+
 export interface ScamCategoryStat {
   category: string;
-  code: string; // X-13 taxonomy code
+  code: X13TaxonomyCode; // X-13 canonical taxonomy code
   count: number;
   percentage: number;
   flaggedHighRisk: number;

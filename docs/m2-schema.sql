@@ -4,8 +4,8 @@
 
 create table if not exists public.subscriptions (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  plan text not null check (plan in ('free', 'premium')),
-  status text not null check (status in ('active', 'cancelled')),
+  plan text not null check (plan in ('Sentinel', 'Guardian', 'Aegis')),
+  status text not null check (status in ('active', 'trialing', 'cancelled')),
   billing_cycle text check (billing_cycle in ('monthly', 'yearly')),
   started_at timestamptz not null default now(),
   renews_at timestamptz,

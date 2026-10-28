@@ -7,7 +7,7 @@ import { AdminProvider, useAdmin } from "@/lib/admin-store";
 import { ShieldAlert, LogOut, ArrowLeft } from "lucide-react";
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
-  const { currentRole, setCurrentRole } = useAdmin();
+  const { currentRole } = useAdmin();
 
   // Page 12: Admin role required (Access Denied view when role is none)
   if (currentRole === "none") {
@@ -27,25 +27,18 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             Your account is signed in, but it does not have an admin role. If you think this is a mistake, ask a super admin to review your role.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => setCurrentRole("admin")}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-teal-700 text-white hover:bg-teal-800 text-sm font-medium transition"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Switch to Super admin
-            </button>
+          <div className="flex justify-center">
             <Link
               href="/"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition shadow-sm"
             >
               <LogOut className="w-4 h-4" />
-              Back to Home
+              Back to my account
             </Link>
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400">
-            Admin access is checked on the server, not in the browser.
+            Client-side RBAC simulation for preview; production deployment enforces verified server-side session checks.
           </div>
         </div>
       </div>
@@ -59,6 +52,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         <main className="flex-1 p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
+        {/* Global Privacy Footer Boundary */}
+        <footer className="px-8 py-4 border-t border-slate-200 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 bg-white">
+          <p>
+            🔒 <strong className="text-slate-800">Zero Raw-Content Access:</strong> Admin views show counts and metadata only. Passwords, vault records (server-side AES-256-GCM encrypted in Module 3), and submitted scam message texts are never stored or accessible in the admin console.
+          </p>
+          <p className="text-[11px] text-slate-400">
+            ScamShield IS2901 · Byte Brigade
+          </p>
+        </footer>
       </div>
     </div>
   );

@@ -132,7 +132,7 @@ export const initialUsers: AdminUser[] = [
     checksCount: 22,
     vaultCount: 31,
     renewal: "Oct 15, 2026 (mock)",
-    billingAmount: 1890,
+    billingAmount: 1990, // Approved Aegis price: LKR 1,990
     supportNotes: [],
     safetyScore: null,
   },
@@ -230,7 +230,7 @@ export const initialUsers: AdminUser[] = [
     checksCount: 29,
     vaultCount: 40,
     renewal: "Oct 18, 2026 (mock)",
-    billingAmount: 1890,
+    billingAmount: 1990, // Approved Aegis price: LKR 1,990
     supportNotes: [],
     safetyScore: null,
   },
@@ -587,14 +587,14 @@ export const initialSystemAlerts: SystemAlert[] = [
     status: "Open",
     whatWeKnow: [
       "Module 3 export payload was empty during morning sync.",
-      "Only weak/reused counts are requested under strict zero-knowledge.",
+      "Only weak/reused counts are requested; no passwords or notes are ever transferred.",
     ],
     timeline: [
       { time: "06:00", event: "Telemetry check found 0 synced vault summaries." },
     ],
     suggestedSteps: [
       "1. Confirm Module 3 client-side health calculation interface.",
-      "2. Check zero-knowledge privacy boundaries.",
+      "2. Check zero raw-content boundaries.",
     ],
   },
 ];
@@ -609,9 +609,34 @@ export const initialFailedSignins = [
   { day: "20", count: 5 },
 ];
 
+// X-13 Canonical Threat Taxonomy Mapping
 export const initialScamCategories: ScamCategoryStat[] = [
-  { category: "Phishing / fake site", code: "CAT-PHISH", count: 410, percentage: 45.5, flaggedHighRisk: 342 },
-  { category: "Job / fee scam", code: "CAT-JOB", count: 230, percentage: 25.6, flaggedHighRisk: 198 },
-  { category: "Parcel / delivery scam", code: "CAT-PARCEL", count: 170, percentage: 18.9, flaggedHighRisk: 145 },
-  { category: "Other / limited context", code: "CAT-OTHER", count: 90, percentage: 10.0, flaggedHighRisk: 42 },
+  {
+    category: "Phishing & Credential Theft",
+    code: "phishing",
+    count: 410,
+    percentage: 45.5,
+    flaggedHighRisk: 342,
+  },
+  {
+    category: "Prize, Lottery & Fee Scam",
+    code: "prize_lottery_scam",
+    count: 230,
+    percentage: 25.6,
+    flaggedHighRisk: 198,
+  },
+  {
+    category: "Fake Invoice & Payment Request",
+    code: "fake_invoice",
+    count: 170,
+    percentage: 18.9,
+    flaggedHighRisk: 145,
+  },
+  {
+    category: "Other / Unclassified Threat",
+    code: "unknown_other",
+    count: 90,
+    percentage: 10.0,
+    flaggedHighRisk: 42,
+  },
 ];
