@@ -39,3 +39,29 @@ See [GITHUB-GUIDE.md](GITHUB-GUIDE.md) for the full beginner walkthrough.
 ## Theme & Typography (all members)
 
 Every module's UI must follow the shared team spec: see [docs/THEME-AND-TYPOGRAPHY.md](docs/THEME-AND-TYPOGRAPHY.md) — colours, fonts, buttons and surfaces are defined there; don't invent module-local styling.
+
+## Run the Module 3 frontend
+
+Use the validated Node.js 24.19.0 version pinned in `.nvmrc` and pnpm 11.25.0. The package engine declares a minimum of Node 22.13.0; it is not a claim that every allowed version was tested.
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Open http://127.0.0.1:3000/vault. The home route redirects to the vault. No environment variables or external service credentials are needed for this frontend preview.
+
+The implementation follows all 30 supplied vault frames using Next.js App Router, React, Tailwind CSS v4, semantic theme tokens and a locally hosted Plus Jakarta Sans font. Logins, notes, folders, generator, health, activity, lock, mobile layouts and dialogs are interactive. See [the M3 frontend guide](docs/M3-FRONTEND.md) for the frame-to-route map and integration boundaries.
+
+This branch uses synthetic, in-memory records. Refreshing or locking resets demo changes. Supabase authentication, encrypted persistence, entitlement enforcement, production health estimation and the safety score formula remain backend integration work. Do not enter real credentials.
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test:vault
+pnpm build
+# With Microsoft Edge installed; Playwright starts its own local server:
+pnpm test:browser
+```
+
+The existing M4 source and tests are retained. The new app scaffold is Next.js 16; align the framework baseline with the M2 branch before merging shared infrastructure into main. Development and build scripts use Webpack. See [verification results and local setup notes](docs/M3-VERIFICATION.md).
