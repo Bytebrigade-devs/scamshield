@@ -31,10 +31,16 @@ export default function SubscriptionPage() {
   }
 
   useEffect(() => {
-    call("GET").then((s) => {
+    let ignore = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void call("GET").then((s) => {
+      if (ignore) return;
       setSub(s);
       setLoading(false);
     });
+    return () => {
+      ignore = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

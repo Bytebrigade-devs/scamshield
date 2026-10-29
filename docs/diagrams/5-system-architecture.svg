@@ -16,7 +16,7 @@
   <g transform="translate(40, 85)">
     <rect x="0" y="0" width="1120" height="195" fill="#ffffff" stroke="#6c8ebf" stroke-width="2" rx="4" filter="url(#drawio-shadow)"/>
     <rect x="0" y="0" width="1120" height="34" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-    <text x="560" y="22" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">TIER 1: PRESENTATION LAYER (Next.js 14 App Router · React 18 · Tailwind CSS · Recharts)</text>
+    <text x="560" y="22" font-size="13" font-weight="bold" fill="#000000" text-anchor="middle">TIER 1: PRESENTATION LAYER (Next.js 16 App Router · React 19 · Tailwind CSS v4 · Recharts)</text>
 
     <!-- Component 1: Overview Dashboard -->
     <g transform="translate(20, 50)">
@@ -39,7 +39,7 @@
       <text x="10" y="64" font-size="9.5" fill="#333333">• Status Badges &amp; Notes Form</text>
       <text x="10" y="82" font-size="9.5" fill="#b85450">• Suspend / Reactivate Modal</text>
       <text x="10" y="100" font-size="9.5" fill="#274e13">• Mandatory Audit Reason Input</text>
-      <text x="10" y="118" font-size="8.5" fill="#666666">Zero-Knowledge Masking</text>
+      <text x="10" y="118" font-size="8.5" fill="#666666">Zero Raw-Content Access</text>
     </g>
 
     <!-- Component 3: Analytics -->
@@ -193,7 +193,7 @@
       <text x="10" y="94" font-size="9" font-family="monospace" font-weight="bold" fill="#b45f06">+ ⭐ v_7day_metric_baselines (View)</text>
       <text x="10" y="110" font-size="9" font-family="monospace" fill="#333333">  - current_count vs prev_7day_avg</text>
       <text x="10" y="126" font-size="9" font-family="monospace" fill="#b85450">  - delta_pct (Flags > 40% spikes)</text>
-      <text x="10" y="150" font-size="8" font-style="italic" fill="#274e13">Zero-Knowledge: Event metadata only</text>
+      <text x="10" y="150" font-size="8" font-style="italic" fill="#274e13">Zero Raw-Content: Event metadata only</text>
     </g>
 
     <!-- Table 4: User Directory & Support Tables -->
@@ -205,7 +205,7 @@
       <text x="10" y="62" font-size="9" font-family="monospace" fill="#000000">+ public.support_tickets (Table)</text>
       <text x="10" y="78" font-size="9" font-family="monospace" fill="#000000">+ public.verdict_feedback (Table)</text>
       <text x="10" y="94" font-size="9" font-family="monospace" fill="#000000">+ auth.users (Supabase Auth)</text>
-      <text x="10" y="110" font-size="9" font-family="monospace" fill="#274e13">+ RLS: Zero-Knowledge Protection</text>
+      <text x="10" y="110" font-size="9" font-family="monospace" fill="#274e13">+ RLS: Zero Raw-Content Protection</text>
       <text x="10" y="126" font-size="9" font-family="monospace" fill="#666666">+ Synthetic billing &amp; plan data</text>
       <text x="10" y="150" font-size="8" font-style="italic" fill="#666666">Aggregates profiles across modules</text>
     </g>

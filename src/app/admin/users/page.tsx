@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Download, Search, ShieldCheck, ChevronDown, AlertCircle } from "lucide-react";
+import { Download, Search, ShieldCheck, ChevronDown } from "lucide-react";
 import { useAdmin } from "@/lib/admin-store";
 import { UserStatus } from "@/lib/types/admin";
 

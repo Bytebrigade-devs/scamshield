@@ -58,7 +58,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("scamshield_m5_users_v3");
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+        try { return JSON.parse(saved); } catch { /* fallback */ }
       }
     }
     return initialUsers;
@@ -68,7 +68,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("scamshield_m5_audit_v3");
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+        try { return JSON.parse(saved); } catch { /* fallback */ }
       }
     }
     return initialAuditLogs;
@@ -78,7 +78,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("scamshield_m5_tickets_v3");
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+        try { return JSON.parse(saved); } catch { /* fallback */ }
       }
     }
     return initialSupportTickets;
@@ -88,7 +88,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("scamshield_m5_alerts_v3");
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+        try { return JSON.parse(saved); } catch { /* fallback */ }
       }
     }
     return initialSystemAlerts;

@@ -87,7 +87,7 @@
     <text x="12" y="88" font-size="9.5" font-family="monospace" fill="#000000">+ buildRetentionCohorts(): CohortMatrix</text>
     <text x="12" y="106" font-size="9.5" font-family="monospace" fill="#000000">+ getScamCategoryDistribution(): CategoryStats</text>
     <text x="12" y="124" font-size="9.5" font-family="monospace" fill="#000000">+ generateCsvExport(): string</text>
-    <text x="12" y="148" font-size="8.5" font-style="italic" fill="#274e13">🔒 Privacy: Zero-Knowledge telemetry metadata only</text>
+    <text x="12" y="148" font-size="8.5" font-style="italic" fill="#274e13">🔒 Privacy: Zero Raw-Content telemetry metadata only</text>
   </g>
 
   <!-- ================= COLUMN 2: DATABASE TABLES ================= -->
@@ -197,7 +197,7 @@
     <text x="15" y="132" font-size="9.5" font-family="monospace" fill="#000000">+ metadata: JSONB NOT NULL</text>
     <text x="15" y="148" font-size="9.5" font-family="monospace" fill="#666666">+ created_at: TIMESTAMPTZ</text>
     <text x="15" y="172" font-size="8.5" font-style="italic" fill="#274e13">Index: event_name, created_at (enables fast 7-day baseline query)</text>
-    <text x="15" y="188" font-size="8.5" font-style="italic" fill="#274e13">Zero-Knowledge: Event metadata only (No raw message bodies)</text>
+    <text x="15" y="188" font-size="8.5" font-style="italic" fill="#274e13">Zero Raw-Content: Event metadata only (No raw message bodies)</text>
   </g>
 
   <!-- DB VIEW: public.admin_user_directory -->
@@ -214,7 +214,7 @@
     <text x="15" y="116" font-size="9.5" font-family="monospace" fill="#000000">+ checks_count: INT, vault_count: INT</text>
     <text x="15" y="132" font-size="9.5" font-family="monospace" fill="#274e13">+ monthly_billing: NUMERIC (mock LKR)</text>
     <text x="15" y="148" font-size="9.5" font-family="monospace" fill="#666666">+ support_notes: TEXT[]</text>
-    <text x="15" y="172" font-size="8.5" font-style="italic" fill="#274e13">Aggregates profile counters with Zero-Knowledge masking</text>
+    <text x="15" y="172" font-size="8.5" font-style="italic" fill="#274e13">Aggregates profile counters with Zero Raw-Content boundaries</text>
   </g>
 
   <!-- DB VIEW: 7-Day Rolling Baseline Comparator View -->

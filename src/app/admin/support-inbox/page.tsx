@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Search, ShieldCheck, ChevronDown, CheckCircle2, Send, UserPlus } from "lucide-react";
 import { useAdmin } from "@/lib/admin-store";
-import { SupportTicket } from "@/lib/types/admin";
+
 
 export default function AdminSupportInboxPage() {
   const { supportTickets, replyToTicket, resolveTicket } = useAdmin();

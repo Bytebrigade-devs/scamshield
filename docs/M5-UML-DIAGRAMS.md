@@ -25,7 +25,7 @@ flowchart LR
         UC4["UC-04: Search & Inspect User Accounts (M5-09)"]
         UC5["UC-05: Suspend / Reactivate User Account (M5-10)"]
         UC6["UC-06: Add Internal Support Note (M5-09)"]
-        UC7["UC-07: Review Immutable Audit Log (M5-11)"]
+        UC7["UC-07: Review Append-Only Audit Log (M5-11)"]
         UC8["UC-08: Export Analytics to CSV (M5-07)"]
         UC9["UC-09: Manage Support Tickets & Feedback (M5-12)"]
         UC10["UC-10: Review Module 6 Safety Score Cohorts (M6-05)"]
@@ -69,7 +69,7 @@ flowchart TD
     SearchUser --> SelectUser[Select target user record]
     SelectUser --> InspectProfile[Inspect metadata: plan, joined date, check count]
     InspectProfile --> CheckZeroKnowledge{"Check Privacy Boundary"}
-    CheckZeroKnowledge -->|Strict Enforcement| ShieldVault["Zero-Knowledge Enforced:<br/>Passwords and messages remain hidden"]
+    CheckZeroKnowledge -->|Strict Enforcement| ShieldVault["Zero Raw-Content Access:<br/>Passwords and messages remain hidden"]
     
     ShieldVault --> ClickSuspend[Click 'Suspend Account']
     ClickSuspend --> CheckRole{"Check User Role (RBAC)"}
@@ -82,7 +82,7 @@ flowchart TD
     InputReason --> SubmitAction[Submit Suspension]
     
     SubmitAction --> UpdateDB[Update user status to 'Suspended']
-    UpdateDB --> CreateAudit[Create immutable audit record in public.audit_logs]
+    UpdateDB --> CreateAudit[Create append-only audit record in public.audit_logs]
     CreateAudit --> StampMetadata[Record: AdminEmail, Timestamp, TargetEmail, Justification, IP]
     StampMetadata --> RefreshUI[Update User Management table and Needs Attention badge]
     RefreshUI --> EndSuccess([Suspension Complete & Logged])
@@ -117,7 +117,7 @@ sequenceDiagram
     and Query Scam Threat Intelligence
         API->>M4: Request scan category metadata (X-13 codes)
         Note over M4,API: Sanitization Barrier: Raw message text is NEVER returned
-        M4-->>API: Threat counts: Phishing (410), Job Scam (230), Parcel (170)
+        M4-->>API: Threat counts: phishing (410), romance_scam (230), fake_invoice (170)
     end
 
     API->>API: Aggregate MRR, conversion rates, and retention cohorts
@@ -134,7 +134,7 @@ erDiagram
     ADMIN_USERS {
         uuid id PK
         string email
-        string role "admin | support | security_analyst"
+        string role "admin | support"
     }
 
     USERS_VIEW {

@@ -9,7 +9,7 @@ import {
 } from "@/lib/seed-data";
 
 export default function AdminOverviewPage() {
-  const { currentRole, metrics, exportCsvData, users, supportTickets } = useAdmin();
+  const { currentRole, exportCsvData, users, supportTickets } = useAdmin();
   const [timeRange, setTimeRange] = useState("Last 30 days");
 
   const openTicketsCount = supportTickets.filter((t) => t.status !== "Resolved").length;

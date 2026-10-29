@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AlertCircle, Shield, Lock, CheckCircle2, ChevronRight } from "lucide-react";
+
 
 export default function AdminSafetyScorePage() {
   return (

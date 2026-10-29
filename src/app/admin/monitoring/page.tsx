@@ -3,13 +3,13 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import {
-  ShieldAlert,
+
   ShieldCheck,
   ChevronDown,
   ArrowLeft,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
+
+
+
   ExternalLink,
 } from "lucide-react";
 import { useAdmin } from "@/lib/admin-store";
@@ -19,7 +19,7 @@ import {
   initialFailedSignins,
   initialScamChecksPerWeek,
 } from "@/lib/seed-data";
-import { SystemAlert } from "@/lib/types/admin";
+
 
 export default function AdminMonitoringPage() {
   const { systemAlerts, acknowledgeAlert } = useAdmin();

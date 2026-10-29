@@ -54,7 +54,7 @@
   * Developed the synthetic dataset with realistic historical timelines, subscription events, and threat logs for evaluation and testing.
 
 ### Slide 7: Technologies Used
-* **Frontend:** Next.js 14, React 18, TypeScript, Tailwind CSS, Lucide Icons.
+* **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS v4, Lucide Icons, pnpm.
 * **Data Visualization:** Recharts (responsive line charts, bar charts).
 * **Backend & Database:** Supabase (PostgreSQL, Row-Level Security policies, UUIDs).
 

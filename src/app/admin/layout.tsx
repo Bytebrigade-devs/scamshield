@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { AdminProvider, useAdmin } from "@/lib/admin-store";
-import { ShieldAlert, LogOut, ArrowLeft } from "lucide-react";
+import { ShieldAlert, LogOut } from "lucide-react";
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { currentRole } = useAdmin();

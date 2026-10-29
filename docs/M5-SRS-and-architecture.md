@@ -6,7 +6,7 @@
 - **Module Owner:** Vishmi Himaya (@Vish-Himaya) · Index No: 245027T
 - **Module 6 Coordinator:** Suraji (@SurajiSaundarya) *(reassigned 25 Oct 2026)*; M5 Owner contributes Admin Cohort Safety Score View
 - **Status:** Interactive Simulation & Design Specification (Draft for Review)
-- **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Recharts, Supabase (PostgreSQL + Auth)
+- **Tech Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Recharts, pnpm, Supabase (PostgreSQL + Auth)
 
 ---
 
@@ -57,6 +57,16 @@ Module 5 serves as **"The Control Room"** of the ScamShield digital safety platf
   * Allow authorized administrators to suspend or reactivate accounts with a mandatory written justification.
 * **FR-M5-11: Audit Trail**
   * Automatically log administrative actions (timestamp, administrator name, action, target user, detailed reason, IP address).
+* **FR-M5-12: Support Inbox & AI Verdict Feedback**
+  * Centralize user support inquiries with status management (*Open*, *In Progress*, *Resolved*).
+  * Provide a dedicated interface (`/admin/support-inbox`) to review customer-reported disputes on scam verdicts (false positives / false negatives) without exposing raw user content.
+* **FR-M5-13: Module 6 Safety Score Cohort Monitoring**
+  * Provide an administrative aggregation view (`/admin/safety-scores`) computing average digital safety scores, distribution brackets (Poor, Moderate, Good, Excellent), and risk breakdown across user cohorts.
+* **FR-M5-14: Combined Platform Health Overview**
+  * Surface an operational health dashboard (`/admin/monitoring`) summarizing cross-module availability, simulated service latency, rate-limiting pressure, and critical incident alerts.
+* **FR-M5-15: Synthetic Seed Dataset Generator**
+  * Provide an interactive and regenerable synthetic dataset generator allowing administrators to seed realistic mock users, tickets, scam telemetry, and audit events for demonstration and testing without risking user privacy.
+
 
 ---
 
