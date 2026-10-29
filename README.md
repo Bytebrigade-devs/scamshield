@@ -39,3 +39,7 @@ See [GITHUB-GUIDE.md](GITHUB-GUIDE.md) for the full beginner walkthrough.
 ## Theme & Typography (all members)
 
 Every module's UI must follow the shared team spec: see [docs/THEME-AND-TYPOGRAPHY.md](docs/THEME-AND-TYPOGRAPHY.md) — colours, fonts, buttons and surfaces are defined there; don't invent module-local styling.
+
+## Module 1 frontend
+
+Suraji's landing, onboarding and growth frontend is in [modules/m1-frontend](modules/m1-frontend). Run it independently from that folder with `npm ci` and `npm run dev`. Its README documents the Module 2/5 handoff boundaries, checks and build commands. This addition preserves the existing Module 4 analysis library; it does not claim a fully integrated application.

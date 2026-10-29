@@ -1,0 +1,14 @@
+SCAMSHIELD MODULE 1 - SOURCE CONTRIBUTION
+
+This repository folder contains source code, not generated build output.
+
+Install Node.js 22.18 or newer, open a terminal in this folder, and run:
+  npm ci
+  npm run build
+
+After building:
+  - Double-click OPEN-PREVIEW.html for a self-contained preview, or
+  - Run npm run preview and open http://127.0.0.1:3000.
+
+For development use npm run dev instead.
+README.md and docs/INTEGRATION.md explain the module boundaries.
