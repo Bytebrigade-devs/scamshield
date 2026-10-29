@@ -395,7 +395,7 @@ export async function runCheck(request: CheckRequest, deps: CheckDeps): Promise<
   // 2) Access (FS-M4-09/NFR-M4-02): only the server-side entitlement snapshot decides.
   const snapshot = deps.entitlement.getEntitlement(deps.session);
   const access = resolveAccess(snapshot, deps.clock.now());
-  if (!access.allowed) {
+  if (!access.allowed || !snapshot) {
     return rejected('access-blocked', ACCESS_BLOCKED_MESSAGE);
   }
 

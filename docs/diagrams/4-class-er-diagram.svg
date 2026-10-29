@@ -1,0 +1,234 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 990" width="100%" height="100%" style="background:#ffffff; font-family: Helvetica, Arial, sans-serif;">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f0f0f0" stroke-width="1"/>
+    </pattern>
+    <filter id="drawio-shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#grid)" />
+
+  <!-- Diagram Title Banner -->
+  <text x="40" y="45" font-size="20" font-weight="bold" fill="#000000">Class &amp; Database Architecture Diagram — Module 5: Admin &amp; Operations</text>
+
+  <!-- ================= COLUMN 1: CONTROLLERS & SERVICE ENGINES ================= -->
+
+  <!-- CLASS 1: AdminController -->
+  <g transform="translate(40, 85)">
+    <rect x="0" y="0" width="340" height="230" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="340" height="34" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+    <text x="170" y="15" font-size="9.5" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Controller · M5-01/09/10&gt;&gt;</text>
+    <text x="170" y="28" font-size="11.5" font-weight="bold" fill="#000000" text-anchor="middle">AdminController</text>
+    
+    <rect x="0" y="34" width="340" height="36" fill="#ffffff" stroke="#6c8ebf" stroke-width="1"/>
+    <text x="12" y="48" font-size="9.5" font-family="monospace" fill="#000000">- currentRole: AdminRole</text>
+    <text x="12" y="62" font-size="9.5" font-family="monospace" fill="#000000">- adminEmail: string</text>
+    
+    <text x="12" y="86" font-size="9.5" font-family="monospace" fill="#000000">+ getExecutiveOverview(): OverviewMetrics</text>
+    <text x="12" y="102" font-size="9.5" font-family="monospace" fill="#004085">+ getActiveAlerts(): SystemAlert[]</text>
+    <text x="12" y="118" font-size="9.5" font-family="monospace" fill="#b45f06">+ executeRecommendedAction(alertId): Result</text>
+    <text x="12" y="134" font-size="9.5" font-family="monospace" fill="#000000">+ searchUsers(query, filters): UserRecord[]</text>
+    <text x="12" y="150" font-size="9.5" font-family="monospace" fill="#b85450">+ suspendUser(userId, reason): Result</text>
+    <text x="12" y="166" font-size="9.5" font-family="monospace" fill="#274e13">+ reactivateUser(userId, reason): Result</text>
+    <text x="12" y="182" font-size="9.5" font-family="monospace" fill="#000000">+ exportCsvData(): Blob (M5-07)</text>
+    <text x="12" y="198" font-size="9.5" font-family="monospace" fill="#000000">+ updateTicket(ticketId, status): void</text>
+    <text x="12" y="214" font-size="9.5" font-family="monospace" fill="#274e13">+ resetSeedData(): void (M5-15)</text>
+  </g>
+
+  <!-- CLASS 2: AnomalyDetectionEngine (⭐ B) -->
+  <g transform="translate(40, 335)">
+    <rect x="0" y="0" width="340" height="210" fill="#ffffff" stroke="#d6b656" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="340" height="34" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+    <text x="170" y="15" font-size="9.5" font-style="italic" fill="#b45f06" text-anchor="middle">&lt;&lt;Anomaly Engine · M5&gt;&gt;</text>
+    <text x="170" y="28" font-size="11.5" font-weight="bold" fill="#000000" text-anchor="middle">⭐ AnomalyDetectionEngine</text>
+    
+    <rect x="0" y="34" width="340" height="52" fill="#ffffff" stroke="#d6b656" stroke-width="1"/>
+    <text x="12" y="48" font-size="9.5" font-family="monospace" fill="#000000">- baselineWindowDays: int = 7</text>
+    <text x="12" y="64" font-size="9.5" font-family="monospace" fill="#000000">- spikeThresholdPct: float = 40.0</text>
+    <text x="12" y="78" font-size="9.5" font-family="monospace" fill="#000000">- failedLoginLimit: int = 15</text>
+    
+    <text x="12" y="102" font-size="9.5" font-family="monospace" fill="#000000">+ fetch7DayBaseline(metric): MetricBaseline</text>
+    <text x="12" y="120" font-size="9.5" font-family="monospace" fill="#b85450">+ detectScamWarningSpike(): AnomalyEvent</text>
+    <text x="12" y="138" font-size="9.5" font-family="monospace" fill="#000000">+ detectFailedLoginSpikes(): AnomalyEvent</text>
+    <text x="12" y="156" font-size="9.5" font-family="monospace" fill="#000000">+ checkComponentHealth(id): HealthStatus</text>
+    <text x="12" y="174" font-size="9.5" font-family="monospace" fill="#000000">+ checkScoreInputCompleteness(): ScoreHealth</text>
+    <text x="12" y="194" font-size="9" font-style="italic" fill="#b45f06">Compares live activity vs. 7-day average</text>
+  </g>
+
+  <!-- CLASS 3: AlertRecommendationEngine (⭐ C) -->
+  <g transform="translate(40, 565)">
+    <rect x="0" y="0" width="340" height="200" fill="#ffffff" stroke="#d6b656" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="340" height="34" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+    <text x="170" y="15" font-size="9.5" font-style="italic" fill="#b45f06" text-anchor="middle">&lt;&lt;Rule Engine · M5&gt;&gt;</text>
+    <text x="170" y="28" font-size="11.5" font-weight="bold" fill="#000000" text-anchor="middle">⭐ AlertRecommendationEngine</text>
+    
+    <rect x="0" y="34" width="340" height="38" fill="#ffffff" stroke="#d6b656" stroke-width="1"/>
+    <text x="12" y="50" font-size="9.5" font-family="monospace" fill="#000000">- ruleMatrix: Map&lt;EventType, RecommendedAction&gt;</text>
+    <text x="12" y="64" font-size="9.5" font-family="monospace" fill="#000000">- severityWeights: Map&lt;string, Severity&gt;</text>
+    
+    <text x="12" y="88" font-size="9.5" font-family="monospace" fill="#000000">+ evaluateRules(anomaly): SystemAlert</text>
+    <text x="12" y="106" font-size="9.5" font-family="monospace" fill="#b45f06">+ mapActionToEvent(eventType): ActionGuidance</text>
+    <text x="12" y="124" font-size="9.5" font-family="monospace" fill="#004085">+ getTargetInvestigationRoute(action): string</text>
+    <text x="12" y="142" font-size="9.5" font-family="monospace" fill="#000000">+ dispatchAlertNotification(alert): void</text>
+    <text x="12" y="160" font-size="9.5" font-family="monospace" fill="#274e13">+ resolveAlert(alertId, notes): void</text>
+    <text x="12" y="180" font-size="9" font-style="italic" fill="#274e13">Rule-based guidance (No black-box ML needed)</text>
+  </g>
+
+  <!-- CLASS 4: AnalyticsEngine -->
+  <g transform="translate(40, 785)">
+    <rect x="0" y="0" width="340" height="185" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="340" height="32" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+    <text x="170" y="14" font-size="9.5" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Service Engine · M5-03/05/06&gt;&gt;</text>
+    <text x="170" y="27" font-size="11.5" font-weight="bold" fill="#000000" text-anchor="middle">AnalyticsEngine</text>
+    
+    <text x="12" y="52" font-size="9.5" font-family="monospace" fill="#000000">+ computeMRR(subscribers): number</text>
+    <text x="12" y="70" font-size="9.5" font-family="monospace" fill="#000000">+ calculateFunnelDropoff(): FunnelStats</text>
+    <text x="12" y="88" font-size="9.5" font-family="monospace" fill="#000000">+ buildRetentionCohorts(): CohortMatrix</text>
+    <text x="12" y="106" font-size="9.5" font-family="monospace" fill="#000000">+ getScamCategoryDistribution(): CategoryStats</text>
+    <text x="12" y="124" font-size="9.5" font-family="monospace" fill="#000000">+ generateCsvExport(): string</text>
+    <text x="12" y="148" font-size="8.5" font-style="italic" fill="#274e13">🔒 Privacy: Zero Raw-Content telemetry metadata only</text>
+  </g>
+
+  <!-- ================= COLUMN 2: DATABASE TABLES ================= -->
+
+  <!-- DB TABLE 1: public.automated_alerts (⭐ A / C) -->
+  <g transform="translate(415, 85)">
+    <rect x="0" y="0" width="370" height="230" fill="#ffffff" stroke="#b85450" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="370" height="34" fill="#f8cecc" stroke="#b85450" stroke-width="1.5"/>
+    <text x="185" y="15" font-size="9.5" font-style="italic" fill="#b85450" text-anchor="middle">&lt;&lt;Table · Automated Alerts &amp; Actions&gt;&gt;</text>
+    <text x="185" y="28" font-size="11.5" font-weight="bold" fill="#b85450" text-anchor="middle">⭐ public.automated_alerts</text>
+    
+    <text x="15" y="52" font-size="9.5" font-family="monospace" font-weight="bold" fill="#b85450">+ id: UUID [PK, gen_random_uuid()]</text>
+    <text x="15" y="68" font-size="9.5" font-family="monospace" fill="#000000">+ alert_type: TEXT CHECK(IN ('ANOMALY', 'HEALTH', 'DATA'))</text>
+    <text x="15" y="84" font-size="9.5" font-family="monospace" fill="#000000">+ detected_event: TEXT NOT NULL</text>
+    <text x="15" y="100" font-size="9.5" font-family="monospace" fill="#b45f06">+ baseline_comparison: JSONB ({"current", "7d_avg", "delta"})</text>
+    <text x="15" y="116" font-size="9.5" font-family="monospace" fill="#b85450">+ severity: TEXT CHECK(IN ('Critical', 'Warning', 'Info'))</text>
+    <text x="15" y="132" font-size="9.5" font-family="monospace" font-weight="bold" fill="#004085">+ recommended_action: TEXT NOT NULL</text>
+    <text x="15" y="148" font-size="9.5" font-family="monospace" fill="#000000">+ target_route: TEXT ('/admin/scams', '/admin/support')</text>
+    <text x="15" y="164" font-size="9.5" font-family="monospace" fill="#000000">+ status: TEXT DEFAULT 'Active' ('Active', 'Investigating')</text>
+    <text x="15" y="180" font-size="9.5" font-family="monospace" fill="#666666">+ acknowledged_by: UUID [FK -&gt; auth.users]</text>
+    <text x="15" y="196" font-size="9.5" font-family="monospace" fill="#666666">+ created_at: TIMESTAMPTZ DEFAULT NOW()</text>
+    <text x="15" y="214" font-size="8.5" font-style="italic" fill="#274e13">Trigger: Triggers real-time notification to Admin UI</text>
+  </g>
+
+  <!-- DB TABLE 2: public.audit_logs -->
+  <g transform="translate(415, 335)">
+    <rect x="0" y="0" width="370" height="210" fill="#ffffff" stroke="#82b366" stroke-width="1.8" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="370" height="34" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+    <text x="185" y="15" font-size="9.5" font-style="italic" fill="#274e13" text-anchor="middle">&lt;&lt;Table · M5-11 Immutable Ledger&gt;&gt;</text>
+    <text x="185" y="28" font-size="11.5" font-weight="bold" fill="#000000" text-anchor="middle">public.audit_logs</text>
+    
+    <text x="15" y="52" font-size="9.5" font-family="monospace" font-weight="bold" fill="#274e13">+ id: UUID [PK, gen_random_uuid()]</text>
+    <text x="15" y="68" font-size="9.5" font-family="monospace" fill="#000000">+ admin_id: UUID [FK -&gt; auth.users]</text>
+    <text x="15" y="84" font-size="9.5" font-family="monospace" fill="#000000">+ admin_email: TEXT NOT NULL</text>
+    <text x="15" y="100" font-size="9.5" font-family="monospace" fill="#000000">+ action: TEXT NOT NULL ('ALERT_INVESTIGATED', ...)</text>
+    <text x="15" y="116" font-size="9.5" font-family="monospace" fill="#000000">+ target_identifier: TEXT NOT NULL</text>
+    <text x="15" y="132" font-size="9.5" font-family="monospace" fill="#000000">+ details: TEXT NOT NULL (Justification / Notes)</text>
+    <text x="15" y="148" font-size="9.5" font-family="monospace" fill="#666666">+ ip_address: TEXT</text>
+    <text x="15" y="164" font-size="9.5" font-family="monospace" fill="#666666">+ created_at: TIMESTAMPTZ DEFAULT NOW()</text>
+    <text x="15" y="188" font-size="8.5" font-style="italic" fill="#274e13">🔒 Append-Only Ledger: UPDATE and DELETE are REVOKED</text>
+  </g>
+
+  <!-- DB TABLE 3: public.verdict_feedback -->
+  <g transform="translate(415, 565)">
+    <rect x="0" y="0" width="370" height="200" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="370" height="34" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+    <text x="185" y="15" font-size="9.5" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Table · M5-12 Dispute Queue&gt;&gt;</text>
+    <text x="185" y="28" font-size="11.5" font-weight="bold" fill="#000000" text-anchor="middle">public.verdict_feedback</text>
+    
+    <text x="15" y="52" font-size="9.5" font-family="monospace" font-weight="bold" fill="#000000">+ id: UUID [PK]</text>
+    <text x="15" y="68" font-size="9.5" font-family="monospace" fill="#000000">+ check_id: TEXT NOT NULL</text>
+    <text x="15" y="84" font-size="9.5" font-family="monospace" fill="#000000">+ taxonomy_category: TEXT (X-13 Taxonomy)</text>
+    <text x="15" y="100" font-size="9.5" font-family="monospace" fill="#000000">+ system_verdict: TEXT NOT NULL</text>
+    <text x="15" y="116" font-size="9.5" font-family="monospace" fill="#b85450">+ user_reaction: TEXT (Dispute/FalsePositive)</text>
+    <text x="15" y="132" font-size="9.5" font-family="monospace" fill="#666666">+ user_comment: TEXT</text>
+    <text x="15" y="148" font-size="9.5" font-family="monospace" fill="#000000">+ status: TEXT DEFAULT 'Pending Review'</text>
+    <text x="15" y="172" font-size="8.5" font-style="italic" fill="#666666">User-reported AI verdict dispute review feed</text>
+  </g>
+
+  <!-- Post-it Box: Rule-Based Action Matrix -->
+  <g transform="translate(415, 785)">
+    <rect x="0" y="0" width="370" height="185" rx="4" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <text x="15" y="22" font-size="10.5" font-weight="bold" fill="#b45f06">⭐ Rule Engine Action Matrix (Predefined):</text>
+    <text x="15" y="42" font-size="9.5" fill="#000000"><tspan font-weight="bold">• Failed login spike:</tspan> &#8594; Review authentication logs</text>
+    <text x="15" y="60" font-size="9.5" fill="#000000"><tspan font-weight="bold">• Password Vault down:</tspan> &#8594; Investigate component health</text>
+    <text x="15" y="78" font-size="9.5" fill="#000000"><tspan font-weight="bold">• Missing score inputs:</tspan> &#8594; Check data integration</text>
+    <text x="15" y="96" font-size="9.5" fill="#000000"><tspan font-weight="bold">• +40% scam warnings:</tspan> &#8594; Review scam activity trends</text>
+    <line x1="15" y1="112" x2="355" y2="112" stroke="#d6b656" stroke-width="1"/>
+    <text x="15" y="128" font-size="9" fill="#333333">• 7-Day Comparison: $Delta = ((Current - Base7d) / Base7d) * 100$</text>
+    <text x="15" y="144" font-size="9" fill="#333333">• Severity: >40% = Warning; >80% or outage = Critical</text>
+    <text x="15" y="162" font-size="8.5" font-style="italic" fill="#274e13">Rule-based recommendations provide clear next steps for admins</text>
+  </g>
+
+  <!-- ================= COLUMN 3: MORE TABLES & VIEWS ================= -->
+
+  <!-- DB TABLE 4: public.support_tickets -->
+  <g transform="translate(810, 85)">
+    <rect x="0" y="0" width="370" height="230" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="370" height="34" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+    <text x="185" y="15" font-size="9.5" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Table · M5-12 Support Desk&gt;&gt;</text>
+    <text x="185" y="28" font-size="11.5" font-weight="bold" fill="#000000" text-anchor="middle">public.support_tickets</text>
+    
+    <text x="15" y="52" font-size="9.5" font-family="monospace" font-weight="bold" fill="#000000">+ id: UUID [PK]</text>
+    <text x="15" y="68" font-size="9.5" font-family="monospace" fill="#000000">+ ticket_number: TEXT UNIQUE NOT NULL</text>
+    <text x="15" y="84" font-size="9.5" font-family="monospace" fill="#000000">+ user_id: UUID [FK -&gt; auth.users]</text>
+    <text x="15" y="100" font-size="9.5" font-family="monospace" fill="#000000">+ user_email: TEXT NOT NULL</text>
+    <text x="15" y="116" font-size="9.5" font-family="monospace" fill="#000000">+ subject: TEXT NOT NULL</text>
+    <text x="15" y="132" font-size="9.5" font-family="monospace" fill="#000000">+ category: TEXT CHECK(IN ('Account', 'Billing', 'Bug'))</text>
+    <text x="15" y="148" font-size="9.5" font-family="monospace" fill="#b45f06">+ status: TEXT DEFAULT 'Open' ('Open', 'Resolved')</text>
+    <text x="15" y="164" font-size="9.5" font-family="monospace" fill="#000000">+ priority: TEXT DEFAULT 'Medium'</text>
+    <text x="15" y="180" font-size="9.5" font-family="monospace" fill="#666666">+ internal_notes: TEXT</text>
+    <text x="15" y="196" font-size="9.5" font-family="monospace" fill="#666666">+ created_at: TIMESTAMPTZ</text>
+  </g>
+
+  <!-- DB TABLE 5: public.analytics_events -->
+  <g transform="translate(810, 335)">
+    <rect x="0" y="0" width="370" height="210" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="370" height="34" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+    <text x="185" y="15" font-size="9.5" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;Table · Telemetry &amp; 7-Day Baseline&gt;&gt;</text>
+    <text x="185" y="28" font-size="11.5" font-weight="bold" fill="#000000" text-anchor="middle">public.analytics_events</text>
+    
+    <text x="15" y="52" font-size="9.5" font-family="monospace" font-weight="bold" fill="#000000">+ id: UUID [PK]</text>
+    <text x="15" y="68" font-size="9.5" font-family="monospace" fill="#000000">+ event_name: TEXT NOT NULL</text>
+    <text x="15" y="84" font-size="9.5" font-family="monospace" fill="#000000">+ source_module: TEXT ('M1'..'M4')</text>
+    <text x="15" y="100" font-size="9.5" font-family="monospace" fill="#666666">+ visitor_id: TEXT</text>
+    <text x="15" y="116" font-size="9.5" font-family="monospace" fill="#666666">+ user_id: UUID [FK]</text>
+    <text x="15" y="132" font-size="9.5" font-family="monospace" fill="#000000">+ metadata: JSONB NOT NULL</text>
+    <text x="15" y="148" font-size="9.5" font-family="monospace" fill="#666666">+ created_at: TIMESTAMPTZ</text>
+    <text x="15" y="172" font-size="8.5" font-style="italic" fill="#274e13">Index: event_name, created_at (enables fast 7-day baseline query)</text>
+    <text x="15" y="188" font-size="8.5" font-style="italic" fill="#274e13">Zero Raw-Content: Event metadata only (No raw message bodies)</text>
+  </g>
+
+  <!-- DB VIEW: public.admin_user_directory -->
+  <g transform="translate(810, 565)">
+    <rect x="0" y="0" width="370" height="200" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="370" height="34" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+    <text x="185" y="15" font-size="9.5" font-style="italic" fill="#666666" text-anchor="middle">&lt;&lt;View · M5-09 Directory&gt;&gt;</text>
+    <text x="185" y="28" font-size="11.5" font-weight="bold" fill="#000000" text-anchor="middle">public.admin_user_directory</text>
+    
+    <text x="15" y="52" font-size="9.5" font-family="monospace" fill="#000000">+ id: UUID (from auth.users)</text>
+    <text x="15" y="68" font-size="9.5" font-family="monospace" fill="#000000">+ name: TEXT, email: TEXT</text>
+    <text x="15" y="84" font-size="9.5" font-family="monospace" fill="#000000">+ plan: TEXT ('Sentinel' | 'Guardian' | 'Aegis')</text>
+    <text x="15" y="100" font-size="9.5" font-family="monospace" fill="#b45f06">+ status: TEXT ('Active' | 'Suspended')</text>
+    <text x="15" y="116" font-size="9.5" font-family="monospace" fill="#000000">+ checks_count: INT, vault_count: INT</text>
+    <text x="15" y="132" font-size="9.5" font-family="monospace" fill="#274e13">+ monthly_billing: NUMERIC (mock LKR)</text>
+    <text x="15" y="148" font-size="9.5" font-family="monospace" fill="#666666">+ support_notes: TEXT[]</text>
+    <text x="15" y="172" font-size="8.5" font-style="italic" fill="#274e13">Aggregates profile counters with Zero Raw-Content boundaries</text>
+  </g>
+
+  <!-- DB VIEW: 7-Day Rolling Baseline Comparator View -->
+  <g transform="translate(810, 785)">
+    <rect x="0" y="0" width="370" height="185" fill="#ffffff" stroke="#82b366" stroke-width="1.5" filter="url(#drawio-shadow)"/>
+    <rect x="0" y="0" width="370" height="34" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+    <text x="185" y="15" font-size="9.5" font-style="italic" fill="#274e13" text-anchor="middle">&lt;&lt;Aggregation View · M5 Analytics&gt;&gt;</text>
+    <text x="185" y="28" font-size="11.5" font-weight="bold" fill="#274e13" text-anchor="middle">⭐ public.v_7day_metric_baselines</text>
+    
+    <text x="15" y="52" font-size="9.5" font-family="monospace" fill="#000000">+ metric_name: TEXT (e.g. 'scam_check_count')</text>
+    <text x="15" y="68" font-size="9.5" font-family="monospace" fill="#000000">+ current_window_count: BIGINT</text>
+    <text x="15" y="84" font-size="9.5" font-family="monospace" fill="#000000">+ prev_7day_avg: NUMERIC</text>
+    <text x="15" y="100" font-size="9.5" font-family="monospace" font-weight="bold" fill="#b85450">+ delta_percentage: NUMERIC (e.g. +40.0%)</text>
+    <text x="15" y="116" font-size="9.5" font-family="monospace" fill="#000000">+ is_anomaly_flagged: BOOLEAN (delta &gt; 40)</text>
+    <text x="15" y="140" font-size="8.5" font-style="italic" fill="#274e13">Powers AnomalyDetectionEngine with fast precalculated averages</text>
+  </g>
+</svg>
