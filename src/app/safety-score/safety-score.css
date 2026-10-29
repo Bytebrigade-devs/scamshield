@@ -1,0 +1,1954 @@
+.m6-app {
+  --teal: var(--color-primary);
+  --dark-teal: var(--color-primary-hover);
+  --mint: var(--color-primary-subtle);
+  --ink: var(--color-text);
+  --muted: var(--color-text-muted);
+  --line: var(--color-border-subtle);
+  --surface: var(--color-background);
+  --amber: var(--color-warning);
+}
+.m6-app * {
+  box-sizing: border-box;
+}
+.m6-app {
+  scroll-behavior: smooth;
+}
+.m6-app {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font: 16px/1.5 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+.m6-app h1,
+.m6-app h2,
+.m6-app h3,
+.m6-app p {
+  margin-top: 0;
+}
+.m6-app h1,
+.m6-app h2,
+.m6-app h3 {
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+.m6-app h1 {
+  font-size: 34px;
+  margin-bottom: 12px;
+}
+.m6-app h2 {
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+.m6-app h3 {
+  font-size: 17px;
+  margin-bottom: 10px;
+}
+.m6-app p {
+  color: var(--muted);
+}
+.m6-app a {
+  color: var(--teal);
+  text-decoration: none;
+}
+.m6-app button,
+.m6-app input,
+.m6-app select {
+  font: 16px/1.5 var(--font-body);
+}
+.m6-app button,
+.m6-app a {
+  touch-action: manipulation;
+}
+.m6-app button {
+  cursor: pointer;
+}
+.m6-app button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.m6-app a:focus-visible,
+.m6-app button:focus-visible,
+.m6-app input:focus-visible,
+.m6-app select:focus-visible,
+.m6-app summary:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.m6-app h1:focus {
+  outline: none;
+}
+.m6-app .container {
+  width: min(1190px, calc(100% - 72px));
+  margin-inline: auto;
+}
+.m6-app .app-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--line);
+}
+.m6-app .header-inner {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+.m6-app .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 21px;
+  letter-spacing: -0.04em;
+}
+.m6-app .brand-icon {
+  display: grid;
+  place-items: center;
+  color: var(--teal);
+}
+.m6-app .brand-icon svg {
+  fill: var(--teal);
+  stroke: var(--color-surface);
+}
+.m6-app .brand-slash {
+  font-size: 20px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  margin: 0 4px;
+}
+.m6-app .brand-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--teal);
+}
+.m6-app .header-inner nav {
+  display: flex;
+  align-items: stretch;
+  gap: 9px;
+}
+.m6-app .header-inner nav a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: var(--radius-control);
+  padding: 9px 13px;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.m6-app .header-inner nav a:hover,
+.m6-app .header-inner nav a[aria-current="page"] {
+  background: var(--mint);
+  color: var(--teal);
+}
+.m6-app .workspace-badge {
+  font-size: 14px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+.m6-app .workspace-badge > span {
+  border-radius: 50%;
+  background: var(--color-primary-subtle);
+  color: var(--teal);
+  font-weight: 600;
+  font-size: 14px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+}
+.m6-app .app-main {
+  padding-top: 42px;
+  padding-bottom: 48px;
+  min-height: calc(100svh - 215px);
+}
+.m6-app .page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 26px;
+}
+.m6-app .eyebrow {
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  color: var(--teal);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.m6-app .page-description {
+  font-size: 14px;
+  margin-bottom: 0;
+}
+.m6-app .view-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 3px;
+  border: 1px solid var(--line);
+  background: var(--color-background);
+  padding: 4px;
+  border-radius: var(--radius-control);
+}
+.m6-app .view-tabs button {
+  font-size: 14px;
+  line-height: 1.4;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 10px 13px;
+  white-space: nowrap;
+}
+.m6-app .view-tabs button[aria-pressed="true"] {
+  color: var(--teal);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-surface);
+}
+.m6-app .demo-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+  padding: 13px 17px;
+  margin-bottom: 25px;
+  color: var(--teal);
+}
+.m6-app .demo-notice svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.m6-app .demo-notice p {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.m6-app .demo-notice strong {
+  color: var(--teal);
+  font-weight: 600;
+}
+.m6-app .card {
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 27px;
+  box-shadow: var(--shadow-surface);
+}
+.m6-app .dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 22px;
+}
+.m6-app .card-kicker {
+  font-size: 14px;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.m6-app .card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.m6-app .card-topline .card-kicker,
+.m6-app .card-topline h2 {
+  margin-bottom: 0;
+}
+.m6-app .pill {
+  background: var(--mint);
+  color: var(--teal);
+  border: 1px solid var(--color-border-subtle);
+  padding: 4px 10px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.m6-app .pill.neutral {
+  background: var(--color-background);
+  color: var(--muted);
+  border-color: var(--line);
+}
+.m6-app .score-summary {
+  display: flex;
+  align-items: center;
+  gap: 27px;
+  margin-top: 24px;
+}
+.m6-app .score-ring {
+  position: relative;
+  flex-shrink: 0;
+  width: 155px;
+  height: 155px;
+}
+.m6-app .score-ring svg {
+  width: 100%;
+  height: 100%;
+}
+.m6-app .score-ring > div {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.m6-app .score-ring strong {
+  color: var(--teal);
+  font-size: 49px;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.06em;
+}
+.m6-app .score-ring span {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 2;
+}
+.m6-app .result-band {
+  display: block;
+  color: var(--teal);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.m6-app .result-band span {
+  font-size: 14px;
+  font-weight: 500;
+}
+.m6-app .result-band.amber {
+  color: var(--amber);
+}
+.m6-app .delta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--teal);
+  font-size: 14px;
+  margin: 13px 0;
+}
+.m6-app .score-caption {
+  font-size: 14px;
+  line-height: 1.75;
+  margin: 0;
+  max-width: 220px;
+}
+.m6-app .score-card-footer {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.m6-app .score-card-footer > span,
+.m6-app .score-card-footer > a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.m6-app .score-card-footer > a {
+  font-weight: 600;
+}
+.m6-app .next-card {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-border-subtle);
+}
+.m6-app .icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 43px;
+  height: 43px;
+  border-radius: var(--radius-control);
+  background: var(--color-primary-subtle);
+  color: var(--teal);
+  flex-shrink: 0;
+}
+.m6-app .next-card .icon-tile {
+  margin: 4px 0 17px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+}
+.m6-app .next-card h2 {
+  font-size: 23px;
+  max-width: 350px;
+  margin-bottom: 12px;
+}
+.m6-app .next-card > p:not(.card-kicker) {
+  font-size: 14px;
+  line-height: 1.75;
+  margin-bottom: 23px;
+}
+.m6-app .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  min-height: 46px;
+  background: var(--teal);
+  border: 1px solid var(--teal);
+  border-radius: var(--radius-control);
+  padding: 11px 21px;
+  color: var(--color-surface);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+.m6-app .button:hover {
+  background: var(--dark-teal);
+  border-color: var(--dark-teal);
+  transform: translateY(-1px);
+}
+.m6-app .button.secondary {
+  background: var(--color-surface);
+  color: var(--teal);
+}
+.m6-app .button.secondary:hover {
+  background: var(--mint);
+}
+.m6-app .button.full {
+  width: 100%;
+}
+.m6-app .button.compact {
+  font-size: 14px;
+  min-height: 39px;
+  padding: 9px 13px;
+}
+.m6-app .button.spaced {
+  margin-top: 12px;
+}
+.m6-app .subcopy {
+  font-size: 14px;
+  line-height: 1.75;
+  margin-bottom: 21px;
+}
+.m6-app .card h2 + .subcopy {
+  margin-top: -6px;
+}
+.m6-app .breakdown-list {
+  display: grid;
+  gap: 18px;
+  margin: 24px 0;
+}
+.m6-app .breakdown-row > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  font-size: 14px;
+}
+.m6-app .breakdown-row strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--teal);
+}
+.m6-app .breakdown-row strong small {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 14px;
+}
+.m6-app .mini-track {
+  height: 5px;
+  border-radius: 5px;
+  background: var(--color-border-subtle);
+  overflow: hidden;
+}
+.m6-app .mini-track span {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+  border-radius: 5px;
+}
+.m6-app .footnote {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--color-text-muted);
+  margin-bottom: 0;
+}
+.m6-app .card > .footnote {
+  margin-top: 22px;
+}
+.m6-app .progress-card .card-topline {
+  align-items: flex-start;
+  margin-top: 3px;
+}
+.m6-app .progress-card .subcopy {
+  margin: 0;
+}
+.m6-app .small-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.m6-app .trend-chart {
+  margin: 25px 0 0;
+}
+.m6-app .trend-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.m6-app .trend-chart figcaption {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin: 13px 0 0;
+}
+.m6-app .rule-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 19px;
+  margin-top: 20px;
+  color: var(--teal);
+}
+.m6-app .rule-note svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.m6-app .rule-note p {
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0;
+}
+.m6-app code {
+  font-size: 0.95em;
+  background: var(--color-background);
+  padding: 2px 4px;
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+.m6-app .recommendations {
+  margin-top: 38px;
+}
+.m6-app .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.m6-app .section-heading .eyebrow {
+  margin-bottom: 7px;
+}
+.m6-app .section-heading h2 {
+  margin-bottom: 0;
+}
+.m6-app .recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.m6-app .recommendation {
+  background: var(--color-surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 23px;
+}
+.m6-app .recommendation h3 {
+  font-size: 16px;
+  margin: 17px 0 10px;
+}
+.m6-app .recommendation p {
+  font-size: 14px;
+  line-height: 1.8;
+  margin-bottom: 17px;
+}
+.m6-app .unavailable-action {
+  display: block;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+  opacity: 1 !important;
+}
+.m6-app .app-footer {
+  border-top: 1px solid var(--line);
+  padding-top: 26px;
+  padding-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+}
+.m6-app .app-footer strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.m6-app .app-footer strong span {
+  font-weight: 400;
+  color: var(--muted);
+}
+.m6-app .app-footer p {
+  font-size: 14px;
+  margin: 5px 0 0;
+  color: var(--color-text-muted);
+}
+.m6-app .notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-primary-subtle);
+  padding: 17px 19px;
+  border-radius: var(--radius-control);
+  margin-top: 24px;
+  color: var(--teal);
+}
+.m6-app .notice svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.m6-app .notice p {
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0;
+}
+.m6-app .notice.warning {
+  border-color: var(--color-border-subtle);
+  background: var(--color-surface);
+  color: var(--color-warning);
+}
+.m6-app .notice.warning p {
+  color: var(--color-warning);
+}
+.m6-app .focused-layout {
+  display: grid;
+  grid-template-columns: 1.55fr 0.75fr;
+  gap: 35px;
+  align-items: start;
+}
+.m6-app .side-note {
+  padding: 18px 4px;
+}
+.m6-app .side-note h2 {
+  font-size: 21px;
+  margin: 20px 0 15px;
+}
+.m6-app .side-note p {
+  font-size: 14px;
+  line-height: 1.85;
+}
+.m6-app .mini-score {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 24px 0;
+}
+.m6-app .mini-score strong {
+  font-size: 34px;
+  color: var(--teal);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+.m6-app .mini-score strong span {
+  font-weight: 400;
+  padding: 0 14px;
+  color: var(--color-text-muted);
+}
+.m6-app .mini-score > span {
+  font-size: 14px;
+  color: var(--muted);
+}
+.m6-app fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.m6-app .checklist-options {
+  display: grid;
+  gap: 12px;
+}
+.m6-app .practice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: 17px 18px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.m6-app .practice:hover {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+}
+.m6-app .practice.selected {
+  background: var(--mint);
+  border-color: var(--teal);
+}
+.m6-app .practice:focus-within {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.m6-app .practice input {
+  accent-color: var(--teal);
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin: 4px 0 0;
+}
+.m6-app .practice input:focus-visible {
+  outline: none;
+}
+.m6-app .practice strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.65;
+  font-weight: 600;
+}
+.m6-app .practice small {
+  display: block;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.m6-app .practice-number {
+  color: var(--teal);
+  font-size: 14px;
+  margin-right: 9px;
+}
+.m6-app .privacy-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  color: var(--teal);
+  font-weight: 600;
+  margin: 20px 0;
+}
+.m6-app .field-error {
+  font-size: 14px;
+  color: var(--color-danger);
+  background: var(--color-surface);
+  padding: 11px 14px;
+  border-radius: var(--radius-control);
+  margin: 12px 0;
+}
+.m6-app .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--teal);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.m6-app .text-link.centered {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 20px;
+}
+.m6-app .narrow {
+  max-width: 750px;
+  margin-inline: auto;
+}
+.m6-app .success-icon {
+  width: 54px;
+  height: 54px;
+  background: var(--color-primary-subtle);
+  color: var(--teal);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+}
+.m6-app .confirmation-list {
+  padding: 0;
+  margin: 25px 0;
+  list-style: none;
+  display: grid;
+  gap: 17px;
+}
+.m6-app .confirmation-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--teal);
+  font-size: 14px;
+}
+.m6-app .confirmation-list svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.m6-app .points-preview {
+  padding: 20px;
+  border-radius: var(--radius-control);
+  background: var(--mint);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+.m6-app .points-preview > span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--teal);
+}
+.m6-app .points-preview strong {
+  font-size: 24px;
+  color: var(--teal);
+}
+.m6-app .points-preview strong small {
+  font-size: 14px;
+  font-weight: 400;
+}
+.m6-app .updated-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 24px;
+}
+.m6-app .updated-score {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-border-subtle);
+}
+.m6-app .complete-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--teal);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+.m6-app .updated-total {
+  color: var(--teal);
+  font-size: 72px;
+  font-weight: 600;
+  letter-spacing: -0.06em;
+  margin: 25px 0 20px;
+  line-height: 1;
+}
+.m6-app .updated-total span {
+  font-size: 32px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+.m6-app .updated-score > p {
+  font-size: 14px;
+  margin-top: 23px;
+}
+.m6-app .updated-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 27px;
+}
+.m6-app .updated-actions + .notice {
+  margin-bottom: 20px;
+}
+.m6-app .updated-actions ~ .footnote {
+  margin-top: 20px;
+}
+.m6-app .empty-state {
+  padding: 28px 20px;
+  text-align: center;
+  max-width: 650px;
+  margin-inline: auto;
+}
+.m6-app .empty-state .icon-tile {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 20px;
+}
+.m6-app .empty-state h2 {
+  font-size: 25px;
+  margin-bottom: 14px;
+}
+.m6-app .empty-state > p {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.m6-app .empty-state .button {
+  margin-top: 13px;
+}
+.m6-app .preview-controls {
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: 19px 22px;
+  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+}
+.m6-app .preview-controls .eyebrow {
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+.m6-app .preview-controls p:not(.eyebrow) {
+  font-size: 14px;
+  margin: 0;
+  max-width: 410px;
+}
+.m6-app .preview-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.m6-app .preview-actions label,
+.m6-app .range-control {
+  display: grid;
+  gap: 5px;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.m6-app select {
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  padding: 9px 28px 9px 11px;
+  color: var(--ink);
+  font-size: 14px;
+  min-height: 39px;
+}
+.m6-app .loading-grid {
+  text-align: center;
+  padding: 45px 15px;
+}
+.m6-app .loading-grid h2 {
+  font-size: 21px;
+  margin: 20px 0 10px;
+}
+.m6-app .loading-grid p {
+  font-size: 14px;
+}
+.m6-app .loading-dot {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: var(--teal);
+  border: 6px solid var(--color-border-subtle);
+  border-radius: 50%;
+  animation: m6-pulse 1s ease-in-out infinite;
+}
+.m6-app .integration-top {
+  display: grid;
+  grid-template-columns: 1.65fr 0.8fr;
+  gap: 23px;
+}
+.m6-app .integrated-score .score-summary h2 {
+  font-size: 23px;
+}
+.m6-app .integrated-score .score-summary p {
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0;
+  max-width: 355px;
+}
+.m6-app .integrated-score .score-card-footer {
+  font-size: 14px;
+}
+.m6-app .coverage-card .card-kicker {
+  margin-bottom: 12px;
+}
+.m6-app .coverage-number {
+  display: block;
+  font-size: 57px;
+  color: var(--teal);
+  font-weight: 600;
+  letter-spacing: -0.055em;
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+.m6-app .coverage-number span {
+  font-size: 23px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+.m6-app .coverage-card h2 {
+  font-size: 17px;
+  margin-bottom: 10px;
+}
+.m6-app .coverage-card > p:not(.card-kicker) {
+  font-size: 14px;
+}
+.m6-app .coverage-dots {
+  display: flex;
+  gap: 9px;
+  margin-top: 20px;
+}
+.m6-app .coverage-dots span {
+  height: 7px;
+  flex: 1;
+  border-radius: 4px;
+  background: var(--color-border-subtle);
+}
+.m6-app .coverage-dots span.current {
+  background: var(--teal);
+}
+.m6-app .source-heading {
+  margin-top: 32px;
+}
+.m6-app .source-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.m6-app .source-card {
+  padding: 23px;
+  display: flex;
+  flex-direction: column;
+}
+.m6-app .source-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 23px;
+}
+.m6-app .status-tag {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 20px;
+  background: var(--color-background);
+  color: var(--muted);
+}
+.m6-app .status-tag.current {
+  background: var(--color-primary-subtle);
+  color: var(--teal);
+}
+.m6-app .status-tag.stale {
+  background: var(--color-surface);
+  color: var(--color-warning);
+}
+.m6-app .status-tag.error {
+  background: var(--color-surface);
+  color: var(--color-danger);
+}
+.m6-app .source-card .card-kicker {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.m6-app .source-card h2 {
+  font-size: 19px;
+  margin-bottom: 13px;
+}
+.m6-app .source-summary {
+  font-size: 14px;
+  line-height: 1.8;
+  min-height: 58px;
+}
+.m6-app .source-time {
+  margin: 4px 0 18px;
+  padding: 15px 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: grid;
+  gap: 12px;
+}
+.m6-app .source-time dt {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-bottom: 3px;
+}
+.m6-app .source-time dd {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.m6-app .source-details {
+  margin-bottom: 16px;
+}
+.m6-app .source-details summary {
+  font-size: 14px;
+  color: var(--teal);
+  font-weight: 600;
+  cursor: pointer;
+}
+.m6-app .source-details p,
+.m6-app .source-details li {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.m6-app .source-details ul {
+  padding-left: 16px;
+  margin: 14px 0;
+}
+.m6-app .source-details .footnote {
+  font-size: 14px;
+}
+.m6-app .source-action {
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-subtle);
+  margin-top: auto;
+}
+.m6-app .source-action p {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--color-text-muted);
+  margin: 8px 0 0;
+}
+.m6-app .metric-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+.m6-app .metric-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  font-size: 14px;
+}
+.m6-app .metric-list dt {
+  color: var(--muted);
+}
+.m6-app .metric-list dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+.m6-app .history-table-card {
+  margin-top: 23px;
+}
+.m6-app .history-table-card .section-heading {
+  margin-bottom: 20px;
+}
+.m6-app .table-scroll {
+  overflow-x: auto;
+}
+.m6-app table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.m6-app th {
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--line);
+  background: var(--color-background);
+}
+.m6-app td {
+  padding: 17px 15px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--muted);
+}
+.m6-app tr:last-child td {
+  border-bottom: 0;
+}
+.m6-app td strong {
+  color: var(--teal);
+  font-size: 14px;
+}
+.m6-app td strong span {
+  color: var(--color-text-muted);
+  font-weight: 400;
+  font-size: 14px;
+}
+.m6-app .guide-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 23px;
+  margin-bottom: 28px;
+}
+.m6-app .guide-grid > .card > p {
+  font-size: 14px;
+  line-height: 1.85;
+}
+.m6-app .guide-wide {
+  grid-column: 1/-1;
+}
+.m6-app .guide-weights {
+  display: grid;
+  gap: 16px;
+  margin: 27px 0 5px;
+}
+.m6-app .guide-weights > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 14px;
+}
+.m6-app .guide-weights dt {
+  color: var(--muted);
+}
+.m6-app .guide-weights dd {
+  margin: 0;
+  color: var(--teal);
+  font-weight: 600;
+}
+.m6-app .band-list {
+  list-style: none;
+  padding: 0;
+  margin: 27px 0;
+  display: grid;
+  gap: 14px;
+}
+.m6-app .band-list li {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-size: 14px;
+}
+.m6-app .band-list strong {
+  color: var(--teal);
+  font-weight: 600;
+  min-width: 65px;
+}
+.m6-app .band-list span {
+  color: var(--muted);
+}
+.m6-app .policy-callout {
+  display: flex;
+  gap: 13px;
+  background: var(--mint);
+  padding: 20px;
+  border-radius: var(--radius-control);
+  margin: 22px 0;
+  color: var(--teal);
+}
+.m6-app .policy-callout svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.m6-app .policy-callout strong {
+  font-size: 14px;
+}
+.m6-app .policy-callout p {
+  font-size: 14px;
+  line-height: 1.85;
+  margin: 5px 0 0;
+}
+.m6-app .principle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px 35px;
+  margin: 27px 0;
+}
+.m6-app .principle-grid h3 {
+  font-size: 15px;
+}
+.m6-app .principle-grid p {
+  font-size: 14px;
+  line-height: 1.85;
+  margin-bottom: 0;
+}
+.m6-app .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.m6-app .skip-link {
+  position: absolute;
+  top: -100px;
+  left: 20px;
+  background: var(--color-surface);
+  padding: 12px;
+  z-index: 10;
+}
+.m6-app .skip-link:focus {
+  top: 10px;
+}
+@keyframes m6-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+@media (max-width: 1100px) {
+  .m6-app .container {
+    width: calc(100% - 48px);
+  }
+  .m6-app .workspace-badge {
+    display: none;
+  }
+  .m6-app .score-summary {
+    gap: 18px;
+  }
+  .m6-app .score-ring {
+    width: 135px;
+    height: 135px;
+  }
+  .m6-app .score-ring strong {
+    font-size: 43px;
+  }
+  .m6-app .score-card {
+    padding: 24px;
+  }
+  .m6-app .result-band {
+    font-size: 14px;
+  }
+  .m6-app .result-band span {
+    display: block;
+    font-size: 14px;
+  }
+  .m6-app .page-heading {
+    align-items: flex-start;
+  }
+  .m6-app h1 {
+    font-size: 30px;
+  }
+  .m6-app .card {
+    padding: 24px;
+  }
+  .m6-app .preview-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .m6-app .preview-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .m6-app .preview-actions label {
+    min-width: 230px;
+  }
+  .m6-app .source-grid {
+    gap: 15px;
+  }
+  .m6-app .source-card {
+    padding: 20px;
+  }
+  .m6-app .integration-top {
+    grid-template-columns: 1.6fr 0.8fr;
+  }
+  .m6-app .integrated-score .score-summary {
+    gap: 15px;
+  }
+  .m6-app .integrated-score .score-summary h2 {
+    font-size: 20px;
+  }
+}
+@media (max-width: 800px) {
+  .m6-app .brand-subtitle,
+  .m6-app .brand-slash {
+    display: none;
+  }
+  .m6-app .header-inner {
+    gap: 15px;
+  }
+  .m6-app .header-inner nav {
+    gap: 2px;
+  }
+  .m6-app .header-inner nav a {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  .m6-app .page-heading {
+    display: block;
+  }
+  .m6-app .page-heading .view-tabs {
+    margin-top: 23px;
+    display: inline-flex;
+  }
+  .m6-app .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .m6-app .score-card,
+  .m6-app .next-card {
+    grid-column: 1/-1;
+  }
+  .m6-app .score-summary {
+    gap: 30px;
+  }
+  .m6-app .score-ring {
+    width: 155px;
+    height: 155px;
+  }
+  .m6-app .score-ring strong {
+    font-size: 49px;
+  }
+  .m6-app .next-card h2 {
+    max-width: none;
+  }
+  .m6-app .next-card .button {
+    width: auto;
+  }
+  .m6-app .recommendation-grid {
+    grid-template-columns: 1fr;
+  }
+  .m6-app .recommendation {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 43px 1fr;
+    column-gap: 18px;
+  }
+  .m6-app .recommendation .icon-tile {
+    grid-row: 1/4;
+  }
+  .m6-app .recommendation h3 {
+    margin: 0 0 8px;
+  }
+  .m6-app .recommendation p {
+    margin: 0 0 10px;
+  }
+  .m6-app .recommendation .small-link,
+  .m6-app .recommendation .unavailable-action {
+    grid-column: 2;
+  }
+  .m6-app .source-grid {
+    grid-template-columns: 1fr;
+  }
+  .m6-app .source-summary {
+    min-height: 0;
+  }
+  .m6-app .source-time {
+    grid-template-columns: 1fr 1fr;
+  }
+  .m6-app .source-card {
+    padding: 25px;
+  }
+  .m6-app .source-top {
+    margin-bottom: 15px;
+  }
+  .m6-app .source-details ul {
+    max-width: 650px;
+  }
+  .m6-app .integration-top {
+    grid-template-columns: 1fr;
+  }
+  .m6-app .coverage-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 25px;
+    align-items: center;
+  }
+  .m6-app .coverage-card .card-kicker {
+    grid-column: 1/-1;
+  }
+  .m6-app .coverage-number {
+    grid-row: 2/5;
+    align-self: start;
+  }
+  .m6-app .coverage-card h2 {
+    margin: 0 0 7px;
+  }
+  .m6-app .coverage-card p {
+    margin: 0;
+  }
+  .m6-app .coverage-dots {
+    margin-top: 13px;
+  }
+  .m6-app .focused-layout {
+    grid-template-columns: 1fr;
+  }
+  .m6-app .side-note {
+    padding: 0 8px;
+    display: none;
+  }
+  .m6-app .app-footer {
+    align-items: flex-start;
+  }
+  .m6-app .app-footer > p {
+    text-align: right;
+    max-width: 180px;
+  }
+  .m6-app .guide-grid {
+    grid-template-columns: 1fr;
+  }
+  .m6-app .guide-wide {
+    grid-column: auto;
+  }
+  .m6-app .updated-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .m6-app .updated-total {
+    font-size: 60px;
+  }
+  .m6-app .updated-total span {
+    font-size: 25px;
+  }
+}
+@media (max-width: 560px) {
+  .m6-app .container {
+    width: calc(100% - 32px);
+  }
+  .m6-app .header-inner {
+    min-height: 80px;
+    align-items: center;
+  }
+  .m6-app .brand {
+    font-size: 19px;
+    gap: 7px;
+  }
+  .m6-app .brand-icon svg {
+    width: 26px;
+  }
+  .m6-app .header-inner nav a {
+    padding: 7px;
+    font-size: 14px;
+    gap: 4px;
+  }
+  .m6-app .header-inner nav a svg {
+    display: none;
+  }
+  .m6-app .app-main {
+    padding-top: 30px;
+    padding-bottom: 35px;
+  }
+  .m6-app h1 {
+    font-size: 27px;
+    line-height: 1.25;
+    letter-spacing: -0.04em;
+  }
+  .m6-app .page-description {
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .m6-app .page-heading {
+    margin-bottom: 22px;
+  }
+  .m6-app .eyebrow {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .m6-app .view-tabs {
+    width: 100%;
+  }
+  .m6-app .view-tabs button {
+    flex: 1;
+    font-size: 14px;
+    padding: 10px;
+  }
+  .m6-app .demo-notice {
+    padding: 13px;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .m6-app .demo-notice p {
+    font-size: 14px;
+  }
+  .m6-app .demo-notice svg {
+    width: 17px;
+  }
+  .m6-app .card {
+    padding: 21px;
+    border-radius: var(--radius-card);
+  }
+  .m6-app .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 17px;
+  }
+  .m6-app .score-card,
+  .m6-app .next-card {
+    grid-column: auto;
+  }
+  .m6-app .score-summary {
+    gap: 19px;
+    align-items: center;
+    margin-top: 22px;
+  }
+  .m6-app .score-ring {
+    width: 130px;
+    height: 130px;
+  }
+  .m6-app .score-ring strong {
+    font-size: 42px;
+  }
+  .m6-app .result-band {
+    font-size: 15px;
+  }
+  .m6-app .result-band span {
+    font-size: 14px;
+    display: block;
+  }
+  .m6-app .delta {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 10px 0;
+  }
+  .m6-app .delta svg {
+    display: none;
+  }
+  .m6-app .score-caption {
+    font-size: 14px;
+    line-height: 1.75;
+  }
+  .m6-app .score-card-footer {
+    font-size: 14px;
+    margin-top: 22px;
+    gap: 12px;
+  }
+  .m6-app .score-card-footer > a {
+    font-size: 14px;
+  }
+  .m6-app .next-card h2 {
+    font-size: 22px;
+  }
+  .m6-app .next-card .button {
+    width: 100%;
+  }
+  .m6-app .card-kicker {
+    font-size: 14px;
+  }
+  .m6-app .section-heading {
+    align-items: flex-start;
+    gap: 15px;
+  }
+  .m6-app .section-heading h2 {
+    font-size: 19px;
+  }
+  .m6-app .section-heading > .small-link {
+    font-size: 14px;
+    max-width: 110px;
+    text-align: right;
+  }
+  .m6-app .section-heading .eyebrow {
+    font-size: 14px;
+  }
+  .m6-app .recommendations {
+    margin-top: 30px;
+  }
+  .m6-app .recommendation {
+    padding: 21px;
+    column-gap: 14px;
+  }
+  .m6-app .recommendation h3 {
+    font-size: 15px;
+  }
+  .m6-app .recommendation p {
+    font-size: 14px;
+  }
+  .m6-app .app-footer {
+    display: block;
+    padding-top: 23px;
+    padding-bottom: 24px;
+  }
+  .m6-app .app-footer > p {
+    text-align: left;
+    max-width: none;
+    margin-top: 12px;
+  }
+  .m6-app .app-footer p {
+    font-size: 14px;
+  }
+  .m6-app .checklist-options {
+    gap: 11px;
+  }
+  .m6-app .practice {
+    padding: 15px 13px;
+    gap: 11px;
+  }
+  .m6-app .practice strong {
+    font-size: 14px;
+  }
+  .m6-app .practice small {
+    font-size: 14px;
+  }
+  .m6-app .practice-number {
+    display: none;
+  }
+  .m6-app .privacy-note {
+    font-size: 14px;
+  }
+  .m6-app .points-preview {
+    padding: 15px;
+    display: block;
+  }
+  .m6-app .points-preview > span {
+    display: block;
+    margin-bottom: 5px;
+  }
+  .m6-app .confirmation-list li {
+    font-size: 14px;
+  }
+  .m6-app .updated-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .m6-app .updated-total {
+    font-size: 72px;
+  }
+  .m6-app .updated-total span {
+    font-size: 30px;
+  }
+  .m6-app .updated-actions {
+    display: grid;
+    gap: 11px;
+  }
+  .m6-app .updated-score > p {
+    font-size: 14px;
+  }
+  .m6-app .preview-controls {
+    padding: 17px;
+    gap: 18px;
+  }
+  .m6-app .preview-actions {
+    display: grid;
+    gap: 12px;
+  }
+  .m6-app .preview-actions label {
+    min-width: 0;
+  }
+  .m6-app .preview-actions .button {
+    width: 100%;
+  }
+  .m6-app .preview-controls p:not(.eyebrow) {
+    font-size: 14px;
+  }
+  .m6-app .integrated-score .score-summary {
+    display: block;
+    text-align: left;
+  }
+  .m6-app .integrated-score .score-ring {
+    margin: 0 auto 22px;
+    width: 145px;
+    height: 145px;
+  }
+  .m6-app .integrated-score .score-summary h2 {
+    font-size: 22px;
+  }
+  .m6-app .integrated-score .score-summary p {
+    font-size: 14px;
+  }
+  .m6-app .integrated-score .score-card-footer {
+    display: grid;
+    gap: 8px;
+  }
+  .m6-app .coverage-card {
+    display: block;
+  }
+  .m6-app .coverage-number {
+    margin-bottom: 13px;
+  }
+  .m6-app .coverage-card h2 {
+    margin-bottom: 8px;
+  }
+  .m6-app .coverage-card p {
+    font-size: 14px;
+  }
+  .m6-app .coverage-dots {
+    margin-top: 20px;
+  }
+  .m6-app .source-card {
+    padding: 22px;
+  }
+  .m6-app .source-time {
+    grid-template-columns: 1fr;
+  }
+  .m6-app .source-details summary {
+    font-size: 14px;
+  }
+  .m6-app .source-summary {
+    font-size: 14px;
+  }
+  .m6-app .metric-list > div {
+    font-size: 14px;
+  }
+  .m6-app .source-details li {
+    font-size: 14px;
+  }
+  .m6-app .notice {
+    padding: 15px;
+    gap: 9px;
+  }
+  .m6-app .notice p {
+    font-size: 14px;
+  }
+  .m6-app .guide-grid {
+    gap: 18px;
+  }
+  .m6-app .guide-grid > .card > p {
+    font-size: 14px;
+  }
+  .m6-app .guide-weights > div {
+    font-size: 14px;
+  }
+  .m6-app .principle-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .m6-app .policy-callout {
+    padding: 15px;
+    gap: 10px;
+  }
+  .m6-app .policy-callout p {
+    font-size: 14px;
+  }
+  .m6-app .history-table-card .section-heading {
+    display: block;
+  }
+  .m6-app .history-table-card .button {
+    margin-top: 15px;
+  }
+  .m6-app .range-control {
+    max-width: 130px;
+  }
+  .m6-app .range-control select {
+    padding-right: 10px;
+  }
+  .m6-app .empty-state {
+    padding: 25px 0;
+  }
+  .m6-app .empty-state h2 {
+    font-size: 22px;
+  }
+  .m6-app .empty-state p {
+    font-size: 14px;
+  }
+  .m6-app .trend-chart figcaption {
+    font-size: 14px;
+  }
+  .m6-app .button {
+    font-size: 14px;
+    gap: 9px;
+  }
+  .m6-app .text-link {
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m6-app {
+    scroll-behavior: auto;
+  }
+  .m6-app *,
+  .m6-app *::before,
+  .m6-app *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .m6-app .button:hover {
+    transform: none;
+  }
+}
+
+/* The application root owns the palette, font loading and colour-scheme. */
+.m6-app {
+  --teal: var(--color-primary);
+  --dark-teal: var(--color-primary-hover);
+  --mint: var(--color-primary-subtle);
+  --ink: var(--color-text);
+  --muted: var(--color-text-muted);
+  --line: var(--color-border-subtle);
+  --surface: var(--color-background);
+  --amber: var(--color-warning);
+  font-family: var(--font-body);
+  font-size: 16px;
+  min-height: 100svh;
+  font-variant-numeric: tabular-nums;
+}
+.m6-app h1 {
+  font-weight: 700;
+}
+.m6-app p {
+  line-height: 1.5;
+}
+.m6-app .button {
+  border-radius: var(--radius-control);
+  gap: 8px;
+  min-height: 44px;
+  color: var(--color-on-primary);
+  transition:
+    background-color 180ms ease-out,
+    border-color 180ms ease-out,
+    color 180ms ease-out;
+}
+.m6-app .button.secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+.m6-app .button:hover {
+  transform: none;
+}
+.m6-app .button:active {
+  background: var(--color-primary-active);
+  border-color: var(--color-primary-active);
+}
+.m6-app .button.secondary:active {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-active);
+}
+.m6-app button:disabled,
+.m6-app button:disabled:hover {
+  opacity: 1;
+  transform: none;
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+  border-color: var(--color-disabled-bg);
+}
+.m6-app .text-link,
+.m6-app .view-tabs button,
+.m6-app nav a {
+  min-height: 44px;
+}
+.m6-app input,
+.m6-app select,
+.m6-app .practice {
+  border-radius: var(--radius-control);
+  border-color: var(--color-border-control);
+}
+.m6-app .button.compact,
+.m6-app select {
+  min-height: 44px;
+}
+.m6-app .brand-icon svg {
+  stroke: var(--color-on-primary);
+}
+.m6-app .unavailable-action {
+  background: var(--color-disabled-bg);
+  border-radius: var(--radius-control);
+  padding: 8px 12px;
+}
+@media (max-width: 560px) {
+  .m6-app .header-inner {
+    flex-wrap: wrap;
+    padding-block: 16px;
+    gap: 14px;
+  }
+  .m6-app .header-inner nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .m6-app .header-inner nav a {
+    font-size: 14px;
+  }
+}
