@@ -42,14 +42,14 @@ Every module's UI must follow the shared team spec: see [docs/THEME-AND-TYPOGRAP
 
 ## Run the Module 3 frontend
 
-Use the validated Node.js 24.19.0 version pinned in `.nvmrc` and pnpm 11.25.0. The package engine declares a minimum of Node 22.13.0; it is not a claim that every allowed version was tested.
+The original M3 validation used Node.js 24.19.0 and pnpm 11.25.0. The current shared target is Node.js 24.22.1, pinned in `.nvmrc`, with pnpm 11.25.0; see the M1 verification record for checks on that target.
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Open http://127.0.0.1:3000/vault. The home route redirects to the vault. No environment variables or external service credentials are needed for this frontend preview.
+Open http://127.0.0.1:3000/vault. The home route now opens the Module 1 landing page; the vault remains available directly at `/vault`. No environment variables or external service credentials are needed for this frontend preview.
 
 The implementation follows all 30 supplied vault frames using Next.js App Router, React, Tailwind CSS v4, semantic theme tokens and a locally hosted Plus Jakarta Sans font. Logins, notes, folders, generator, health, activity, lock, mobile layouts and dialogs are interactive. See [the M3 frontend guide](docs/M3-FRONTEND.md) for the frame-to-route map and integration boundaries.
 
@@ -65,3 +65,23 @@ pnpm test:browser
 ```
 
 The existing M4 source and tests are retained. The new app scaffold is Next.js 16; align the framework baseline with the M2 branch before merging shared infrastructure into main. Development and build scripts use Webpack. See [verification results and local setup notes](docs/M3-VERIFICATION.md).
+
+## Run the Module 1 frontend
+
+From the repository root, use Node.js 24.22.1 and pnpm 11.25.0 on Windows, macOS or Linux:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Open http://127.0.0.1:3000/ for the landing page, then `/onboarding`, `/benefits`, `/share`, `/privacy` and `/signup-preview`. Module 1 is part of the shared application, with one root manifest, pnpm lockfile, font and theme. The signup preview creates no account; M2's actual signup route is not connected.
+
+```bash
+pnpm test:m1
+pnpm typecheck
+pnpm lint
+pnpm build
+```
+
+See [the M1 frontend guide](docs/M1-FRONTEND.md), [integration boundaries](docs/m1/integration.md) and [verification results](docs/m1/verification.md). Events and experiments remain disabled by default pending the M2/M5 X-02 agreement.
