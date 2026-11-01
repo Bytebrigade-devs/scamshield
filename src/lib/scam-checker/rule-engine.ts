@@ -6,10 +6,24 @@
  * match alone is not confirmation of an incident."
  *
  * HONESTY BOUNDARY (load-bearing): the patterns below implement HYPOTHESES of the proposed
- * rule catalogue (testing/M4-rule-catalogue.md), which is owner-accepted as an interim PLANNING
- * artifact only — NOT approved executable detector logic or final matching criteria. This module
- * reports which documented rules matched and quotes evidence spans; it produces NO verdict, score,
- * category or incident finding, and a matched keyword alone never confirms an incident.
+ * rule catalogue (testing/M4-rule-catalogue.md) — the owner-accepted v0.1 planning rows
+ * (R-M4-01…10, 20 Oct) plus the v0.2-draft Sri Lankan scam-landscape amendment (R-M4-13…19
+ * and the Sinhala/Singlish cue extensions, 24 Oct) and same-day R-M4-20 (instant-loan
+ * family, added on the owner's direction after two reported scam texts) — all PLANNING
+ * artifacts, NOT approved executable detector logic or final matching criteria. This module reports which documented
+ * rules matched and quotes evidence spans; it produces NO verdict, score, category or incident
+ * finding, and a matched keyword alone never confirms an incident.
+ *
+ * ID namespace (review finding, 27 Oct 2026): the R-M4-xx IDs above are catalogue rule-hypothesis
+ * IDs (R-M4-01…20), NOT the Final report's requirement IDs (R-M4-01…18). E.g. catalogue R-M4-13
+ * is the prize/reward claim-link rule; report R-M4-13 is the own-history requirement.
+ *
+ * Language position (owner decision 24 Oct 2026, superseding the 18 Oct English-only
+ * settlement): cues add Sinhala-script tokens and a conservative Singlish starter set, with
+ * NO accuracy or coverage claim. Sinhala cues use script lookbehinds — JS `\b` is ASCII-only
+ * and does not bound Sinhala — and treat the ZWJ (U+200D) in conjuncts (ත්‍යාග, ජයග්‍රාහක) as
+ * optional. The negation guard remains English-only (asymmetric: Sinhala prohibitions do not
+ * suppress Sinhala cues — documented catalogue limitation). Tamil stays unsupported.
  *
  * Design rules (each pinned by rule-engine.test.ts):
  * 1. Pure string processing — no network I/O, no fetching of URLs or any destination.
@@ -65,12 +79,12 @@ const NEGATION_RE =
 const NO_NOUN_RE = /\bno\s+(?:(?:registration|processing|reservation|delivery|customs|training|application|upfront|advance|card|bank|login|password|security|code|fee|payment|or|is|are|required|needed|requested|upgrade|number)\s+)*$/i;
 const INSTRUCTION_BREAK_RE = /\b(?:but|however|instead|then|so|therefore|before\s+you)\b/i;
 
-const SECRET_RE = /\b(password|passcode|otp|one[-\s]?time\s+code|pin)\b|\bbank\s+login\b/i;
-const DEMAND_RE = /\b(reply\s+with|send(?:ing)?|shar(?:e|ing)|provid(?:e|ing)|disclos(?:e|ing)|giv(?:e|ing)|enter(?:ing)?|typ(?:e|ing)|confirm(?:ing)?|verify(?:ing)?|updat(?:e|ing))\b/i;
+const SECRET_RE = /\b(password|passcode|otp|one[-\s]?time\s+code|pin)\b|\bbank\s+login\b|\bbank\s+details\b|\bcard\s+details\b/i;
+const DEMAND_RE = /\b(reply\s+with|send(?:ing)?|shar(?:e|ing)|provid(?:e|ing)|disclos(?:e|ing)|giv(?:e|ing)|enter(?:ing)?|typ(?:e|ing)|confirm(?:ing)?|verify(?:ing)?|updat(?:e|ing))\b|\bask(?:ing|ed)?\s+(?:me\s+|you\s+|us\s+)?for\b|(?<![\u0D80-\u0DFF])තහවුරු\s*කරන්න|(?<![\u0D80-\u0DFF])යවන්න|(?<![\u0D80-\u0DFF])එවන්න/i;
 const THREAT_RE =
   /\b(suspend\w*|disabl\w*|clos(?:e|es|ed|ing)|shut\w*|terminat\w*|expir\w*|cancel\w*|delet\w*|block\w*|froze\w*|penalt\w*|locked|los(?:e|ing))\b/i;
 const PRESSURE_RE =
-  /\b(\d+\s*(?:minutes?|hours?|days?|[ap]\.?m\.?)|today|tonight|now|immediately|right\s+away|within\s+(?:\d+|the\s+hour)|unless\s+you|deadline)\b/i;
+  /\b(\d+\s*(?:minutes?|hours?|days?|[ap]\.?m\.?)|today|tonight|now|immediately|right\s+away|within\s+(?:\d+|the\s+hour)|within\s+a\s+(?:week|day|few\s+hours)|unless\s+you|deadline)\b/i;
 const ACTION_RE =
   /\b(?:verify|confirm|update|restore|enter)\s+(?:\w+\s+){0,3}(?:password|pin|otp|login|account|bank\s+details)\b|\b(click|log\s?in|pay|send|reply(?:\s+with)?|buy|deposit|transfer)\b/i;
 const DESTINATION_RE =
@@ -87,9 +101,9 @@ const PAYMENT_DEMAND_RE = /\b(pay|send|transfer|buy|purchase|settle|payable)\b|\
 const ORDER_CTX_RE =
   /\b(purchase\s+order|po-\d+|reconcile\w*|existing\s+supplier\s+record|existing\s+(?:order|record)|calls?\s+(?:the|your)\s+(?:usual\s+)?contact|usual\s+contact|normal\s+billing\s+portal|established\s+supplier\s+details|existing\s+supplier\s+contact|independently\s+(?:verify|check|confirm))\b/i;
 
-const PRIZE_RE = /\b(prize|winnings?|award\w*|draw|lottery|jackpot|winner|voucher|winning\s+odds)\b/i;
+const PRIZE_RE = /\b(prize|winnings?|award\w*|draw|lottery|jackpot|winner|voucher|winning\s+odds)\b|\blucky\s+draw\b|\breward\s+points?\b|\bloyalty\s+points?\b|(?<![\u0D80-\u0DFF])ලොතරැයි|(?<![\u0D80-\u0DFF])ජයග්\u200D?රාහක|(?<![\u0D80-\u0DFF])ත්\u200D?යාග|(?<![\u0D80-\u0DFF])සුබ\s*පැතුම්|\bjayagrahak(?:ayek|aya|ayan)?\b|\bjaya\s?grahak(?:ayek|aya|ayan)?\b|\blutharayi\b/i;
 const MONEY_VERB_RE = /\b(pay(?:ing)?|send(?:ing)?|transfer(?:ring)?|buy(?:ing)?|purchas(?:e|ing))\b/i;
-const FEE_NOUN_RE = /\b(fee|charge|cost|upgrade|release|processing|delivery|customs|registration|odds|entry|entries|retain|guarantee)\b/i;
+const FEE_NOUN_RE = /\b(fee|charge|cost|upgrade|release|processing|delivery|customs|registration|odds|entry|entries|retain|guarantee)\b|\bclearance\b|(?<![\u0D80-\u0DFF])ගාස්තු/i;
 
 const CRED_RE = /\b(bank\s+login(?:\s+and\s+|\s+or\s+)?password|bank\s+(?:login|password)|account\s+(?:login|password)|bank\s+details|account\s+number|card\s+number|security\s+code|internet\s+banking)\b/i;
 
@@ -105,7 +119,59 @@ const CHEQUE_RE = /\b(cheques?|paycheck)\b/i;
 const OVERPAY_RE = /\b(extra|surplus|overpay\w*|additional|more\s+than|excess|keep\s+your\s+fee|the\s+rest)\b/i;
 const ONWARD_RE = /\b(send|forward|transfer)\s+(?:the\s+|any\s+|back\s+|out\s+)?(?:surplus|extra|difference|rest|amount|funds)\b|\b(?:buy|purchase)\s+gift[ -]?cards?\s+for\s+(?:the\s+)?(?:rest|surplus|difference)\b/i;
 
-// ---- rule table: catalogue hypotheses R-M4-01…R-M4-10 (planning IDs, draft logic) ----
+// ---- Sri Lankan adaptation cues (catalogue v0.2-draft, 24 Oct 2026) ----
+// Sinhala cues use script lookbehinds, never \b (JS \b is ASCII-only), and make the ZWJ
+// (U+200D) inside conjuncts (ත්‍යාග, ජයග්‍රාහක) optional. Sources: evidence/
+// M4-scam-landscape-sri-lanka-20261024.md; shape flags (R-M4-18/19) are engineering
+// acceptance rules in the R-M4-11 tradition — never malicious-domain findings, no fetching.
+const PARCEL_CTX_RE =
+  /\b(?:parcel|package|consignment|courier|delivery|customs)\b|(?<![\u0D80-\u0DFF])පාර්සල්|(?<![\u0D80-\u0DFF])තෑගි/iu;
+const PARCEL_DEMAND_RE =
+  /\b(?:(?:customs|clearance|release|redelivery|delivery)\s+(?:fee|charge|cost|payment)s?|unpaid\s+(?:customs|delivery))\b|\b(?:update|confirm|verify)\s+(?:your\s+|the\s+)?(?:delivery\s+)?address\b|(?<![\u0D80-\u0DFF])රේගු\s*ගාස්තු/iu;
+const FINE_CTX_RE =
+  /\b(?:traffic|parking|unpaid|spot)\s+fines?\b|\bfine\s+of\b|\bcourt\s+action\b|\bprosecut\w+|(?<![\u0D80-\u0DFF])දඩ(?:\s*මුදල්)?(?!ය)/iu;
+const CLAIM_DEMAND_RE =
+  /\b(?:claim|collect|confirm|verify)\s+(?:your\s+|the\s+)?(?:[\w,.]+\s+){0,3}(?:prize|winnings?|reward(?:\s+points?)?|gift|voucher|cash)\b|(?<![\u0D80-\u0DFF])තහවුරු\s*කරන්න|\bkaranna\b/iu;
+const TXN_CTX_RE = /\b(?:transfers?|transactions?|payments?|withdrawals?)\b/i;
+const UNAUTHORIZED_RE =
+  /\bif\s+this\s+is\s+not\s+you\b|\bdid\s+not\s+(?:make|authorize|authorise)\b|\b(?:un|not\s+)authorized?\b|\bsuspicious\s+activity\b/i;
+// Review fix #6 (24 Oct 2026): the Sinhala investment token is spelled out with explicit
+// code points — ආ(U+0D86) ය(U+0DBA) + vowel sign (ෝ U+0DDD | ො U+0DDC | decomposed ෙ U+0DD9 +
+// ා U+0DCF | bare ෙ) + ජ(U+0DA2) න(U+0DB1). The earlier single-character class ආ[යොයෝ]ජන could
+// never match the correctly spelled ආයෝජන (it needs TWO code points after ආය) while matching
+// the nonsense string ආෝජන. Pinned by rule-engine.test.ts in both composed spellings and the
+// decomposed form.
+const INVEST_CTX_RE =
+  /\b(?:invest\w*|crypto\w*|forex|usdt|bitcoin|trading\s+app)\b|(?<![\u0D80-\u0DFF])\u0D86\u0DBA(?:\u0DDD|\u0DDC|\u0DD9\u0DCF|\u0DD9)\u0DA2\u0DB1/iu;
+const DOUBLING_RE =
+  /\b(?:doubl\w*|guaranteed\s+(?:returns?|profits?)|risk[- ]free)\b|(?<![\u0D80-\u0DFF])දෙගුණ/iu;
+const SHORTENER_RE =
+  /(?<![\p{L}\p{N}_.@/?:=&#%+-])(?:(?:https?:\/\/|www\.)[^\s"'<>]+|(?:bit\.ly|tinyurl\.com|t\.me|wa\.me|cutt\.ly|is\.gd|goo\.gl|shorturl\.at|rb\.gy|rebrand\.ly|tiny\.cc)[^\s"'<>]*)/iu;
+const SHORTENER_HOST_RE = /^(?:www\.)?(?:bit\.ly|tinyurl\.com|t\.me|wa\.me|cutt\.ly|is\.gd|goo\.gl|shorturl\.at|rb\.gy|rebrand\.ly|tiny\.cc)$/i;
+const HOSTILE_SHAPE_RE =
+  /\b(?:https?:\/\/|www\.)[^\s"'<>]+|\b[\w-]+-(?:verify|secure|pay|claim|release|renewal|redelivery|delivery|login|support)-[\w-]+\.(?:com|net|org|top|xyz|online|info|men|help)\b|\b[\w.-]+\.apk\b/i;
+const HOSTILE_TLD_RE = /\.(?:top|xyz|online|men|help|cfd|cam|one|icu|buzz)$/i;
+const LOOKALIKE_HOST_RE = /(?:^|\.)[\w-]+-(?:verify|secure|pay|claim|release|renewal|redelivery|delivery|login|support)-[\w-]+\.(?:com|net|org|top|xyz|online|info|men|help)$/i;
+// This generic shape is NOT a brand comparison: benign names such as my-pay-later.com
+// also match. Keep this acceptance heuristic evidence-only, never an impersonation claim.
+// Review fix #2: the former TRUSTED_DOMAIN_RE whole-message suppressor was removed — one
+// official link must never hide a suspicious link elsewhere in the same message. Domain
+// flags inspect parsed hostnames, never usernames, paths or queries. APK attachments are
+// a separate shape cue, including on otherwise ordinary hosts.
+
+// Instant-loan / easy-money family (R-M4-20, added same-day on the owner's direction after
+// two reported scam texts): loan context OR instant-approval wording (including the Singlish
+// tokens "ikmanin" (ඉක්මනින්), "dakwa", "danma") + a money amount + a message-supplied link.
+// Licensed-bank promos WITHOUT a message link stay silent; a genuine lender promo that does
+// include a link would fire — evidence for review, never a verdict (documented limitation).
+const LOAN_CTX_RE =
+  /\bloans?\b|\bcredit\b|\bno\s+collateral\b|instant\s+(?:approval|loan|cash)|approval\s+in\s+\d+|\b(?:ikmanin|dakwa|danma)\b|(?<![\u0D80-\u0DFF])ණය/iu;
+// Currency and amount must be on one line; bound the numeric token rather than bridging
+// paragraphs. Grouped amounts such as Rs. 250 000 remain valid; bare large amounts stay
+// a documented heuristic, not proof that a number is money.
+const LOAN_AMOUNT_RE = /\b(?:lkr|rs\.?|rupees?)[ \t]{0,3}\d(?:[\d,.]|[ \t](?=\d)){0,19}(?![\d,.])|(?<![\d,.])\b\d[\d, \t]{4,18}\d\b(?![\d,.])/i;
+
+// ---- rule table: catalogue hypotheses R-M4-01…R-M4-10 (v0.1) + R-M4-13…20 (v0.2 draft) ----
 
 const RULES: Rule[] = [
   {
@@ -193,6 +259,68 @@ const RULES: Rule[] = [
       { name: 'onward-transfer', re: ONWARD_RE, guarded: true, primary: true },
     ],
   },
+  // v0.2-draft rows — Sri Lankan scam-landscape adaptation (planning hypotheses).
+  {
+    id: 'R-M4-13',
+    cues: [
+      { name: 'prize', re: PRIZE_RE },
+      { name: 'claim-demand', re: CLAIM_DEMAND_RE, guarded: true, primary: true },
+      { name: 'message-destination', re: DESTINATION_RE },
+    ],
+  },
+  {
+    id: 'R-M4-14',
+    cues: [
+      { name: 'parcel-context', re: PARCEL_CTX_RE },
+      { name: 'parcel-demand', re: PARCEL_DEMAND_RE, guarded: true, primary: true },
+      { name: 'message-destination', re: DESTINATION_RE },
+    ],
+  },
+  {
+    id: 'R-M4-15',
+    cues: [
+      { name: 'fine-context', re: FINE_CTX_RE, primary: true },
+      { name: 'payment-demand', re: PAYMENT_DEMAND_RE, guarded: true },
+      { name: 'pressure', re: PRESSURE_RE },
+    ],
+  },
+  {
+    id: 'R-M4-16',
+    cues: [
+      { name: 'txn-context', re: TXN_CTX_RE },
+      { name: 'unauthorized-claim', re: UNAUTHORIZED_RE, primary: true },
+      { name: 'message-destination', re: DESTINATION_RE },
+    ],
+  },
+  {
+    id: 'R-M4-17',
+    cues: [
+      { name: 'investment-context', re: INVEST_CTX_RE },
+      { name: 'doubling-claim', re: DOUBLING_RE, guarded: true, primary: true },
+    ],
+    // Disclaimers never suppress an affirmative promise. The cue guard excludes direct
+    // negations and dated historical growth, rather than clearing an entire message.
+  },
+  {
+    id: 'R-M4-18',
+    cues: [{ name: 'shortened-url', re: SHORTENER_RE, primary: true }],
+  },
+  {
+    id: 'R-M4-19',
+    cues: [{ name: 'hostile-link-shape', re: HOSTILE_SHAPE_RE, primary: true }],
+    // Review fix #2 (24 Oct 2026): the former whole-message trusted-domain suppressor let one
+    // official link (e.g. payment.ceb.lk) launder a scam link elsewhere in the same message.
+    // Each candidate is checked on its own hostname/attachment shape; no domain reference
+    // clears a different candidate, and a shape flag never proves maliciousness.
+  },
+  {
+    id: 'R-M4-20',
+    cues: [
+      { name: 'loan-context', re: LOAN_CTX_RE, primary: true },
+      { name: 'money-amount', re: LOAN_AMOUNT_RE },
+      { name: 'message-destination', re: DESTINATION_RE },
+    ],
+  },
 ];
 
 // ---- matching engine ----
@@ -229,7 +357,22 @@ function negated(seg: Segment, cueStart: number, cue: Cue, value: string): boole
     .split(INSTRUCTION_BREAK_RE).at(-1) ?? '';
   // Ignored or bypassed records are not affirmative verification context and must not suppress the invoice rule.
   if (cue.name === 'order-context' && /\b(?:ignore|skip|bypass|disregard)\b/i.test(prefix)) return true;
+  // "If you are asked for your OTP …" style warnings describe the scammer's ask — they are
+  // not a demand by this message. A bare conditional prefix suppresses disclosure demands.
+  if (cue.name === 'disclosure-demand' && /\bif\b/i.test(prefix)) return true;
   if (/^(?:is\s+due|payable)$/i.test(value) && /\b(?:if|whether)\b/i.test(prefix)) return true;
+  if (cue.name === 'doubling-claim') {
+    if (/\b(?:not|never|no|without|cannot|can'?t)\s+(?:(?:a|any|necessarily|ever|be|been|being|to|promise|offer|expect|ensure)\s+)*$/i.test(prefix)) return true;
+    if (/^doubled$/i.test(value) && !/\b(?:is|are|be|gets?)\s*$/i.test(prefix)) {
+      const suffix = seg.text.slice(cueStart - seg.start + value.length);
+      const dated = /^\s+(?:in\s+value\s+)?(?:(?:over|during|in)\s+)?(?:the\s+)?(?:last|past|previous)\s+(?:(?:\d+|one|two|three|five|ten|twenty)\s+)?(?:years?|months?|decades?|quarters?)\b/i;
+      const elapsedYears = /^\s+(?:in\s+value\s+)?over\s+(?:\d+|one|two|three|five|ten|twenty)\s+(?:years?|decades?)\b/i;
+      const perfectPast = /\b(?:has|have|had)\s+(?:already\s+)?$/i.test(prefix);
+      const prospective = /\b(?:will|would|shall|should|could|can|may|might)\b|\bto\s+have\b/i.test(prefix);
+      if (!prospective && (dated.test(suffix) || (perfectPast && elapsedYears.test(suffix)))) return true;
+    }
+    return false;
+  }
   // Negating a different verb does not negate a fee/information noun: for example,
   // "cannot confirm your entry until the fee arrives" still requests that fee.
   if (['fee-noun', 'job-fee', 'credential'].includes(cue.name)) {
@@ -238,11 +381,40 @@ function negated(seg: Segment, cueStart: number, cue: Cue, value: string): boole
   return NEGATION_RE.test(prefix) || NO_NOUN_RE.test(prefix);
 }
 
+/** Parse syntax locally only; URL construction never fetches or resolves a destination. */
+function hasHostileShape(value: string): boolean {
+  const candidate = value.replace(/[.,;:!?)}\]]+$/, '');
+  if (!/^(?:https?:\/\/|www\.)/i.test(candidate) && /\.apk$/i.test(candidate)) return true;
+  try {
+    const url = new URL(/^https?:\/\//i.test(candidate) ? candidate : `https://${candidate}`);
+    const host = url.hostname.replace(/\.+$/, '');
+    return HOSTILE_TLD_RE.test(host) || LOOKALIKE_HOST_RE.test(host) || /\.apk(?:$|\/)/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function hasShortenerHost(value: string): boolean {
+  try {
+    const candidate = value.replace(/[.,;:!?)}\]]+$/, '');
+    const hasScheme = /^https?:\/\//i.test(candidate);
+    const url = new URL(hasScheme ? candidate : `https://${candidate}`);
+    // Bare email tokens are not URLs, even if their mail host is itself a shortener.
+    // Consume the complete token (including Unicode/suffixes) before host validation.
+    if (!hasScheme && url.username.length > 0) return false;
+    return SHORTENER_HOST_RE.test(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function cueSpans(text: string, segs: Segment[], cue: Cue): Span[] {
   const out: Span[] = [];
   for (const m of text.matchAll(new RegExp(cue.re.source, cue.re.flags.includes('g') ? cue.re.flags : cue.re.flags + 'g'))) {
     const start = m.index ?? 0;
     const value = m[0];
+    if (cue.name === 'hostile-link-shape' && !hasHostileShape(value)) continue;
+    if (cue.name === 'shortened-url' && !hasShortenerHost(value)) continue;
     if (cue.guarded) {
       const seg = segs.find((s) => start >= s.start && start < s.start + s.text.length);
       if (seg && negated(seg, start, cue, value)) continue;
@@ -337,8 +509,9 @@ export function analyzeRules(text: string): RuleAnalysis {
 
 /**
  * R-M4-11 stub — explicit display/target metadata check ONLY.
- * Plain text never triggers this rule (no shortener list / subdomain threshold: OPEN in the
- * catalogue). Engineering acceptance rule, not malicious-domain evidence; no fetching.
+ * Plain text never triggers this rule. Shortener and abuse-TLD/.apk shape flags for plain
+ * text now live in R-M4-18/R-M4-19 (v0.2); misspelling detection and a subdomain-depth
+ * threshold remain OPEN in the catalogue. Engineering acceptance rules; no fetching.
  */
 export function checkDisplayTarget(display?: string, target?: string): RuleMatch[] {
   if (!display || !target) return [];

@@ -1,0 +1,4 @@
+# The platform resolver binary is supplied as an optional dependency.
+# Linting is verified without running its fallback install script.
+allowBuilds:
+  unrs-resolver: false

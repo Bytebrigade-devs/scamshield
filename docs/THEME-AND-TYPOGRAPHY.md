@@ -7,6 +7,12 @@
 
 ## 1. Purpose and direction
 
+### M3 implementation notes — 27 October 2026
+
+PR #22 consumes the palette through shared aliases in `src/app/globals.css`. Its inverse navigation aliases (`--color-nav-background`, `--color-nav-surface`, `--color-nav-text`, `--color-nav-muted`, `--color-nav-border`, `--color-nav-accent`, `--color-nav-selected`) map respectively to the existing dark background, surface, text, muted, border, primary and subtle-primary values. Navigation stays an inverse surface in the light-default layout. `--color-overlay` centralises the existing navy backdrop at 45% opacity; transparency still needs rendered-context review. Component styles contain no raw colour literals.
+
+Secondary controls use the specified surface fill with primary-coloured text/border and mode-specific pressed states. Body type is 16px; metadata and controls are at least 14px, including mobile layouts. A single root `@font-face` loads the licensed local Plus Jakarta Sans file. These are implementation notes, not a new palette, a typography exception, or design-steward sign-off. Rendered dark-mode acceptance remains open.
+
 Give the landing page, onboarding, subscription screens, password vault, scam checker, admin dashboard and Digital Safety Score one coherent identity.
 
 **Direction: light-default with a coordinated dark mode, navy–teal, clear and reassuring.** Use generous whitespace, readable typography, softly rounded controls and restrained shadows. Dark mode uses navy backgrounds, slate surfaces, light text and brighter teal actions—not a neon hacker terminal.

@@ -1,5 +1,6 @@
 # dependencies
 node_modules/
+.dependencies-incomplete/
 
 # next.js
 .next/
@@ -21,6 +22,9 @@ supabase/.temp
 
 # testing
 coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
 
 # OS / editor junk
 .DS_Store

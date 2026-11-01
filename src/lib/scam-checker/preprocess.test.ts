@@ -16,6 +16,24 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { extractCandidates } from './preprocess.ts';
 
+test('review follow-up: ordinary next-line text and contacts are never reconstructed as URL paths', () => {
+  for (const separator of ['\n', '\r\n']) {
+    for (const ending of ['/', '/help-', '/path']) {
+      for (const next of ['Please call 0771234567.', '0771234567', '+94 77 123 4567', 'support@bank.example']) {
+        const r = extractCandidates(`Visit https://site.example${ending}${separator}${next}`);
+        assert.equal(r.wrappedCandidates, undefined, `${ending} followed by ${next}`);
+        assert.deepEqual(r.urls, [`https://site.example${ending}`]);
+      }
+    }
+  }
+});
+
+test('review follow-up: a following complete URL is separate even after a trailing slash', () => {
+  const r = extractCandidates('https://a.example/\nhttps://b.example/info');
+  assert.deepEqual(r.urls, ['https://a.example/', 'https://b.example/info']);
+  assert.equal(r.wrappedCandidates, undefined);
+});
+
 test('URL prefixes are case-insensitive while candidate spelling stays verbatim', () => {
   assert.deepEqual(extractCandidates('HTTPS://bank.example/Login HTTP://other.example WWW.bank.example').urls,
     ['HTTPS://bank.example/Login', 'HTTP://other.example', 'WWW.bank.example']);
@@ -110,7 +128,90 @@ test('fixture-grounded: synthetic pair M4-PH06-S extracts exactly its expected s
   });
 });
 
+// --- M4-15 partial: conservative line-wrapped URL readings (v0.2 slice, review fix #4) ---
+
+test('a wrap with explicit URL syntax keeps the verbatim fragment and discloses the reading separately', () => {
+  const text = 'Claim https://peth-claim.example/winner-\nlist?ref=1 today';
+  const r = extractCandidates(text);
+  assert.deepEqual(r.urls, ['https://peth-claim.example/winner-']);
+  assert.deepEqual(r.wrappedCandidates, ['https://peth-claim.example/winner-list?ref=1']);
+  // Review fix #4: urls stay strictly verbatim substrings of the submitted text.
+  assert.ok(text.includes(r.urls[0]));
+  assert.ok(!text.includes(r.wrappedCandidates[0]), 'the joined reading removes the line break and is not a substring');
+});
+
+test('multi-line wraps produce one stitched reading, still verbatim-fragment first', () => {
+  const r = extractCandidates('https://a.example/x\n/y\n/z end');
+  assert.deepEqual(r.urls, ['https://a.example/x']);
+  assert.deepEqual(r.wrappedCandidates, ['https://a.example/x/y/z']);
+});
+
+test('plain word continuations remain ambiguous even after a slash or mid-token hyphen', () => {
+  for (const text of [
+    'https://a.example/winner-\nlist today',
+    'https://a.example/help-\nplease call us',
+    'https://a.example/\nplease call us',
+  ]) assert.equal(extractCandidates(text).wrappedCandidates, undefined, text);
+});
+
+test('a TLD-dot wrap still joins from the continuation side, a sentence period never does', () => {
+  const tld = extractCandidates('see https://a.example\n/x today');
+  assert.deepEqual(tld.wrappedCandidates, ['https://a.example/x']);
+  const sentence = extractCandidates('visit www.second.example/path.\nmore text');
+  assert.deepEqual(sentence.urls, ['www.second.example/path']);
+  assert.equal(sentence.wrappedCandidates, undefined, 'a trailing period is sentence punctuation, not a wrap');
+});
+
+test('every reported url is a verbatim substring of the submitted text (review fix #4 pin)', () => {
+  const texts = [
+    'Claim https://peth-claim.example/winner-\nlist today',
+    'see https://boc-verify-account.x\nyz/verify now',
+    'Visit https://example.com\nNext sentence follows',
+    'mixed https://a.example/x-\ny and www.second.example/path.\nmore',
+  ];
+  for (const text of texts) {
+    const r = extractCandidates(text);
+    for (const url of r.urls) assert.ok(text.includes(url), `"${url}" must appear verbatim`);
+    for (const reading of r.wrappedCandidates ?? []) {
+      assert.ok(!text.includes(reading), `stitched reading "${reading}" must never pose as a raw span`);
+    }
+  }
+});
+
+test('a word-like continuation is never joined (no invented candidate)', () => {
+  const r = extractCandidates('Visit https://example.com\nNext sentence follows');
+  assert.deepEqual(r.urls, ['https://example.com']);
+  assert.equal(r.wrappedCandidates, undefined);
+});
+
+test('a following separate URL is not glued to the previous one', () => {
+  assert.deepEqual(extractCandidates('https://a.example/abc\nhttps://b.example/def').urls,
+    ['https://a.example/abc', 'https://b.example/def']);
+});
+
+test('an unstitched alphanumeric wrap keeps the verbatim first-line fragment', () => {
+  const r = extractCandidates('verify at https://boc-verify-account.x\nyz/verify now');
+  assert.deepEqual(r.urls, ['https://boc-verify-account.x']);
+  assert.equal(r.wrappedCandidates, undefined);
+});
+
 // --- PR #13 review response — F2: trailing-punctuation trim is balance-aware ---
+
+test('review hardening: sentence punctuation cannot be embedded in a stitched URL reading', () => {
+  for (const punctuation of ['.', ',', ')']) {
+    const result = extractCandidates(`See https://a.example/path${punctuation}\n/next`);
+    assert.deepEqual(result.urls, ['https://a.example/path']);
+    assert.equal(result.wrappedCandidates, undefined, 'punctuation terminates the candidate rather than moving inside a guessed URL');
+  }
+});
+
+test('review follow-up: punctuation on any wrapped line terminates further stitching', () => {
+  for (const punctuation of ['.', ',', ')']) {
+    const result = extractCandidates(`https://a.example/path\n/next${punctuation}\n/again`);
+    assert.deepEqual(result.urls, ['https://a.example/path']);
+    assert.deepEqual(result.wrappedCandidates, ['https://a.example/path/next']);
+  }
+});
 
 test('balanced parentheses stay in the URL candidate (Wikipedia-style titles)', () => {
   const r = extractCandidates('see https://en.wikipedia.org/wiki/Scam_(disambiguation) ok');

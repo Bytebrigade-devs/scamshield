@@ -16,6 +16,10 @@
  *    is language-agnostic and claims no language capability.
  * 5. No truncation: the full given text is processed (FS-M4-02 — input capping/rejection is
  *    FR-M4-01 server-side validation, out of this stage's scope).
+ * 6. Line-wrapped URL readings (M4-15 partial): a single line break inside a URL produces a
+ *    stitched full reading, disclosed ONLY via the optional wrappedCandidates note — `urls`
+ *    itself stays strictly verbatim (review fix #4: a joined value is not a substring and
+ *    never poses as a raw span). Word-like continuations are never joined.
  *
  * Test runner: Node built-in `node --test` with native TypeScript type stripping — zero
  * dependencies. Proposed M4-19/X-06 starting convention, pending team confirmation.
@@ -26,6 +30,16 @@ export interface ExtractionCandidates {
   urls: string[];
   emails: string[];
   phones: string[];
+  /**
+   * Likely full readings of URL candidates that a line break split (SMS line-wrapping;
+   * M4-15 partial). Review fix #4 (24 Oct 2026): `urls` contains ONLY verbatim spans of the
+   * submitted text — a stitched reading removes the line break and is therefore NOT a
+   * substring, so it is disclosed here instead, clearly labelled, and never mixed into the
+   * raw candidate set. Present only when non-empty. The join is conservative: both
+   * fragments must verbatim look like one URL and the join must still validate; an
+   * unstitched alphanumeric wrap keeps the verbatim first-line fragment in `urls`.
+   */
+  wrappedCandidates?: string[];
 }
 
 interface Span {
@@ -51,6 +65,11 @@ const PHONE_RE = /(?<![0-9+])\+?[0-9][0-9 \t().-]*[0-9](?![0-9])/gu;
 const TRAILING_SENTENCE_RE = /[.,;:!?'"]+$/u;
 const TRAILING_CLOSER_RE = /[)\]}]$/u;
 const CLOSER_PAIRS: Readonly<Record<string, string>> = { ')': '(', ']': '[', '}': '{' };
+
+// Line-wrap readings require URL syntax in the continuation. A plain word or number is
+// ambiguous even after a trailing slash/hyphen, so it is never reconstructed. Independent
+// URLs, emails and phone candidates remain separate; readings are still untrusted guesses.
+const WRAPPED_CONTINUATION_RE = /^\r?\n([A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]+)/;
 
 function collect(re: RegExp, text: string): Span[] {
   const out: Span[] = [];
@@ -105,6 +124,44 @@ function isValidUrl(raw: string): boolean {
   return authority.includes('.');
 }
 
+/**
+ * Join URL candidates that a single line break split, when both fragments verbatim look
+ * like one URL. Plain alphanumeric continuations (including …/winner-\nlist) stay split;
+ * an explicit URL separator or a mid-token continuation with URL syntax is required.
+ */
+function stitchLineWrapped(text: string, spans: Span[]): { spans: Span[]; stitched: string[] } {
+  const out: Span[] = [];
+  const stitched: string[] = [];
+  const contacts = [...phoneSpans(text), ...collect(EMAIL_RE, text)];
+  for (const span of spans) {
+    let value = span.value;
+    let end = span.end;
+    for (;;) {
+      // Check every line, not just the initial span. Trimming before the next join
+      // would hide a sentence boundary and invent "path/next./again" readings.
+      if (trimTrailing(value) !== value) break;
+      const m = WRAPPED_CONTINUATION_RE.exec(text.slice(end));
+      if (!m) break;
+      const continuation = m[1];
+      const continuationStart = end + m[0].length - continuation.length;
+      if (/^(?:https?:\/\/|www\.)/i.test(continuation)) break;
+      if (contacts.some((contact) => contact.start < continuationStart + continuation.length &&
+        continuationStart < contact.end)) break;
+      const looksWrapped =
+        /^[/?#&=][^/?#&=]/.test(continuation) ||
+        (/[A-Za-z0-9][_-]$/.test(value) && /^[a-z][A-Za-z0-9._~-]*[/?#&=%]/.test(continuation));
+      if (!looksWrapped) break;
+      const joined = value + continuation;
+      if (!isValidUrl(trimTrailing(joined))) break;
+      value = joined;
+      end += m[0].length;
+    }
+    if (value !== span.value) stitched.push(value);
+    out.push({ start: span.start, end, value });
+  }
+  return { spans: out, stitched };
+}
+
 function digitCount(value: string): number {
   let n = 0;
   for (const ch of value) if (ch >= '0' && ch <= '9') n += 1;
@@ -156,8 +213,13 @@ export function extractCandidates(text: string): ExtractionCandidates {
   const taken: Span[] = [];
 
   // 1) URLs (highest precedence), with trailing sentence punctuation excluded.
+  //    Review fix #4 (24 Oct 2026): `urls` stays strictly verbatim. A line-wrapped URL is
+  //    reported as its verbatim first-line fragment here, while the stitched full reading
+  //    (newline removed) is disclosed separately via `wrappedCandidates` — a joined value
+  //    is not a substring of the input and must never pose as a raw span.
   const urlSpans: Span[] = [];
-  for (const span of collect(URL_RE, text)) {
+  const rawUrlSpans = collect(URL_RE, text);
+  for (const span of rawUrlSpans) {
     const value = trimTrailing(span.value);
     if (value.length === 0 || !isValidUrl(value)) continue;
     const trimmed: Span = { start: span.start, end: span.start + value.length, value };
@@ -166,6 +228,9 @@ export function extractCandidates(text: string): ExtractionCandidates {
       urlSpans.push(trimmed);
     }
   }
+  const wrappedReadings = stitchLineWrapped(text, rawUrlSpans)
+    .stitched.map((value) => trimTrailing(value))
+    .filter((value) => value.length > 0 && isValidUrl(value) && !urlSpans.some((s) => s.value === value));
 
   // 2) Emails, excluding any span already claimed by a URL.
   const emailSpans: Span[] = [];
@@ -188,9 +253,14 @@ export function extractCandidates(text: string): ExtractionCandidates {
     }
   }
 
+  const urls = uniqueInOrder(urlSpans);
+  const wrappedCandidates = [...new Set(wrappedReadings)];
   return {
-    urls: uniqueInOrder(urlSpans),
+    urls,
     emails: uniqueInOrder(emailSpans),
     phones: uniqueInOrder(acceptedPhones),
+    // The note key exists only when a stitched reading survived validation, so callers
+    // comparing the plain { urls, emails, phones } shape are unaffected.
+    ...(wrappedCandidates.length > 0 ? { wrappedCandidates } : {}),
   };
 }
