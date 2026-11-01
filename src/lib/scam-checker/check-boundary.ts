@@ -398,6 +398,11 @@ export async function runCheck(request: CheckRequest, deps: CheckDeps): Promise<
   if (!access.allowed) {
     return rejected('access-blocked', ACCESS_BLOCKED_MESSAGE);
   }
+  // resolveAccess maps a null snapshot to denied, but TypeScript cannot infer that
+  // from the access result — narrow explicitly so later snapshot.subjectKey uses typecheck.
+  if (snapshot === null) {
+    return rejected('access-blocked', ACCESS_BLOCKED_MESSAGE);
+  }
 
   // 3) Usage gates (FS-M4-08): any denial declines the provider call entirely.
   const now = deps.clock.now();

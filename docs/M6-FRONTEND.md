@@ -44,7 +44,7 @@ pnpm lint
 pnpm build
 ```
 
-See [verification](m6/verification.md) for the actual results and the pre-existing shared-project TypeScript blocker. Model/API tests do not establish browser acceptance or server authorization.
+See [verification](m6/verification.md) for the dated 2 November 2026 rerun on Node 24.22.1: all 16 M6 tests, scoped and full typechecks, lint and the full production build passed after syncing the M4 owner’s merged fix. Browser interaction, visual and screen-reader QA are explicitly deferred due to the managed environment limits; model/API tests do not establish browser acceptance or server authorization.
 
 ## Source and integration notes
 
