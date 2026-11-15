@@ -36,8 +36,20 @@
  * R-M4-11 is a separate metadata check (`checkDisplayTarget`) — plain text never triggers it.
  * R-M4-12's category fallback (unknown_other) is M4-10/X-13 scope and is NOT implemented here.
  *
+ * v0.3-draft URL-shape rules (10 November 2026, M4-12 tail): R-M4-21 excessive subdomain depth,
+ * R-M4-22 single-edit misspelling of a reviewed official domain label, R-M4-23 a reviewed brand
+ * named in the same sentence as a link whose hostname is not that brand's reviewed host. They
+ * are engineering acceptance shape flags over the reviewed projection in reviewed-reference.ts
+ * — parsed locally, never fetched, never a reputation/impersonation/malicious-domain finding.
+ * Thresholds and reference limits are catalogue decisions (testing/M4-rule-catalogue.md v0.3).
+ *
  * Runner: Node built-in `node --test` (zero dependencies) — M4-19/X-06 PROPOSED convention.
  */
+
+import {
+  REVIEWED_BRANDS, SPELLING_REFERENCES, isReviewedOfficialHost, registrableDomain,
+  subdomainDepth, isSingleEditApart,
+} from './reviewed-reference.ts';
 
 /** One matched rule with quoted evidence. NO verdict/score/category field exists, by design. */
 export interface RuleMatch {
@@ -170,6 +182,19 @@ const LOAN_CTX_RE =
 // paragraphs. Grouped amounts such as Rs. 250 000 remain valid; bare large amounts stay
 // a documented heuristic, not proof that a number is money.
 const LOAN_AMOUNT_RE = /\b(?:lkr|rs\.?|rupees?)[ \t]{0,3}\d(?:[\d,.]|[ \t](?=\d)){0,19}(?![\d,.])|(?<![\d,.])\b\d[\d, \t]{4,18}\d\b(?![\d,.])/i;
+
+// ---- v0.3-draft URL-shape rules (R-M4-21…23) ----
+// Parse candidates locally; no fetch, no DNS, no reputation. Bare domains are included so an
+// SMS-style typosquat ("dilaog.lk") is visible without a scheme; file names/extensions are
+// excluded so an attachment name is not treated as a host. Thresholds are documented decisions
+// (catalogue v0.3-draft), deliberately conservative: depth >= 3 labels above the registrable
+// domain, single-edit distance on reference labels >= 6 characters, same-sentence brand/link.
+const SHAPE_URL_RE =
+  /(?<![\p{L}\p{N}_.@/?:=&#%+-])(?:https?:\/\/|www\.)[^\s"'<>]+|(?<![\p{L}\p{N}_.@/?:=&#%+-])(?:[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?\.)+(?:[a-z]{2,24})(?::\d{1,5})?(?![\p{L}\p{N}-])/giu;
+const FILE_EXTENSION_TLDS = new Set(['apk', 'zip', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg',
+  'txt', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv', 'exe', 'msi', 'rar', '7z', 'html', 'htm']);
+const EXCESSIVE_SUBDOMAIN_DEPTH = 3;
+const BRAND_LINK_SENTENCE_WINDOW = 160;
 
 // ---- rule table: catalogue hypotheses R-M4-01…R-M4-10 (v0.1) + R-M4-13…20 (v0.2 draft) ----
 
@@ -408,6 +433,108 @@ function hasShortenerHost(value: string): boolean {
   }
 }
 
+interface ParsedCandidate {
+  start: number;
+  end: number;
+  token: string;
+  host: string;
+}
+
+/** URL-ish candidates for the v0.3 shape rules. Parses tokens locally; never resolves. */
+function parsedUrlCandidates(text: string): ParsedCandidate[] {
+  const out: ParsedCandidate[] = [];
+  const seen = new Set<number>();
+  for (const match of text.matchAll(SHAPE_URL_RE)) {
+    const start = match.index ?? 0;
+    const token = match[0].replace(/[.,;:!?)}\]]+$/, '');
+    if (!token || (start > 0 && text[start - 1] === '@')) continue;
+    let host = '';
+    try {
+      const url = new URL(/^https?:\/\//i.test(token) ? token : `https://${token}`);
+      host = url.hostname.toLowerCase().replace(/\.+$/, '');
+    } catch {
+      continue;
+    }
+    if (!host || !host.includes('.')) continue;
+    const tld = host.split('.').at(-1) ?? '';
+    if (!/^[a-z]{2,24}$/.test(tld) || FILE_EXTENSION_TLDS.has(tld)) continue;
+    if (seen.has(start)) continue;
+    seen.add(start);
+    out.push({ start, end: start + token.length, token, host });
+  }
+  return out;
+}
+
+function aliasPattern(alias: string): RegExp {
+  const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'giu');
+}
+
+/** v0.3-draft URL-shape evidence (R-M4-21…23). Appended after the cue-table matches. */
+function shapeMatches(text: string): RuleMatch[] {
+  const candidates = parsedUrlCandidates(text);
+  if (candidates.length === 0) return [];
+  const out: RuleMatch[] = [];
+  const seen = new Set<string>();
+
+  for (const candidate of candidates) {
+    const depth = subdomainDepth(candidate.host);
+    if (depth < EXCESSIVE_SUBDOMAIN_DEPTH) continue;
+    const key = `R-M4-21:${candidate.start}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ ruleId: 'R-M4-21', excerpt: candidate.token, start: candidate.start, end: candidate.end,
+      contextNote: `excessive-subdomain-depth:${depth}` });
+  }
+
+  for (const candidate of candidates) {
+    if (isReviewedOfficialHost(candidate.host)) continue;
+    const label = registrableDomain(candidate.host).split('.')[0];
+    if (label.length < 6) continue;
+    const reference = SPELLING_REFERENCES.find(item => isSingleEditApart(label, item.label));
+    if (!reference) continue;
+    const key = `R-M4-22:${candidate.start}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ ruleId: 'R-M4-22', excerpt: candidate.token, start: candidate.start, end: candidate.end,
+      contextNote: `possible-misspelling-of:${reference.officialDomain}` });
+  }
+
+  // R-M4-23: a reviewed brand named in the same sentence as a link whose host is not one of
+  // that brand's reviewed hosts. Same-sentence only, so a nearby-but-separate mention is not
+  // treated as a claim about the link (documented limitation: other official destinations and
+  // third-party cross-references can still be flagged as evidence for review, never a verdict).
+  for (const brand of REVIEWED_BRANDS) {
+    for (const alias of brand.aliases) {
+      for (const match of text.matchAll(aliasPattern(alias))) {
+        const brandStart = match.index ?? 0;
+        const brandEnd = brandStart + match[0].length;
+        for (const candidate of candidates) {
+          // Measure the actual link↔brand gap, not the distance from the link's START: a long
+          // URL written BEFORE the brand must not hide a nearby brand (review E#57). Overlapping
+          // spans yield gap 0 rather than a negative value.
+          const gap = candidate.start >= brandEnd
+            ? candidate.start - brandEnd
+            : brandStart >= candidate.end ? brandStart - candidate.end : 0;
+          if (gap > BRAND_LINK_SENTENCE_WINDOW) continue;
+          const between = candidate.start >= brandEnd
+            ? text.slice(brandEnd, candidate.start)
+            : text.slice(candidate.end, brandStart);
+          if (/[.!?;\n]/.test(between)) continue;
+          if (brand.officialHosts.some(official => candidate.host === official
+            || candidate.host.endsWith(`.${official}`))) continue;
+          const key = `R-M4-23:${candidate.start}:${brand.organizationId}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push({ ruleId: 'R-M4-23', excerpt: candidate.token, start: candidate.start, end: candidate.end,
+            contextNote: `link-host-not-reviewed-for:${brand.organizationId}` });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 function cueSpans(text: string, segs: Segment[], cue: Cue): Span[] {
   const out: Span[] = [];
   for (const m of text.matchAll(new RegExp(cue.re.source, cue.re.flags.includes('g') ? cue.re.flags : cue.re.flags + 'g'))) {
@@ -502,6 +629,14 @@ export function analyzeRules(text: string): RuleAnalysis {
     const excerpt = selectEvidence(text, segs, rule, found);
     if (!excerpt) continue;
     matches.push({ ruleId: rule.id, excerpt: excerpt.value, start: excerpt.start, end: excerpt.end, contextNote: primary.name });
+  }
+
+  // v0.3-draft URL-shape evidence is appended after the documented cue-table rules; the
+  // ordering of existing matches is unchanged. Overlaps are impossible by construction.
+  for (const match of shapeMatches(text)) {
+    if (matches.some(existing => existing.ruleId === match.ruleId
+      && existing.start === match.start && existing.end === match.end)) continue;
+    matches.push(match);
   }
 
   return { matches };
