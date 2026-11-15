@@ -3,7 +3,7 @@
 **From:** Svishwa — M4 owner, AI Scam Checker · **Handle:** @Svishwa2004
 **Date:** 15 November 2026 · **Status:** factual handover note — no new approval, commitment or shared acceptance is claimed.
 
-> **This file is standalone.** It needs no other document and no access to the M4 workspace. It is the reverse-direction companion to the modules' own requests to M4 and can be uploaded to GitHub as-is.
+> **This file is standalone.** Everything needed to act on it is written here; no M4-workspace access is required. The companion asks document is published separately as `docs/m4-cross-module-asks.md` (the reverse direction — what M4 asks from each module) and is named only once as a reference.
 
 ---
 
@@ -12,7 +12,7 @@
 | Module | What that module needs from M4 | Is it available? |
 |---|---|---|
 | **M1 — Landing / onboarding / privacy** | Privacy-notice wording + data-flow; scam category vocabulary; official guidance/next-step content and valid destinations | **Available to review now** (design/content prepared; live wiring pending) |
-| **M2 — Signup / paywall / subscription** | The plan/quota/usage model and how M4 enforces it; the session/entitlement fields M4 needs; usage-accounting rules | **Available now** (plan table owner-confirmed; M2's contract still needed to wire it) |
+| **M2 — Signup / paywall / subscription** | The plan/quota/usage model and how M4 enforces it; the session/entitlement fields M4 needs; usage-accounting rules | **Available now** (M4 owner confirmed plans/prices 18 Oct 2026; M2's 15 Nov handoff confirms plan IDs, quotas, trial, cap and burst — not prices/labels; shared wiring still needed) |
 | **M3 — Vault (and possible schema steward)** | M4's proposed field needs and exclusions for the shared schema — only if M3 takes the schema-steward role | **Available now** (inputs supplied); otherwise nothing is needed |
 | **M5 — Admin / analytics** | The usage/category event M4 would emit; the evidence summary; category labels | **Proposed, ready for M5's review** (M5's field list still needed) |
 | **M6 — Digital Safety Score (coordinator Suraji)** | M4's message-input rules + 16 synthetic scoring cases; scam-activity input definition; scam-guidance and destinations; stories/relationships/checker-to-score notes; conditional threat-feed content | **Delivered 20 Oct, receipted 21 Oct** (consumer review pending) |
@@ -26,13 +26,13 @@
 
 **What M1 can take from M4:**
 
-1. **Privacy-notice wording and data-flow description.** M4 wrote and owner-reviewed the text shown before a message is submitted: that the message text goes to an AI provider, that people must not paste passwords/OTPs/bank keys, and where the privacy information belongs. **Use it to align the M1 privacy page and signup flow.**
-   *Boundary:* this is a design/wording contribution — it is not final legal copy, and the privacy-link destination is still undecided.
+1. **Privacy-notice wording and data-flow description.** M4 wrote and owner-reviewed the **preview** text shown before a message is submitted — but only in M4's workspace-only standalone checker, **not in the shared app**. The text says that the message goes to an AI provider, that people must not paste passwords/OTPs/bank keys, and where the privacy information belongs. **Use it to align the M1 privacy page and signup flow.**
+   *Boundary:* this is a design/preview artifact pending M1 alignment and live acceptance — not final legal copy, and the privacy-link destination is still undecided.
 2. **Scam category vocabulary.** Five static category IDs with plain-language labels and short definitions (a shared taxonomy proposal). M1 may reuse them for education/landing content and a later digest. *Boundary:* proposal only — no M1 content is authored by M4, and the taxonomy still needs consumer review.
-3. **Official guidance and next-step content.** The neutral "what to do next" wording (don't follow the link, don't share passwords, contact your bank independently) and the list of reviewed official destinations with source/date notes. Some official sources were unavailable when reviewed (two banks and a courier were unreachable), and M4 records them as unavailable rather than inventing contacts.
+3. **Official guidance and next-step content.** The neutral "what to do next" wording (don't follow the link, don't share passwords, contact your bank independently) and the list of reviewed official destinations with source/date notes. At the **10 November 2026 re-check, one bank (HNB) and one courier (FedEx) remained unavailable**; the earlier 31 October review had five blocked sources. M4 records unavailable sources as unavailable rather than inventing contacts.
    *Boundary:* M4 does not promise live links, reachability or institutional endorsement.
 
-**What M4 needs back from M1** is listed in the companion asks note (privacy review, link destination, retention position).
+**What M4 needs back from M1** is listed in the companion asks document `docs/m4-cross-module-asks.md` (privacy review, link destination, retention position).
 
 ---
 
@@ -40,7 +40,7 @@
 
 **What M2 can take from M4:**
 
-1. **The plan and quota model.** Three named plans with monthly/quarterly/annual prices, checks per month/day, trial allowance, a short burst limit (5 checks per minute) and proposed history windows. The M2 owner already confirmed these plans for the paywall; **the numbers, labels and trial rule are available for the paywall screens and copy.**
+1. **The plan and quota model.** Three named plans with monthly/quarterly/annual prices, checks per month/day, trial allowance, a short burst limit (5 checks per minute) and proposed history windows. **The M4 owner confirmed these plans and prices on 18 October 2026**; the **M2 handoff (15 November 2026)** confirms the plan IDs (`sentinel`/`guardian`/`aegis`), the quotas, trial, cap and burst — **not** the LKR prices or display labels. The numbers, labels and trial rule are therefore available for the paywall screens and copy.
    *Boundary:* payments stay mocked; no real subscription, invoice or spending commitment is implied.
 2. **The entitlement fields M4 needs** — so M2 can shape its contract once: what identifies a plan, its status, its expiry, and how a request proves the user is signed in. M4's server side is already built around a slot for exactly that.
 3. **Usage-accounting rules M4 already enforces** — so the paywall and the checker don't disagree: monthly allowance is anchored at first use, a failed/AI-unavailable check does not consume quota, burst limits are enforced, and a rejected request never counts as a check.
@@ -87,15 +87,15 @@
 
 **Important boundaries M6 can rely on:** no raw messages, snippets, contacts or credentials enter any M4→M6 export; running more checks must never increase safety by itself; an unavailable result is not evidence of safety or danger; subscription/payment values do not influence the score; and M4 may remain non-scoring until a reviewed model supports it.
 
-**What M4 needs back from M6:** a consumer review of the two design inputs and a yes/no on the scam-activity input and guidance destinations (see the companion asks note).
+**What M4 needs back from M6:** a consumer review of the two design inputs and a yes/no on the scam-activity input and guidance destinations (see `docs/m4-cross-module-asks.md`).
 
 ---
 
 ## 6. Manager and whole team
 
 1. **Report-ready evidence and honest limits.** M4's interim contribution is submitted; current verification numbers, test/browser evidence and explicit "not yet run" lists are maintained and can be quoted in the final report.
-2. **Status and blockers.** M4's remaining work is either (a) waiting on another owner, (b) waiting on the API-key/funding decision, or (c) an owner decision. Nothing is silently dropped — the blockers are listed in M4's asks note.
-3. **Evaluation/pilot results later.** The 500-message detector run, prompt tuning and any accuracy discussion need a funded API key first; until then M4 reports only local regression evidence, never accuracy.
+2. **Status and blockers.** M4's remaining work is either (a) waiting on another owner, (b) waiting on an authorized API-key/funding decision, or (c) an owner decision. Nothing is silently dropped — the blockers are listed in `docs/m4-cross-module-asks.md`.
+3. **Evaluation/pilot results later.** The 500-message detector run, prompt tuning and any accuracy discussion need an authorized API key and funding decision first; until then M4 reports only local regression evidence, never accuracy.
 
 ---
 
