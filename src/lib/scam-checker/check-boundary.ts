@@ -44,6 +44,8 @@
  * Runner: Node built-in `node --test` (zero dependencies) — M4-19/X-06 PROPOSED convention.
  */
 
+import { TAXONOMY_VERSION, normaliseCategory, type CategoryId } from './taxonomy.ts';
+
 // ---- injected stage contracts (structurally compatible with the M4-03/M4-04 libraries) ----
 
 /** Untrusted stage-1 candidates (shape of preprocess `ExtractionCandidates`). Not verified identities. */
@@ -72,25 +74,10 @@ export interface StageRules {
 export type ExtractFn = (text: string) => StageCandidates;
 export type AnalyzeRulesFn = (text: string) => StageRules;
 
-// ---- X-13 taxonomy constants (contracts/X-13-taxonomy-and-summary-contract.md §2) ----
+// ---- X-13 taxonomy constants (single source: ./taxonomy.ts; contracts/X-13-taxonomy-and-summary-contract.md §2) ----
 
-export const TAXONOMY_VERSION = '0.1.0-draft';
+export { TAXONOMY_VERSION, type CategoryId } from './taxonomy.ts';
 export const CONTRACT_VERSION = '0.1.0-draft';
-
-export type CategoryId =
-  | 'phishing'
-  | 'romance_scam'
-  | 'fake_invoice'
-  | 'prize_lottery_scam'
-  | 'unknown_other';
-
-const CATEGORY_IDS: readonly string[] = [
-  'phishing',
-  'romance_scam',
-  'fake_invoice',
-  'prize_lottery_scam',
-  'unknown_other',
-];
 
 const SUPPORTED_TAXONOMY_VERSIONS: readonly string[] = [TAXONOMY_VERSION];
 
@@ -340,8 +327,7 @@ export function validateReply(json: unknown): ValidatedReply | null {
   let category: CategoryId = 'unknown_other';
   if (reply.category !== undefined && reply.category !== null) {
     if (typeof reply.category !== 'string') return null;
-    const normalized = reply.category.trim().toLowerCase();
-    if (CATEGORY_IDS.includes(normalized)) category = normalized as CategoryId;
+    category = normaliseCategory(reply.category);
   }
   return {
     verdictLabel: verdictLabel as VerdictLabel,
