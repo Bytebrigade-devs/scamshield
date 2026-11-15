@@ -107,6 +107,21 @@ test('R-M4-23: a reviewed brand named beside a non-reviewed link host is evidenc
   assert.equal(text.slice(found[0].start, found[0].end), found[0].excerpt);
 });
 
+test('R-M4-23: a long link written BEFORE the brand still fires on the real gap (review E#57)', () => {
+  // The gap must be measured link↔brand, not from the link's start: a 150-character path in
+  // front of the brand used to push the distance past 160 and hide the finding.
+  const longPath = 'a'.repeat(150);
+  const close = `Open https://sampath-bank.top/${longPath} before you reply — Sampath Bank says your account is locked.`;
+  const found = matchesOf(close, 'R-M4-23');
+  assert.equal(found.length, 1);
+  assert.ok(found[0].excerpt.startsWith('https://sampath-bank.top/'));
+  assert.equal(close.slice(found[0].start, found[0].end), found[0].excerpt);
+  // Control: the same long link, then a genuinely far-away brand (>160 characters later) stays silent.
+  const farFiller = 'and this is a long filler comment without punctuation that keeps going '.repeat(3);
+  const far = `Open https://sampath-bank.top/${longPath} ${farFiller}Sampath Bank is mentioned far away.`;
+  assert.deepEqual(matchesOf(far, 'R-M4-23'), []);
+});
+
 test('R-M4-23: the reviewed host for that brand, a separate sentence, or no brand stays silent', () => {
   for (const text of [
     'Sampath Bank alert: check your account at https://www.sampath.lk.',

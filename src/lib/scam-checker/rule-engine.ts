@@ -510,7 +510,13 @@ function shapeMatches(text: string): RuleMatch[] {
         const brandStart = match.index ?? 0;
         const brandEnd = brandStart + match[0].length;
         for (const candidate of candidates) {
-          if (Math.abs(candidate.start - brandEnd) > BRAND_LINK_SENTENCE_WINDOW) continue;
+          // Measure the actual link↔brand gap, not the distance from the link's START: a long
+          // URL written BEFORE the brand must not hide a nearby brand (review E#57). Overlapping
+          // spans yield gap 0 rather than a negative value.
+          const gap = candidate.start >= brandEnd
+            ? candidate.start - brandEnd
+            : brandStart >= candidate.end ? brandStart - candidate.end : 0;
+          if (gap > BRAND_LINK_SENTENCE_WINDOW) continue;
           const between = candidate.start >= brandEnd
             ? text.slice(brandEnd, candidate.start)
             : text.slice(candidate.end, brandStart);
