@@ -340,7 +340,7 @@ test('FR-M4-04: a valid reply completes the analysis and passes stage evidence t
     assert.equal(outcome.analysisStatus, 'completed');
     assert.equal(outcome.analysisMode, 'rules_and_ai'); // X-13 §4.1 pair
     assert.equal(outcome.category, 'phishing');
-    assert.deepEqual(outcome.reply, { verdictLabel: 'suspicious', category: 'phishing', reason: VALID_REPLY.reason });
+    assert.deepEqual(outcome.reply, { verdictLabel: 'suspicious', category: 'phishing', reason: VALID_REPLY.reason, riskLevel: 'undetermined', reasonHighlights: [] });
     assert.deepEqual(outcome.rules, FAKE_RULES, 'rule evidence is never altered or given a verdict');
     assert.deepEqual(outcome.candidates, FAKE_CANDIDATES);
     assert.deepEqual(outcome.limitations, []);
@@ -400,6 +400,8 @@ test('FR-M4-04: validateReply rejects non-objects, missing fields and bad types 
     verdictLabel: 'suspicious',
     category: 'phishing',
     reason: null,
+    riskLevel: 'undetermined',
+    reasonHighlights: [],
   });
 });
 

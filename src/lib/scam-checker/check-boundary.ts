@@ -213,6 +213,16 @@ export type AnalysisMode = 'rules_and_ai' | 'rules_only' | 'none';
 
 export type RejectionReason = 'invalid-input' | 'access-blocked' | 'quota-denied' | 'rate-denied';
 
+/** Qualitative AI assessment only; neither a probability nor a verdict from local rules. */
+export type RiskLevel = 'low' | 'suspicious' | 'high' | 'undetermined';
+
+export interface ReasonHighlight {
+  /** Exact excerpt and UTF-16 offsets into the original AI reason, not the submitted message. */
+  start: number;
+  end: number;
+  excerpt: string;
+}
+
 /** Draft transport labels, not a safety guarantee or an approved classification taxonomy. */
 export const DRAFT_VERDICT_LABELS = [
   'suspicious', 'potentially suspicious', 'no obvious indicators', 'high risk', 'undetermined',
@@ -226,6 +236,10 @@ export interface ValidatedReply {
   verdictLabel: VerdictLabel;
   category: CategoryId;
   reason: string | null;
+  /** Presentation-only band from the provider reply; never a local-rule verdict. */
+  riskLevel: RiskLevel;
+  /** Bounded exact excerpts from `reason` for display; empty when absent or unusable. */
+  reasonHighlights: ReasonHighlight[];
 }
 
 export type CheckOutcome =
@@ -303,6 +317,28 @@ export function resolveAccess(snapshot: EntitlementSnapshot | null, now: number)
 
 // ---- FR-M4-04 structural reply validation (DRAFT schema, OD-M4-04 open) ----
 
+/** Optional display metadata never invalidates a usable reply or rewrites its explanation. */
+function validateReasonHighlights(reason: string | null, value: unknown): ReasonHighlight[] {
+  if (!reason || !Array.isArray(value)) return [];
+  let spans: ReasonHighlight[] = [];
+  for (const excerpt of value.slice(0, 4)) {
+    if (typeof excerpt !== 'string' || excerpt.trim().length === 0) continue;
+    const start = reason.indexOf(excerpt);
+    if (start < 0) continue;
+    const candidate = [...spans, { start, end: start + excerpt.length, excerpt }].sort((a, b) => a.start - b.start);
+    const merged: ReasonHighlight[] = [];
+    for (const span of candidate) {
+      const previous = merged.at(-1);
+      if (previous && span.start < previous.end) {
+        previous.end = Math.max(previous.end, span.end);
+        previous.excerpt = reason.slice(previous.start, previous.end);
+      } else merged.push({ ...span });
+    }
+    if (merged.reduce((sum, span) => sum + span.end - span.start, 0) <= reason.length * 0.35) spans = merged;
+  }
+  return spans;
+}
+
 /**
  * Validates bounded object fields, the draft verdict transport allow-list, the supported
  * taxonomy version (an unsupported version is rejected at the boundary — X-13 §2.2) and the
@@ -329,10 +365,15 @@ export function validateReply(json: unknown): ValidatedReply | null {
     if (typeof reply.category !== 'string') return null;
     category = normaliseCategory(reply.category);
   }
+  const reason = typeof reply.reason === 'string' ? reply.reason : null;
+  const riskLevel: RiskLevel = reply.risk_level === 'low' || reply.risk_level === 'suspicious' || reply.risk_level === 'high'
+    ? reply.risk_level : 'undetermined';
   return {
     verdictLabel: verdictLabel as VerdictLabel,
     category,
-    reason: typeof reply.reason === 'string' ? reply.reason : null,
+    reason,
+    riskLevel,
+    reasonHighlights: validateReasonHighlights(reason, reply.reason_highlights),
   };
 }
 
