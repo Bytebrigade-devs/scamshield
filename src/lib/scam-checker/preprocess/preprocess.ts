@@ -25,11 +25,21 @@
  * dependencies. Proposed M4-19/X-06 starting convention, pending team confirmation.
  */
 
+import { classifyPhone, type PhoneInsight } from './phone-metadata.ts';
+
 /** Untrusted extraction candidates — see FR-M4-02. Not verified identities. */
 export interface ExtractionCandidates {
   urls: string[];
   emails: string[];
   phones: string[];
+  /**
+   * Offline Sri Lankan phone-SHAPE classification for every accepted phone candidate
+   * (M4-15 extension, 15 November 2026). Present only when at least one phone candidate
+   * exists, so callers comparing the plain { urls, emails, phones } shape are unaffected.
+   * Shape only: never an allocation, reachability, subscriber or operator claim, and a
+   * non-LK or unnormalisable value is reported as unclassified — never safe.
+   */
+  phoneInsights?: PhoneInsight[];
   /**
    * Likely full readings of URL candidates that a line break split (SMS line-wrapping;
    * M4-15 partial). Review fix #4 (24 Oct 2026): `urls` contains ONLY verbatim spans of the
@@ -255,12 +265,18 @@ export function extractCandidates(text: string): ExtractionCandidates {
 
   const urls = uniqueInOrder(urlSpans);
   const wrappedCandidates = [...new Set(wrappedReadings)];
+  const phones = uniqueInOrder(acceptedPhones);
+  // Offline shape classification for the phone candidates that already passed extraction.
+  // Additive and optional: a candidate is never rewritten, and a failure to classify is
+  // reported as unclassified (never as invalid, safe or verified).
+  const phoneInsights = phones.map(classifyPhone);
   return {
     urls,
     emails: uniqueInOrder(emailSpans),
-    phones: uniqueInOrder(acceptedPhones),
+    phones,
     // The note key exists only when a stitched reading survived validation, so callers
     // comparing the plain { urls, emails, phones } shape are unaffected.
     ...(wrappedCandidates.length > 0 ? { wrappedCandidates } : {}),
+    ...(phoneInsights.length > 0 ? { phoneInsights } : {}),
   };
 }

@@ -2,8 +2,9 @@
  * M4 — X-13 taxonomy source of truth (M4-10).
  *
  * One place for the five category IDs, display labels and taxonomy version so the boundary,
- * the X-13 event builder and tests cannot drift. Browser UI copy lives outside this library;
- * only the IDs/labels/version here are exported.
+ * the X-13 event builder and tests cannot drift. The UI keeps its own JS copy
+ * (`code/ui/public/assessment.js`) because browser code cannot import TypeScript; a drift
+ * test asserts the two stay identical.
  *
  * These are the M4-owner-accepted `0.1.0-draft` proposals, not a frozen shared contract.
  * Labels are display vocabulary only, never a safety or incident claim.

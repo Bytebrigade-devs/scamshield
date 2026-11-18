@@ -8,5 +8,9 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
-  "exclude": ["node_modules", ".dependencies-incomplete"]
+  "exclude": [
+    "node_modules",
+    ".dependencies-incomplete",
+    "src/lib/scam-checker/**/*.test.ts"
+  ]
 }

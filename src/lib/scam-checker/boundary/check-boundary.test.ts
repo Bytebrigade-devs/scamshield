@@ -18,6 +18,9 @@
  * contracts/M4-usage-quotas-and-funding-decision.md §1 (18 Oct 2026); the access mapping
  * from contracts/M4-access-policy-decision.md. No network I/O of any kind occurs here.
  *
+ * ID namespace: the R-M4-01 fixture ID below is a catalogue rule-hypothesis ID, NOT the Final
+ * report's requirement ID R-M4-01.
+ *
  * Runner: Node built-in `node --test` (zero dependencies) — M4-19/X-06 PROPOSED convention.
  */
 import { test } from 'node:test';
@@ -190,6 +193,38 @@ test('FS-M4-02: input one character over the cap is rejected with an edit/reduce
   assert.equal(calls.length, 0, 'provider stub records zero calls');
 });
 
+test('FS-M4-02: the cap counts UTF-16 code units — astral emoji weigh two units each', async () => {
+  // Draft cap unit is the UTF-16 code unit (DEFAULT_LIMITS.inputCharCap), so a surrogate
+  // pair counts as two units. Documents the runtime unit; grapheme-cluster counting is not
+  // implemented and is not claimed.
+  const { deps, calls } = makeDeps();
+  const atCap = '🙂'.repeat(1_000);
+  assert.equal(atCap.length, 2_000, '1,000 astral emoji are 2,000 UTF-16 code units');
+  const accepted = await runCheck({ text: atCap }, deps);
+  assert.equal(accepted.kind, 'analysed');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0], atCap, 'the original astral text reaches the provider verbatim');
+  const over = await runCheck({ text: '🙂'.repeat(1_001) }, deps);
+  assert.equal(over.kind, 'rejected');
+  if (over.kind === 'rejected') assert.match(over.message, /2,000/);
+  assert.equal(calls.length, 1, 'over-cap astral input makes no provider call');
+});
+
+test('FS-M4-01/FS-M4-02: CRLF line breaks are preserved verbatim and count as two units', async () => {
+  const { deps, calls } = makeDeps();
+  const atCap = `${'a'.repeat(1_998)}\r\n`;
+  assert.equal(atCap.length, 2_000);
+  const accepted = await runCheck({ text: atCap }, deps);
+  assert.equal(accepted.kind, 'analysed');
+  assert.equal(calls[0], atCap, 'CRLF is never normalised before the provider call');
+  const over = await runCheck({ text: `${'a'.repeat(1_999)}\r\n` }, deps);
+  assert.equal(over.kind, 'rejected');
+  assert.equal(calls.length, 1, 'the over-cap CRLF text makes no provider call');
+  const blank = await runCheck({ text: '\r\n\r\n' }, deps);
+  assert.equal(blank.kind, 'rejected');
+  if (blank.kind === 'rejected') assert.equal(blank.reason, 'invalid-input');
+});
+
 // ---- FS-M4-09 / access-policy mapping (contracts/M4-access-policy-decision.md) ----
 
 test('resolveAccess: active, trial and cancelled-within-entitlement are allowed with the right allowance', () => {
@@ -340,7 +375,10 @@ test('FR-M4-04: a valid reply completes the analysis and passes stage evidence t
     assert.equal(outcome.analysisStatus, 'completed');
     assert.equal(outcome.analysisMode, 'rules_and_ai'); // X-13 §4.1 pair
     assert.equal(outcome.category, 'phishing');
-    assert.deepEqual(outcome.reply, { verdictLabel: 'suspicious', category: 'phishing', reason: VALID_REPLY.reason, riskLevel: 'undetermined', reasonHighlights: [] });
+    assert.deepEqual(outcome.reply, {
+      verdictLabel: 'suspicious', category: 'phishing', reason: VALID_REPLY.reason,
+      riskLevel: 'undetermined', reasonHighlights: [],
+    });
     assert.deepEqual(outcome.rules, FAKE_RULES, 'rule evidence is never altered or given a verdict');
     assert.deepEqual(outcome.candidates, FAKE_CANDIDATES);
     assert.deepEqual(outcome.limitations, []);
@@ -454,6 +492,46 @@ test('review hardening: an atomic completion failure releases its reservation wi
   assert.equal((await runCheck({ text: VALID_TEXT }, deps)).kind, 'rejected');
   finish({ kind: 'ok', json: VALID_REPLY });
   assert.equal((await pending).kind, 'analysed');
+});
+
+// ---- presentation metadata (owner-approved local refinement, 25 October 2026) ----
+
+test('presentation metadata: explicit risk bands do not depend on free-form verdicts', () => {
+  for (const riskLevel of ['low', 'suspicious', 'high', 'undetermined']) {
+    assert.equal(validateReply({ ...VALID_REPLY, risk_level: riskLevel })?.riskLevel, riskLevel);
+  }
+  for (const value of [undefined, null, 100, 'safe', 'HIGH', {}, ['high']]) {
+    const reply = validateReply({ ...VALID_REPLY, risk_level: value });
+    assert.ok(reply, 'bad optional metadata must preserve a usable assessment');
+    assert.equal(reply.riskLevel, 'undetermined');
+    assert.equal(reply.reason, VALID_REPLY.reason);
+  }
+});
+
+test('presentation metadata: highlights quote the first occurrence, merge overlaps and deduplicate', () => {
+  const reason = 'A fake government fine uses time pressure to demand payment. A fake government fine should be checked independently through an official channel.';
+  const reply = validateReply({ ...VALID_REPLY, reason, reason_highlights: ['fake government', 'government fine', 'fake government', 'not in the explanation'] });
+  assert.deepEqual(reply?.reasonHighlights, [{ start: 2, end: 22, excerpt: 'fake government fine' }]);
+  assert.equal(reply?.reason, reason);
+});
+
+test('presentation metadata: malformed highlights, excessive coverage and absent reasons degrade safely', () => {
+  const reason = 'Do not pay through this link. Check independently with the relevant authority.';
+  for (const value of [undefined, null, 'link', {}, [42, null, '', 'invented']]) {
+    assert.deepEqual(validateReply({ ...VALID_REPLY, reason, reason_highlights: value })?.reasonHighlights, []);
+  }
+  const reply = validateReply({ ...VALID_REPLY, reason, reason_highlights: [reason, 'Do not pay', 'this link', 'Check', 'authority'] });
+  assert.ok(reply);
+  assert.deepEqual(reply.reasonHighlights.map((span) => span.excerpt), ['Do not pay', 'this link', 'Check']);
+  assert.ok(reply.reasonHighlights.reduce((sum, span) => sum + span.end - span.start, 0) <= reason.length * 0.35);
+  assert.deepEqual(validateReply({ ...VALID_REPLY, reason: null, reason_highlights: ['pay'] })?.reasonHighlights, []);
+});
+
+test('presentation metadata: Unicode and markup highlights remain original text with UTF-16 offsets', () => {
+  const reason = '🙊 වීරයා පණිවිඩය: <b>pay</b> is untrusted markup and must remain inert while the full explanation remains readable.';
+  const reply = validateReply({ ...VALID_REPLY, reason, reason_highlights: ['වීරයා', '<b>pay</b>'] });
+  assert.equal(reply?.reasonHighlights.length, 2);
+  for (const span of reply!.reasonHighlights) assert.equal(reason.slice(span.start, span.end), span.excerpt);
 });
 
 test('FS-M4-06: a timeout makes exactly one provider attempt — no retry, no fallback model', async () => {

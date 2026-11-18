@@ -26,7 +26,7 @@ Context matching uses draft local bounds: 320 characters for related context, 80
 Requires Node 22.18 or later for native TypeScript stripping; verified with Node v24.22.0. No package installation is required:
 
 ```text
-node --test src/lib/scam-checker/preprocess.test.ts src/lib/scam-checker/rule-engine.test.ts
+node --test src/lib/scam-checker/preprocess/preprocess.test.ts src/lib/scam-checker/rules/rule-engine.test.ts
 ```
 
 The repository suite passes **52 tests**. It includes the earlier seven preprocessing-review regressions as well as the analysis refinements, evidence offsets, Unicode, long-input and no-fetch checks.

@@ -20,9 +20,9 @@
 
 ## Verification
 
-- `node src/lib/scam-checker/reason-highlights.test.ts` → **10/10 pass**
-- `node src/lib/scam-checker/pipeline-x13.test.ts` → **5/5 pass**
-- `node src/lib/scam-checker/check-boundary.test.ts` → **27/27 pass** (expectations updated for the additive fields)
+- `node src/lib/scam-checker/boundary/reason-highlights.test.ts` → **10/10 pass**
+- `node src/lib/scam-checker/boundary/pipeline-x13.test.ts` → **5/5 pass**
+- `node src/lib/scam-checker/boundary/check-boundary.test.ts` → **27/27 pass** (expectations updated for the additive fields)
 - full repository library suite → **243/243 pass** (16 files)
 - CI: ubuntu + windows
 

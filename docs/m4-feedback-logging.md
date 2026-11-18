@@ -4,7 +4,7 @@
 
 ## What this adds
 
-`src/lib/scam-checker/feedback-store.ts` (+ `feedback-store.test.ts`, 10 tests):
+`src/lib/scam-checker/boundary/feedback-store.ts` (+ `feedback-store.test.ts`, 10 tests):
 
 | Piece | Behaviour |
 |---|---|
@@ -24,5 +24,5 @@
 
 ## Verification
 
-- `node src/lib/scam-checker/feedback-store.test.ts` → **10/10 pass**
+- `node src/lib/scam-checker/boundary/feedback-store.test.ts` → **10/10 pass**
 - repository library suite → **219/219 pass** (13 files)
