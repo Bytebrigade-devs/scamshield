@@ -1,4 +1,5 @@
-# Vendored data files are byte-pinned by SHA-256 in tests and generators.
+# M4 files are ported byte-identically from the owner workspace and several tests,
+# generators and fixtures pin exact bytes (SHA-256, string comparison).
 # Never apply end-of-line conversion on checkout, on any platform.
-src/lib/scam-checker/ui/vendor/** -text
-src/lib/scam-checker/preprocess/vendor/** -text
+src/lib/scam-checker/** -text
+src/lib/testing/** -text
