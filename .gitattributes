@@ -3,3 +3,8 @@
 # Never apply end-of-line conversion on checkout, on any platform.
 src/lib/scam-checker/** -text
 src/lib/testing/** -text
+
+# Generated from the files above by ui/scripts/sync-public.ts, and compared byte-for-byte
+# by the mirror test — so it must check out verbatim too.
+public/checker/** -text
+src/app/checker/shell.generated.ts -text
