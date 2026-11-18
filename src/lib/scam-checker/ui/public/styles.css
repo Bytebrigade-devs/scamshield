@@ -426,6 +426,16 @@ textarea.message-input[aria-invalid="true"] {
   color: var(--color-text);
 }
 
+/* Warning banner above the result (M4-12, owner decision 17 November 2026). */
+.notice--warning {
+  border-color: var(--color-warning);
+  background: var(--color-warning-subtle);
+}
+
+.notice--warning .notice__title {
+  color: var(--color-warning);
+}
+
 .privacy-details {
   margin-top: var(--space-2);
   font-size: 14px;

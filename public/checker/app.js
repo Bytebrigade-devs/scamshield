@@ -7,6 +7,7 @@ import { guidanceCards, linkInspectionCard } from '/checker/guidance-cards.js';
 import { createSummaryModel } from '/checker/summary.js';
 import { summaryCard } from '/checker/summary-card.js';
 import { formatCheckTime } from '/checker/evidence.js';
+import { linkWarningBanner } from '/checker/link-banner.js';
 
 const view = document.getElementById('view');
 const navCheck = document.getElementById('nav-check');
@@ -378,6 +379,9 @@ function renderResult(payload) {
   assessment.append(el('p', { class: 'assessment__footnote' }, status === 'unavailable'
     ? 'A service failure does not prove that your text was not transferred to or retained by the AI provider.'
     : 'This is a qualitative assessment, not a scam probability, and guidance rather than a guarantee of safety. The sender has not been authenticated and links have not been checked for reputation.'));
+  // Warning banner above the verdict when link-shape flags exist (owner decision, 17 November 2026).
+  const linkBanner = linkWarningBanner(payload.linkInspection, el);
+  if (linkBanner) view.append(linkBanner);
   view.append(assessment);
   // Layout is only measurable once the paragraph is in the document.
   explanationMore.sync();
