@@ -1,0 +1,4 @@
+# Vendored data files are byte-pinned by SHA-256 in tests and generators.
+# Never apply end-of-line conversion on checkout, on any platform.
+src/lib/scam-checker/ui/vendor/** -text
+src/lib/scam-checker/preprocess/vendor/** -text
