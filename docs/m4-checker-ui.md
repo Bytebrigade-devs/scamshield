@@ -48,6 +48,10 @@ The one fixture the published tests read (`M4-result-regression.json`) lives at 
 
 ```powershell
 node --test "src/lib/scam-checker/**/*.test.ts"   # 473 passing in the sync branch
+corepack pnpm typecheck                           # tsc --noEmit, exit 0
+corepack pnpm build                               # app build, exit 0
 ```
+
+`tsconfig.json` excludes `src/lib/scam-checker/**/*.test.ts` from `tsc`: several UI tests import untyped browser JS from `ui/public/`, so they are executed by `node --test` (CI) rather than typechecked. Product code is fully typechecked.
 
 The workspace suite that produced these files passes 464/464 (including the six sweep tests that stay workspace-only); the repository run adds the two repository-only drift guards.
