@@ -1,3 +1,7 @@
+# Current backend work — 7 November 2026
+
+M2 screens now connect to the existing Next.js/TypeScript + Supabase backend by default. See [backend setup](docs/M2-BACKEND.md). Set NEXT_PUBLIC_M2_MODE=demo to use the earlier frontend-only presentation. Payments remain simulated.
+
 # ScamShield
 
 **Current M2 interim mode: frontend-only with dummy data.** Run `npm run dev` and open `/pricing` or `/account/subscription`. No backend configuration is needed. See [Frontend demo guide](docs/FRONTEND-DEMO.md) for presentation flows, dummy card details and reset controls. The older Supabase setup below is for the retained backend implementation.

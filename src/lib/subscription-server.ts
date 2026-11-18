@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
-import { NextRequest } from "next/server";
+import { evaluateEntitlement } from "./entitlement";
+import type { Subscription } from "./plans";
 
-export async function verifiedUser(req: NextRequest) {
+export async function verifiedUser(req: Request) {
   const token = req.headers.get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
   if (!token) return null;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,6 +14,26 @@ export async function verifiedUser(req: NextRequest) {
   });
   const { data, error } = await db.auth.getUser(token);
   return error || !data.user ? null : { db, user: data.user };
+}
+
+/** Resolve the caller and their current entitlement on every protected request. */
+export async function getSubscriptionContext(req: Request) {
+  const auth = await verifiedUser(req);
+  if (!auth) return { kind: "unauthenticated" } as const;
+
+  const { data: subscription, error } = await auth.db
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", auth.user.id)
+    .maybeSingle<Subscription>();
+  if (error) return { kind: "unavailable" } as const;
+
+  return {
+    kind: "verified",
+    user: auth.user,
+    subscription,
+    entitlement: evaluateEntitlement(subscription),
+  } as const;
 }
 
 /** Server routes only. This secret must never have a NEXT_PUBLIC prefix. */

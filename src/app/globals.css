@@ -226,6 +226,9 @@
   .input::placeholder {
     color: var(--color-text-muted);
   }
+  .input[type="password"]::-ms-reveal {
+    display: none;
+  }
   .input:focus-visible {
     outline: var(--focus-ring);
     outline-offset: 2px;

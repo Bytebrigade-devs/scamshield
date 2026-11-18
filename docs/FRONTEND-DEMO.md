@@ -7,9 +7,15 @@ Run `npm run dev` and open `/pricing`, `/login`, or `/account/subscription`.
 - First visit seeds a signed-in sample account (`demo@scamshield.test`) with a Guardian monthly subscription.
 - Signup accepts any valid dummy email and a password of at least 8 characters, creates a fresh demo account, and opens pricing. Login accepts a dummy email/password or the Use demo account button. Passwords are never stored or verified.
 - Trial activation creates a seven-day, 15-check dummy trial. The same demo account cannot allocate it twice. Demo controls > New account lets you repeat the flow.
-- Card entry follows the user's reference image. Fill dummy card details fills the test number, a future expiry and code 123. Add Card clears the inputs and opens payment review.
-- Save my card remembers only the dummy label (last four 4242) and expiry. A saved dummy card is available at later checkout, and can be removed from the subscription screen. Full numbers and security codes are never saved.
-- `DEMO10` previews 10% off. Demo options switches between success and decline. Success creates/replaces the chosen dummy plan; decline leaves the existing plan unchanged.
+- Enter the test cardholder and number manually. Use any future expiry and security code `123`. **Verify card** clears the inputs and opens payment review.
+
+  | Test cardholder | Test number | Starting balance |
+  | --- | --- | ---: |
+  | Lahiru | `4242 4242 4242 4242` | LKR 20,000,000 |
+  | Sahan | `5555 5555 5555 4444` | LKR 20,000,000 |
+  | Achintha | `4000 0000 0000 0002` | LKR 400 |
+- Save my card remembers the selected card’s last four digits and expiry. A saved dummy card is available at later checkout and can be removed from the subscription screen. Full numbers and security codes are never saved.
+- `DEMO10` previews 10% off. **Verify payment** approves the payment when the simulated balance covers the total. A successful checkout saves the plan and deducts the total from that card. An insufficient balance declines the payment.
 - Subscription management shows the selected plan, expiry, sample usage counters, saved dummy card, plan changes and cancellation. Cancellation retains the same expiry.
 - Forgot password shows an Open demo reset link action. The reset screen validates matching passwords and displays success. No email is sent and no password is changed on a server.
 - Demo controls on the subscription page load New account, Active plan, Trial account and Expired plan scenarios. These reset the sample data and saved card.

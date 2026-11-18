@@ -31,13 +31,17 @@ The service role key is required because authenticated browsers can only **read 
 
 ## M4 integration contract
 
-M4 must verify identity and read subscriptions on its server **for every protected operation**, then call `evaluateEntitlement(subscription)` from `src/lib/entitlement.ts` with the server clock. Use `verifiedUser(request)` from `src/lib/subscription-server.ts` and select the row by its returned `user.id`. A read error must stop the operation. Never accept a browser's user ID, plan, expiry, status, quota, or `canRunCheck` flag. `GET /api/subscription` exposes the same decision to the signed-in UI using `Authorization: Bearer <access_token>` and `Cache-Control: no-store`.
+Call `getSubscriptionContext(request)` from `src/lib/subscription-server.ts` on the server for every protected check. Send the Supabase access token in the `Authorization: Bearer <access_token>` header. The helper verifies the token, selects only the verified user's subscription and evaluates it using the server clock. `GET /api/subscription` uses the same helper and returns its subscription and entitlement with `Cache-Control: no-store`.
+
+Handle `unauthenticated` as HTTP 401 and `unavailable` or a thrown error as HTTP 503. For a `verified` result, use `user.id` as the owner ID and require `entitlement.canRunCheck` before proceeding to M4's usage and budget checks. A verified user can have a null subscription and a denied entitlement.
 
 The decision includes `canRunCheck`, `reason`, `planId`, `status`, `expiresAt`, and limits. Limits are 60/200/600 successful checks per month, 5/15/40 per day, 2,000 input characters and 5 checks/minute. Trials have a 15-check total cap, including when cancelled. These values are entitlement metadata, **not a usage counter**.
 
 M4 must atomically enforce monthly/daily/trial/burst limits and provider budgets before calling a model, and count only completed successful checks. No checker endpoint or usage ledger exists in this repository yet. No claim is made that quotas are enforced by this M2 implementation. History authorization/ownership and retention remain separate, unimplemented decisions. Proposed 30/90/180-day history windows are not advertised as implemented retention.
 
 The database field `renews_at` is retained for compatibility but means **entitlement expiry** here. No automatic renewal occurs. Expiry comparisons use the server clock; the account screen displays Sri Lanka time. `past_due` and `suspended` cannot be cleared through mock checkout. Valid paid-plan changes/reactivation and invoices remain later work.
+
+The M2 implementation is in the local working copy of `feat/m2-signup-paywall`. The shared base branch and CI or deployment availability still need team confirmation. Proposed ownership for M4 review is that M4 owns checker history and feedback records and scopes them by the authenticated Supabase `user.id`. M2 provides the server-side identity and entitlement contract.
 
 ## Manual demo and integration checklist
 

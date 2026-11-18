@@ -1,5 +1,6 @@
 export type BillingCycle = "monthly" | "quarterly" | "yearly";
 export type PlanId = "sentinel" | "guardian" | "aegis";
+export const CHECK_LIMITS = { inputCharacters: 2000, checksPerMinute: 5, trialTotalChecks: 15 } as const;
 export const PLANS = {
   sentinel: { id: "sentinel", name: "Sentinel", price: { monthly: 490, quarterly: 1320, yearly: 4900 }, monthlyChecks: 60, dailyChecks: 5 },
   guardian: { id: "guardian", name: "Guardian", price: { monthly: 990, quarterly: 2670, yearly: 9900 }, monthlyChecks: 200, dailyChecks: 15 },

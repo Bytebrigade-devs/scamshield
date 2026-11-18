@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DEMO_MODE } from "@/lib/m2-mode";
+import { getSupabase } from "@/lib/supabase";
 import { demoSignIn } from "@/lib/demo-store";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -29,8 +31,15 @@ export default function AuthForm({ mode }: { mode: "signup" | "login" }) {
     }
     setBusy(true);
     try {
-    await new Promise(resolve => setTimeout(resolve, 250));
-    demoSignIn(email, mode === "signup");
+    if (DEMO_MODE) demoSignIn(email, mode === "signup");
+    else {
+      const auth = getSupabase().auth;
+      const { data, error } = mode === "signup"
+        ? await auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + "/account/subscription" } })
+        : await auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      if (!data.session) { setPassword(""); setInfo("Check your email to confirm your account, then log in."); return; }
+    }
     setPassword("");
     router.push(mode === "signup" ? "/pricing" : "/account/subscription");
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to connect. Please retry."); }
@@ -50,7 +59,7 @@ export default function AuthForm({ mode }: { mode: "signup" | "login" }) {
         <p className="mt-1 text-muted">
           {isSignup ? "Start protecting your digital life in a minute." : "Log in to manage your plan."}
         </p>
-        <p className="mt-3 text-sm text-muted">Frontend demo: use any email and a dummy password. Nothing is authenticated or sent to a server.</p>
+        {DEMO_MODE && <p className="mt-3 text-sm text-muted">Frontend demo: use any email and a dummy password. Nothing is authenticated or sent to a server.</p>}
         <form onSubmit={submit} className="mt-6 space-y-4">
           <Field
             label="Email" type="email" required autoComplete="email" placeholder="you@example.com"
@@ -64,7 +73,7 @@ export default function AuthForm({ mode }: { mode: "signup" | "login" }) {
             value={password} onChange={(e) => setPassword(e.target.value)}
           />
           {!isSignup && <Link href="/forgot-password" className="link inline-block text-sm">Forgot password?</Link>}
-          {!isSignup && <Button variant="secondary" block onClick={() => { demoSignIn("demo@scamshield.test"); router.push("/account/subscription"); }}>Use demo account</Button>}
+          {DEMO_MODE && !isSignup && <Button variant="secondary" block onClick={() => { demoSignIn("demo@scamshield.test"); router.push("/account/subscription"); }}>Use demo account</Button>}
           {error && <Alert tone="danger">{error}</Alert>}
           {info && <Alert tone="success">{info}</Alert>}
           <Button

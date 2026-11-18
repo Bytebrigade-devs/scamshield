@@ -62,30 +62,50 @@ test('only approved plans/cycles accepted, prices in LKR', () => {
 
 function routeHarness(current = null, signedIn = true, readFailure = false) {
   const writes = [];
-  const read = { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: current, error: readFailure ? new Error('offline') : null }; } };
+  const readFilters = [];
+  const read = { select() { return this; }, eq(column, value) { readFilters.push([column, value]); return this; }, async maybeSingle() { return { data: current, error: readFailure ? new Error('offline') : null }; } };
   const write = {
     insert(value) { writes.push({ operation: 'insert', value }); return this; },
     update(value) { writes.push({ operation: 'update', value }); return this; },
     eq() { return this; }, is() { return this; }, select() { return this; },
     async single() { return { data: { ...current, ...writes.at(-1).value }, error: null }; },
   };
+  const server = load('src/lib/subscription-server.ts', {
+    './entitlement': { evaluateEntitlement },
+    '@supabase/supabase-js': {
+      createClient: (_url, key) => key === 'writer' ? { from: () => write } : {
+        auth: { getUser: async token => token === 'valid-token'
+          ? { data: { user: { id: 'server-user', created_at: new Date().toISOString() } }, error: null }
+          : { data: { user: null }, error: new Error('invalid token') } },
+        from: () => read,
+      },
+    },
+  }, { process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'https://example.test', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'reader', SUPABASE_SERVICE_ROLE_KEY: 'writer' } } });
   const routes = load('src/app/api/subscription/route.ts', {
     'next/server': { NextResponse: { json: (body, options) => ({ body, ...options }) } },
-    '@/lib/subscription-server': {
-      verifiedUser: async () => signedIn ? { user: { id: 'server-user', created_at: new Date().toISOString() }, db: { from: () => read } } : null,
-      subscriptionWriter: () => ({ from: () => write }),
-    },
+    '@/lib/subscription-server': server,
     '@/lib/plans': plans,
     '@/lib/payment-methods': paymentMethods,
     '@/lib/entitlement': { evaluateEntitlement, billingEnd },
   });
-  return { writes, request: (method, body) => routes[method]({ method, json: async () => body }) };
+  return { writes, readFilters, request: (method, body) => routes[method]({
+    method, headers: new Headers({ Authorization: signedIn ? 'Bearer valid-token' : 'Bearer invalid-token' }), json: async () => body,
+  }) };
 }
 test('route rejects unauthenticated operations without writing', async () => {
   for (const method of ['GET', 'POST', 'PUT', 'DELETE']) {
     const api = routeHarness(null, false);
     assert.equal((await api.request(method)).status, 401); assert.equal(api.writes.length, 0);
+    assert.equal(api.readFilters.length, 0);
   }
+});
+test('entitlement lookup uses only the identity verified by Supabase', async () => {
+  const api = routeHarness();
+  const response = await api.request('GET', { user_id: 'another-user', canRunCheck: true });
+  assert.deepEqual(api.readFilters, [['user_id', 'server-user']]);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.entitlement.canRunCheck, false);
+  assert.equal(response.headers['Cache-Control'], 'no-store');
 });
 test('route read failure fails closed', async () => {
   const api = routeHarness(null, true, true);
@@ -163,7 +183,8 @@ test('cancellation preserves existing plan/expiry and repeated cancellation is i
 
 function frontendDemo() {
   const storage = new Map();
-  const demo = load('src/lib/demo-store.ts', { './plans': plans, './entitlement': { evaluateEntitlement, billingEnd } }, {
+  const testCards = load('src/lib/test-cards.ts');
+  const demo = load('src/lib/demo-store.ts', { './plans': plans, './entitlement': { evaluateEntitlement, billingEnd }, './test-cards': testCards }, {
     window: { localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) } },
   });
   return { demo, storage };
@@ -189,6 +210,26 @@ test('frontend demo checkout, upgrade and cancellation work without backend call
   demo.demoSubscriptionRequest('POST', { plan: 'sentinel', billingCycle: 'monthly', scenario: 'success' });
   assert.equal(demo.readDemo().subscription.plan, 'sentinel');
 });
+test('demo checkout debits only the selected test card and preserves balances on decline', () => {
+  const { demo, storage } = frontendDemo();
+  const initial = demo.readDemo();
+  delete initial.cardBalances;
+  storage.set('scamshield-interim-demo-v1', JSON.stringify(initial));
+  assert.equal(demo.readDemo().cardBalances['4242'], 20_000_000);
+  const payment = { plan: 'guardian', billingCycle: 'yearly', promoCode: 'DEMO10', testCardId: '4444' };
+  assert.throws(() => demo.demoSubscriptionRequest('POST', { ...payment, scenario: 'declined' }), /declined/);
+  assert.equal(demo.readDemo().cardBalances['4444'], 20_000_000);
+  demo.demoSubscriptionRequest('POST', { ...payment, scenario: 'success' });
+  assert.equal(demo.readDemo().cardBalances['4444'], 19_991_090);
+  assert.equal(demo.readDemo().cardBalances['4242'], 20_000_000);
+  const existing = demo.readDemo();
+  delete existing.cardBalances['0002'];
+  storage.set('scamshield-interim-demo-v1', JSON.stringify(existing));
+  assert.equal(demo.readDemo().cardBalances['0002'], 400);
+  const before = JSON.stringify(demo.readDemo());
+  assert.throws(() => demo.demoSubscriptionRequest('POST', { ...payment, scenario: 'success', testCardId: '0002' }), /insufficient balance/);
+  assert.equal(JSON.stringify(demo.readDemo()), before);
+});
 test('frontend declined payments and invalid promos preserve the previous plan', () => {
   const { demo } = frontendDemo();
   const previous = JSON.stringify(demo.readDemo());
@@ -212,4 +253,34 @@ test('frontend saved card stores only dummy display metadata and can be removed'
   assert.equal(raw.includes('password'), false);
   assert.equal(raw.includes('securityCode'), false);
   demo.saveDemoCard(null); assert.equal(demo.readDemo().card, null);
+});
+
+function backendClient({ session = { access_token: 'verified-token' }, responseOK = true } = {}) {
+  const requests = [];
+  const client = load('src/lib/subscription-client.ts', {
+    './m2-mode': { DEMO_MODE: false },
+    './demo-store': { demoSubscriptionRequest() { throw new Error('Demo storage must not be used'); } },
+    './supabase': { getSupabase: () => ({ auth: { getSession: async () => ({ data: { session }, error: null }) } }) },
+  }, { fetch: async (url, options) => {
+    requests.push({ url, options });
+    return { ok: responseOK, json: async () => responseOK ? { subscription: row, mocked: true } : { error: 'Server denied this operation' } };
+  } });
+  return { client, requests };
+}
+test('backend client requires an auth session and never falls back to dummy data', async () => {
+  const { client, requests } = backendClient({ session: null });
+  await assert.rejects(client.subscriptionRequest(), /Log in/);
+  assert.equal(requests.length, 0);
+});
+test('backend client sends access token and checkout selection to the server without caching', async () => {
+  const { client, requests } = backendClient();
+  await client.subscriptionRequest('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success' });
+  assert.equal(requests[0].url, '/api/subscription');
+  assert.equal(requests[0].options.headers.Authorization, 'Bearer verified-token');
+  assert.equal(requests[0].options.cache, 'no-store');
+  assert.equal(JSON.parse(requests[0].options.body).plan, 'guardian');
+});
+test('backend client surfaces rejection without a local success or entitlement', async () => {
+  const { client } = backendClient({ responseOK: false });
+  await assert.rejects(client.subscriptionRequest('DELETE'), /Server denied/);
 });

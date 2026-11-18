@@ -1,24 +1,32 @@
-import { Subscription, isPlan, isCycle } from "./plans";
+import { PLANS, Subscription, isPlan, isCycle } from "./plans";
 import { billingEnd, evaluateEntitlement } from "./entitlement";
+import { TEST_CARD_STARTING_BALANCES, isTestCardId, type TestCardId } from "./test-cards";
 
-export type DemoCard = { last4: "4242"; expiry: string };
+export type DemoCard = { last4: TestCardId; expiry: string };
 type DemoState = {
   version: 1;
   user: { email: string; createdAt: string; signedIn: boolean };
   subscription: Subscription | null;
   card: DemoCard | null;
+  cardBalances: Record<TestCardId, number>;
 };
 const KEY = "scamshield-interim-demo-v1";
 function seed(): DemoState {
   const now = new Date();
   return { version: 1, user: { email: "demo@scamshield.test", createdAt: now.toISOString(), signedIn: true }, subscription: {
     user_id: "demo-user", plan: "guardian", billing_cycle: "monthly", status: "active", started_at: now.toISOString(), renews_at: billingEnd(now, 1), cancelled_at: null,
-  }, card: null };
+  }, card: null, cardBalances: { ...TEST_CARD_STARTING_BALANCES } };
 }
 export function readDemo(): DemoState {
   const raw = window.localStorage.getItem(KEY);
   if (raw) {
-    try { const state = JSON.parse(raw); if (state.version === 1 && typeof state.user?.email === "string") return state; } catch { /* Replace damaged demo data. */ }
+    try {
+      const state = JSON.parse(raw) as DemoState;
+      if (state.version === 1 && typeof state.user?.email === "string") {
+        state.cardBalances = { ...TEST_CARD_STARTING_BALANCES, ...state.cardBalances };
+        return state;
+      }
+    } catch { /* Replace damaged demo data. */ }
   }
   const state = seed(); writeDemo(state); return state;
 }
@@ -52,10 +60,16 @@ export function demoSubscriptionRequest(method: string, body?: unknown) {
     if (expiry.getTime() <= Date.now()) throw new Error("The trial has expired. Choose a plan or reset the demo.");
     state.subscription = { user_id: "demo-user", plan: "sentinel", billing_cycle: null, status: "trialing", started_at: start.toISOString(), renews_at: expiry.toISOString(), cancelled_at: null };
   } else if (method === "POST") {
-    const input = body as { plan?: unknown; billingCycle?: unknown; scenario?: unknown; promoCode?: unknown } | undefined;
+    const input = body as { plan?: unknown; billingCycle?: unknown; scenario?: unknown; promoCode?: unknown; testCardId?: unknown } | undefined;
     if (!input || !isPlan(input.plan) || !isCycle(input.billingCycle) || !["success", "declined"].includes(String(input.scenario))) throw new Error("Choose a valid plan, billing cycle and demo outcome.");
-    if (input.scenario === "declined") throw new Error("Demo payment declined. Your subscription has not changed. Select Successful to try again.");
+    if (input.scenario === "declined") throw new Error("Demo payment declined. Your subscription has not changed.");
     if (input.promoCode && input.promoCode !== "DEMO10") throw new Error("Try the dummy promo code DEMO10 for 10% off.");
+    const cardId = input.testCardId === undefined ? state.card?.last4 ?? "4242" : input.testCardId;
+    if (!isTestCardId(cardId)) throw new Error("Choose a test card.");
+    const price = PLANS[input.plan].price[input.billingCycle];
+    const total = price - (input.promoCode === "DEMO10" ? Math.round(price * 0.1) : 0);
+    if (state.cardBalances[cardId] < total) throw new Error("Payment declined. This test card has insufficient balance.");
+    state.cardBalances[cardId] -= total;
     const start = new Date();
     state.subscription = { user_id: "demo-user", plan: input.plan, billing_cycle: input.billingCycle, status: "active", started_at: start.toISOString(), renews_at: billingEnd(start, { monthly: 1, quarterly: 3, yearly: 12 }[input.billingCycle]), cancelled_at: null };
   } else if (method !== "GET") throw new Error("Unsupported demo action.");

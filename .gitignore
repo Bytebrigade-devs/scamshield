@@ -9,6 +9,8 @@ next-env.d.ts
 # build output
 dist/
 build/
+.netlify/
+.vercel/
 
 # environment & secrets
 .env

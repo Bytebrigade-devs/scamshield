@@ -1,4 +1,4 @@
-import { PLANS, Subscription, isPlan } from "./plans";
+import { CHECK_LIMITS, PLANS, Subscription, isPlan } from "./plans";
 
 /** Run on the server with its clock. M4 must also enforce atomic usage limits. */
 export function evaluateEntitlement(sub: Subscription | null, now = Date.now()) {
@@ -14,11 +14,11 @@ export function evaluateEntitlement(sub: Subscription | null, now = Date.now()) 
     status: sub?.status ?? null,
     expiresAt: sub?.renews_at ?? null,
     limits: allowed ? {
-      monthlyChecks: sub!.billing_cycle === null ? 15 : plan!.monthlyChecks,
+      monthlyChecks: sub!.billing_cycle === null ? CHECK_LIMITS.trialTotalChecks : plan!.monthlyChecks,
       dailyChecks: plan!.dailyChecks,
-      trialTotalChecks: sub!.billing_cycle === null ? 15 : null,
-      inputCharacters: 2000,
-      checksPerMinute: 5,
+      trialTotalChecks: sub!.billing_cycle === null ? CHECK_LIMITS.trialTotalChecks : null,
+      inputCharacters: CHECK_LIMITS.inputCharacters,
+      checksPerMinute: CHECK_LIMITS.checksPerMinute,
     } : null,
   };
 }

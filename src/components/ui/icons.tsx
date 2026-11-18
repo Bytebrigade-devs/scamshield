@@ -17,6 +17,19 @@ export const CheckIcon = (p: IconProps) => (
   <Svg {...p}><path d="M20 6 9 17l-5-5" /></Svg>
 );
 
+export const EyeIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+    <circle cx="12" cy="12" r="3" />
+  </Svg>
+);
+
+export const EyeOffIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m3 3 18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a15 15 0 0 1-2.8 3.5M6.1 6.1A16 16 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.6-1.2M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+  </Svg>
+);
+
 export const PaymentCardIcon = (p: IconProps) => (
   <Svg {...p}><rect x="2" y="4" width="20" height="16" rx="3" /><path d="M2 9h20M6 15h4" /></Svg>
 );
