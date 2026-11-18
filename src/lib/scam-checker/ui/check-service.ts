@@ -147,8 +147,9 @@ export interface CheckService {
   check(text: unknown, sender?: unknown): Promise<CheckServiceResult>;
 }
 
-/** Fixed local demo subject. Identity is injected server-side, never read from the browser. */
-const DEMO_SUBJECT_KEY = 'local-ui-demo-subject';
+/** Fixed local demo subject. Identity is injected server-side, never read from the browser.
+ *  Exported so the feedback surfaces report against the same server-derived subject. */
+export const DEMO_SUBJECT_KEY = 'local-ui-demo-subject';
 const TRIAL_WINDOW_MS = 7 * 86_400_000;
 
 /**
