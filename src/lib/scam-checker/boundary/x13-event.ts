@@ -38,7 +38,11 @@ const VALID_PAIRS: Readonly<Record<string, readonly [AnalysisStatus, AnalysisMod
   'unavailable/none': ['unavailable', 'none'],
 });
 
-function isRfc3339Utc(value: unknown): value is string {
+/**
+ * UTC RFC-3339 timestamp rule shared by the X-13 event and the M6-04 evidence builder.
+ * Additive export; the event builder's behaviour is unchanged.
+ */
+export function isRfc3339Utc(value: unknown): value is string {
   return typeof value === 'string'
     && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)
     && Number.isFinite(Date.parse(value));
@@ -50,6 +54,15 @@ function isEventId(value: unknown): value is string {
 
 function pairIsValid(status: AnalysisStatus, mode: AnalysisMode): boolean {
   return VALID_PAIRS[`${status}/${mode}`] !== undefined;
+}
+
+/**
+ * Exported so sibling X-13 payload builders (M6-04 evidence) reuse one status/mode table
+ * instead of copying it. Additive export; the event builder's behaviour is unchanged.
+ */
+export function isValidAnalysisPair(status: unknown, mode: unknown): boolean {
+  if (typeof status !== 'string' || typeof mode !== 'string') return false;
+  return pairIsValid(status as AnalysisStatus, mode as AnalysisMode);
 }
 
 /**

@@ -1,9 +1,9 @@
 /**
  * M4 — taxonomy + X-13 event tests (M4-10 / FR-M4-15).
  *
- * Repository copy: covers the `0.1.0-draft` vocabulary, the unknown/other fallback and the
+ * Covers the owner-accepted `0.1.0-draft` vocabulary, the unknown/other fallback and the
  * eight-field `m4.check_outcome` builder/validator. Pure unit tests: no provider, network,
- * env or database. The workspace copy adds UI drift guards that do not exist in this repo.
+ * env or database.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -57,6 +57,21 @@ test('normaliseCategory keeps exact IDs and falls back for absent/unknown/ambigu
   assert.equal(normaliseCategory(42), 'unknown_other');
 });
 
+test('the browser label copy stays in sync with the TypeScript taxonomy (drift guard)', () => {
+  const assessment = readFileSync(new URL('../ui/public/assessment.js', import.meta.url), 'utf8');
+  for (const id of CATEGORY_IDS) assert.ok(assessment.includes(`${id}:`), `missing ${id} in UI labels`);
+  for (const label of Object.values(CATEGORY_LABELS)) assert.ok(assessment.includes(`'${label}'`), `missing label ${label}`);
+});
+
+test('the provider prompt lists exactly the reviewed category IDs (drift guard)', () => {
+  const promptSource = readFileSync(new URL('../ui/check-service.ts', import.meta.url), 'utf8');
+  for (const id of CATEGORY_IDS) assert.ok(promptSource.includes(id), `prompt missing ${id}`);
+  const listed = promptSource.match(/category \(exactly one of: ([^)]+)\)/);
+  assert.ok(listed, 'category prompt line not found');
+  const ids = listed![1].split(',').map(value => value.trim());
+  assert.deepEqual(ids, [...CATEGORY_IDS]);
+});
+
 test('a completed outcome builds the exact eight-field event', () => {
   const event = buildCheckOutcomeEvent(outcome('completed', 'rules_and_ai', 'phishing'), META);
   assert.deepEqual(event, {
@@ -98,7 +113,7 @@ test('event id and timestamp are validated; no malformed event is emitted', () =
   for (const eventId of ['', '   ', 'has space', 'a'.repeat(129)]) {
     assert.equal(buildCheckOutcomeEvent(valid, { eventId, occurredAt: META.occurredAt }), null);
   }
-  for (const occurredAt of ['', 'yesterday', '2026-11-15T12:00:00', '2026-11-15T12:00:00+05:30']) {
+  for (const occurredAt of ['', 'yesterday', '2026-11-15T12:00:00', '2026-11-15T12:00:00+05:30', '2026-13-45T99:99:99Z']) {
     assert.equal(buildCheckOutcomeEvent(valid, { eventId: META.eventId, occurredAt }), null);
   }
 });
@@ -120,7 +135,8 @@ test('the validator rejects extra keys, wrong pairs and positive categories for 
 
 test('the event carries no message, contact, verdict or account fields', () => {
   const event = buildCheckOutcomeEvent(outcome('completed', 'rules_and_ai', 'phishing'), META)!;
-  assert.deepEqual(Object.keys(event).sort(), [
+  const keys = Object.keys(event).sort();
+  assert.deepEqual(keys, [
     'analysis_mode', 'analysis_status', 'category_id', 'contract_version',
     'event_id', 'event_type', 'occurred_at', 'taxonomy_version',
   ]);

@@ -15,7 +15,8 @@
  *    fetches, holds no key and reads no environment.
  * 2. The reply schema below is a DRAFT contract — the transport allow-list does not settle
  *    verdict semantics or confidence (OD-M4-04 open). Validation never proves truth, and an
- *    invalid reply is never "repaired" into a successful AI result.
+ *    invalid reply is never "repaired" into a successful AI result. Optional risk-level and
+ *    reason-highlight metadata is presentation-only; it can never rescue an invalid reply.
  * 3. No verdict/score/category is attributed to rule matches (stage-2 design rule); a
  *    completed verdict comes only from a validated provider reply.
  * 4. Nothing is emitted anywhere: an analysed result carries the fields a future X-13
@@ -211,8 +212,6 @@ export interface ClockPort {
 export type AnalysisStatus = 'completed' | 'limited' | 'unavailable';
 export type AnalysisMode = 'rules_and_ai' | 'rules_only' | 'none';
 
-export type RejectionReason = 'invalid-input' | 'access-blocked' | 'quota-denied' | 'rate-denied';
-
 /** Qualitative AI assessment only; neither a probability nor a verdict from local rules. */
 export type RiskLevel = 'low' | 'suspicious' | 'high' | 'undetermined';
 
@@ -222,6 +221,8 @@ export interface ReasonHighlight {
   end: number;
   excerpt: string;
 }
+
+export type RejectionReason = 'invalid-input' | 'access-blocked' | 'quota-denied' | 'rate-denied';
 
 /** Draft transport labels, not a safety guarantee or an approved classification taxonomy. */
 export const DRAFT_VERDICT_LABELS = [

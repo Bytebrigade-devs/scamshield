@@ -8,11 +8,11 @@ Adds a **portable, offline** Sri Lankan phone-number shape reader to the M4 libr
 
 | File | Role |
 |---|---|
-| `src/lib/scam-checker/phone-metadata.ts` | `normaliseLkPhone()` → E.164; `classifyPhone()` → `{ raw, e164, lkNumber, lkMobile }` |
-| `src/lib/scam-checker/lk-phone-metadata.generated.ts` | Generated typed metadata (**do not hand-edit**) |
-| `src/lib/scam-checker/vendor/lk-phonenumber-metadata.json` | Reviewed, vendored LK numbering facts + provenance + limits |
-| `src/lib/scam-checker/scripts/generate-lk-phone-metadata.ts` | SHA-256-pinned offline generator, `--check` reproducible |
-| `src/lib/scam-checker/phone-metadata.test.ts` | 6 tests: normalisation forms, classification, fail-closed behaviour, no-network construction, pinned source |
+| `src/lib/scam-checker/preprocess/phone-metadata.ts` | `normaliseLkPhone()` → E.164; `classifyPhone()` → `{ raw, e164, lkNumber, lkMobile }` |
+| `src/lib/scam-checker/preprocess/lk-phone-metadata.generated.ts` | Generated typed metadata (**do not hand-edit**) |
+| `src/lib/scam-checker/preprocess/vendor/lk-phonenumber-metadata.json` | Reviewed, vendored LK numbering facts + provenance + limits |
+| `src/lib/scam-checker/preprocess/scripts/generate-lk-phone-metadata.ts` | SHA-256-pinned offline generator, `--check` reproducible |
+| `src/lib/scam-checker/preprocess/phone-metadata.test.ts` | 6 tests: normalisation forms, classification, fail-closed behaviour, no-network construction, pinned source |
 
 ## Source and licence
 
@@ -35,13 +35,13 @@ Adds a **portable, offline** Sri Lankan phone-number shape reader to the M4 libr
 
 ## Scope of this repository slice
 
-This is the **portable library only**. The M4 workspace build also wires the reading into pipeline stage 1 (`phoneInsights` on `extractCandidates`) and its integration test; that integration is **not** ported here because the repository `preprocess.ts` is an older revision. No UI change, no provider/AI call, no deployment, no frozen fixture or prior evidence change.
+This slice is now the **full pipeline integration, not only the portable library**. The M4 workspace reading is wired into pipeline stage 1 (`phoneInsights` on `extractCandidates`) with its integration test, and the 18 November 2026 sync published both together, so the earlier "portable library only / integration not ported" note is superseded. No UI change, no provider/AI call, no deployment, no frozen fixture or prior evidence change.
 
 ## Verification
 
 ```powershell
-node src/lib/scam-checker/scripts/generate-lk-phone-metadata.ts --check   # integrity + reproducibility
-node --test src/lib/scam-checker/*.test.ts                                # library suite (CI: ubuntu + windows)
+node src/lib/scam-checker/preprocess/scripts/generate-lk-phone-metadata.ts --check   # integrity + reproducibility
+node --test "src/lib/scam-checker/**/*.test.ts"                                      # library suite (CI: ubuntu + windows)
 ```
 
 Recorded at port time: generator check **exit 0** (integrity `b6fa2d29…`) and the library suite green (the new file adds **6 tests**). The workspace-side record with the full source review and limits is `evidence/M4-phone-metadata-20261115.md`.

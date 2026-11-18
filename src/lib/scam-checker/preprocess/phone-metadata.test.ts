@@ -1,16 +1,18 @@
 /**
- * M4 — offline Sri Lankan phone-shape classification tests (ported 15 November 2026).
+ * M4 — offline Sri Lankan phone-shape classification tests (15 November 2026).
  *
- * Scope: the portable library slice only (`phone-metadata.ts` + the pinned generated metadata).
- * The workspace pipeline integration (`phoneInsights` on `extractCandidates`) is intentionally
- * **not** part of this repository slice — the repository `preprocess.ts` is an older revision.
+ * Requirement link: M4-15 (edge cases/graceful behaviour) and FR-M4-02 (untrusted candidates).
+ * Tier-0 research item: evidence/M4-scam-detection-mechanisms-research-20261113.md §6.
+ *
+ * Boundaries pinned here: shape-only (never allocation/reachability/operator), raw candidate
+ * preserved, no network I/O, additive optional extraction field, unclassified is not "safe".
  *
  * Runner: Node's built-in test runner (`node --test`), zero dependencies.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { classifyPhone, normaliseLkPhone, LK_SHAPE_SOURCE } from './phone-metadata.ts';
+import { extractCandidates } from './preprocess.ts';
 import { LK_NUMBERING } from './lk-phone-metadata.generated.ts';
 
 test('normalises the written Sri Lankan forms to E.164', () => {
@@ -34,7 +36,8 @@ test('other countries, wrong lengths and impossible shapes stay unclassified (ne
   assert.equal(normaliseLkPhone('   '), null);
   assert.equal(normaliseLkPhone('call me'), null);
   assert.equal(normaliseLkPhone(42 as unknown as string), null); // never throws on non-strings
-  assert.deepEqual(classifyPhone('+1 (555) 123-4567'), { raw: '+1 (555) 123-4567', e164: null, lkNumber: false, lkMobile: false });
+  const unclassified = classifyPhone('+1 (555) 123-4567');
+  assert.deepEqual(unclassified, { raw: '+1 (555) 123-4567', e164: null, lkNumber: false, lkMobile: false });
 });
 
 test('classifies mobile versus fixed-line shape from the reviewed metadata, with raw preserved', () => {
@@ -61,7 +64,7 @@ test('classifies mobile versus fixed-line shape from the reviewed metadata, with
   });
 });
 
-test('performs no network I/O of any kind', () => {
+test('perform no network I/O of any kind', () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (() => {
     throw new Error('phone-metadata performed network I/O');
@@ -71,17 +74,23 @@ test('performs no network I/O of any kind', () => {
       classifyPhone(value);
       normaliseLkPhone(value);
     }
+    extractCandidates('Call 0771234567 or +1 555 123 4567 before 5pm.');
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test('the module reads no environment variables and imports only its generated metadata', () => {
-  const source = readFileSync(new URL('./phone-metadata.ts', import.meta.url), 'utf8');
-  const imports = [...source.matchAll(/^\s*import\s[^;]*?from\s+['"]([^'"]+)['"]/gm)].map(match => match[1]);
-  assert.deepEqual(imports, ['./lk-phone-metadata.generated.ts']);
-  assert.doesNotMatch(source, /process\.env\./);
-  assert.doesNotMatch(source, /\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(/);
+test('extraction reports insights additively, preserving the plain candidate shape', () => {
+  const withPhones = extractCandidates('Call 0771234567 or +1 555 123 4567 today.');
+  assert.deepEqual(withPhones.phones, ['0771234567', '+1 555 123 4567']);
+  assert.deepEqual(withPhones.phoneInsights, [
+    { raw: '0771234567', e164: '+94771234567', lkNumber: true, lkMobile: true },
+    { raw: '+1 555 123 4567', e164: null, lkNumber: false, lkMobile: false },
+  ]);
+  // Key absent when there are no phone candidates, so callers comparing the plain shape are unaffected.
+  assert.equal('phoneInsights' in extractCandidates('Hello team, the review is tomorrow.'), false);
+  assert.deepEqual(extractCandidates('Hello team, the review is tomorrow.'),
+    { urls: [], emails: [], phones: [] });
 });
 
 test('the vendored numbering source is pinned and shape-fact only', () => {

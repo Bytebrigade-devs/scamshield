@@ -14,7 +14,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createOpenAIProvider, DEFAULT_MODEL } from './openai-adapter.ts';
+import { createOpenAIProvider, DEFAULT_MODEL, DEFAULT_DEADLINE_MS, MAX_OUTPUT_TOKENS, providerDeadline } from './openai-adapter.ts';
+import type { AiFailure } from './openai-adapter.ts';
 import type { ProviderAttempt } from './check-boundary.ts';
 
 const API_KEY = 'test-key-server-side-only';
@@ -109,7 +110,7 @@ test('a custom buildPayload and model are honoured (DRAFT payload seam for OD-M4
   });
   await provider.analyze('hello');
   const payload = JSON.parse(calls[0].init.body ?? '{}') as Record<string, unknown>;
-  assert.deepEqual(payload, { model: 'candidate-model', custom: true, text: 'hello', max_completion_tokens: 1_000 });
+  assert.deepEqual(payload, { model: 'candidate-model', custom: true, text: 'hello', max_completion_tokens: 4_096 });
 });
 
 test('FR-M4-04: a non-2xx status is http-error and an unparseable body is bad-json — never ok', async () => {
@@ -156,13 +157,77 @@ test('review hardening: default and custom payloads cannot remove or increase th
   for (const buildPayload of [undefined, () => ({ model: 'candidate', max_completion_tokens: 100_000 })]) {
     const { calls, fetchImpl } = stubFetch(() => Promise.resolve(okJson(envelopeOf({ verdict: 'suspicious' }))));
     await createOpenAIProvider({ apiKey: API_KEY, fetchImpl, buildPayload }).analyze('x');
-    assert.equal(JSON.parse(calls[0].init.body ?? '{}').max_completion_tokens, 1_000);
+    assert.equal(JSON.parse(calls[0].init.body ?? '{}').max_completion_tokens, 4_096);
     if (!buildPayload) {
       const payload = JSON.parse(calls[0].init.body ?? '{}');
       assert.match(payload.messages[0].content, /0\.1\.0-draft/);
       assert.match(payload.messages[0].content, /no obvious indicators/i);
     }
   }
+});
+
+test('output truncation is rejected even with parseable JSON and reports a sanitized reason', async () => {
+  for (const content of ['{"verdict":', JSON.stringify({ verdict: 'suspicious' })]) {
+    const diagnostics: AiFailure[] = [];
+    const { calls, fetchImpl } = stubFetch(() => Promise.resolve(okJson({
+      choices: [{ finish_reason: 'length', message: { content } }],
+      private_provider_detail: API_KEY,
+    })));
+    const attempt = await createOpenAIProvider({ apiKey: API_KEY, fetchImpl,
+      onDiagnostic: failure => diagnostics.push(failure) }).analyze('private message');
+    assert.deepEqual(attempt, { kind: 'failed', failure: 'bad-json' });
+    assert.deepEqual(diagnostics, [{ code: 'output-limit' }]);
+    assert.equal(calls.length, 1);
+    assert.equal(JSON.stringify(diagnostics).includes(API_KEY), false);
+    assert.equal(JSON.stringify(diagnostics).includes('private message'), false);
+  }
+});
+
+test('output budgets use the approved default, accept bounded settings, and override payload budgets', async () => {
+  for (const [setting, expected] of [[undefined, 4096], [512, 512], [8192, 8192], [511, 4096], [8193, 4096], [NaN, 4096], [1024.5, 4096]] as const) {
+    const { calls, fetchImpl } = stubFetch(() => Promise.resolve(okJson(envelopeOf({ verdict: 'suspicious' }))));
+    await createOpenAIProvider({ apiKey: API_KEY, fetchImpl, maxOutputTokens: setting,
+      buildPayload: () => ({ max_completion_tokens: 999_999 }) }).analyze('x');
+    assert.equal(JSON.parse(calls[0].init.body!).max_completion_tokens, expected);
+  }
+  assert.equal(MAX_OUTPUT_TOKENS, 4096);
+  assert.equal(DEFAULT_DEADLINE_MS, 45_000);
+  for (const value of [undefined, 0, -1, NaN, Infinity, 60_001]) assert.equal(providerDeadline(value), 45_000);
+  assert.equal(providerDeadline(60_000), 60_000);
+});
+
+test('HTTP failures distinguish rate limiting and bounded Retry-After without leaking provider content', async () => {
+  for (const [status, retry, expected] of [[429, '17', { code: 'rate-limited', retryAfterSeconds: 17 }],
+    [429, '9999999', { code: 'rate-limited' }], [429, 'secret', { code: 'rate-limited' }],
+    [401, '17', { code: 'provider-error' }], [503, '17', { code: 'provider-error' }]] as const) {
+    const diagnostics: AiFailure[] = [];
+    const { calls, fetchImpl } = stubFetch(() => Promise.resolve(new Response(API_KEY, { status, headers: { 'retry-after': retry } })));
+    assert.deepEqual(await createOpenAIProvider({ apiKey: API_KEY, fetchImpl,
+      onDiagnostic: failure => diagnostics.push(failure) }).analyze('x'), { kind: 'failed', failure: 'http-error' });
+    assert.deepEqual(diagnostics, [expected]);
+    assert.equal(calls.length, 1);
+  }
+});
+
+test('malformed replies, timeouts and network errors each emit one sanitized failure diagnostic', async () => {
+  for (const kind of ['invalid-response', 'timeout', 'network'] as const) {
+    const diagnostics: AiFailure[] = [];
+    const { fetchImpl } = stubFetch((_url, init) => kind === 'invalid-response'
+      ? Promise.resolve(new Response('not-json')) : kind === 'network'
+        ? Promise.reject(new Error(API_KEY)) : new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(new Error(API_KEY)), { once: true });
+        }));
+    await createOpenAIProvider({ apiKey: API_KEY, fetchImpl, deadlineMs: 5,
+      onDiagnostic: failure => diagnostics.push(failure) }).analyze('x');
+    assert.deepEqual(diagnostics, [{ code: kind }]);
+  }
+});
+
+test('a diagnostic observer throwing cannot change the provider failure or cause another attempt', async () => {
+  const { calls, fetchImpl } = stubFetch(() => Promise.resolve(new Response('failure', { status: 500 })));
+  assert.deepEqual(await createOpenAIProvider({ apiKey: API_KEY, fetchImpl,
+    onDiagnostic: () => { throw new Error('observer failure'); } }).analyze('x'), { kind: 'failed', failure: 'http-error' });
+  assert.equal(calls.length, 1);
 });
 
 test('review hardening: oversized streamed responses are cancelled before parsing regardless of Content-Length', async () => {

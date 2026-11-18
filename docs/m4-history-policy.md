@@ -4,7 +4,7 @@
 
 ## What this adds
 
-`src/lib/scam-checker/history-store.ts` (+ `history-store.test.ts`):
+`src/lib/scam-checker/boundary/history-store.ts` (+ `history-store.test.ts`):
 
 | Piece | Behaviour |
 |---|---|
@@ -22,7 +22,7 @@
 
 ## Verification
 
-- `node src/lib/scam-checker/history-store.test.ts` → **11/11 pass**
+- `node src/lib/scam-checker/boundary/history-store.test.ts` → **11/11 pass**
 - full repository library suite → **186/186 pass** (10 files)
 - CI: ubuntu + windows
 

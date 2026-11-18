@@ -88,6 +88,14 @@ test('Unicode (Sinhala) text is preserved and processed without crashing (FS-M4-
   // No language assessment is claimed — extraction is language-agnostic by design.
 });
 
+test('Tamil text is preserved and extraction stays language-agnostic (FS-M4-04; Tamil unsupported)', () => {
+  // Tamil is not an evaluated language (SRS language position, 18 Oct 2026; OD-M4-03 open):
+  // this pins extraction robustness and original-text preservation only — no translation,
+  // Tamil detection or efficacy claim is made.
+  const r = extractCandidates('வணக்கம், உங்கள் கணக்கு முடக்கப்படும் https://example.lk/help');
+  assert.deepEqual(r, { urls: ['https://example.lk/help'], emails: [], phones: [] });
+});
+
 test('trailing punctuation is not part of the URL candidate', () => {
   const r = extractCandidates('See https://example.com/help. Next sentence.');
   assert.deepEqual(r.urls, ['https://example.com/help']);
@@ -280,6 +288,7 @@ test('FR-M4-02 first sentence: extraction runs without fetching URL destinations
       urls: ['https://en.wikipedia.org/wiki/Scam_(disambiguation)'],
       emails: ['support@windpetal-reset.example'],
       phones: ['+94 77 123 4567'],
+      phoneInsights: [{ raw: '+94 77 123 4567', e164: '+94771234567', lkNumber: true, lkMobile: true }],
     });
     assert.equal(fetchCalls, 0);
   } finally {
@@ -287,14 +296,30 @@ test('FR-M4-02 first sentence: extraction runs without fetching URL destinations
   }
 });
 
-test('the module has zero imports — no dns/https path to host resolution exists (FR-M4-02)', () => {
-  // Backs rule 1's "never resolves a host": in Node, DNS/HTTP clients are only
-  // reachable through an import (a fetch stub cannot prove a negative for them), so
-  // the dependency-free construction is the evidence — pinned here as a source check.
-  const source = readFileSync(new URL('./preprocess.ts', import.meta.url), 'utf8');
-  const importLike = /^\s*import\b|\brequire\s*\(|\bimport\s*\(|\bfrom\s+['"]/m;
-  assert.ok(
-    !importLike.test(source),
-    'preprocess.ts must stay dependency-free: any import could reach node:dns/https'
-  );
+test('no network-capable imports: the dependency chain stays local and shape-only (FR-M4-02)', () => {
+  // Backs rule 1's "never resolves a host": in Node, DNS/HTTP clients are only reachable
+  // through an import (a fetch stub cannot prove a negative for them). Until 15 Nov 2026 this
+  // was pinned as "zero imports"; the offline LK phone-shape classifier (M4-15 extension) is
+  // the one allowed local import, and this test now pins the WHOLE chain instead: an explicit
+  // allow-list of relative specifiers at each level, no bare/`node:` specifier anywhere, and
+  // no generated metadata that could reach network code.
+  const specifiers = (source: string): string[] => {
+    const out: string[] = [];
+    for (const m of source.matchAll(/^\s*(?:import|export)\s[^;]*?from\s+['"]([^'"]+)['"]/gm)) out.push(m[1]);
+    for (const m of source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) out.push(m[1]);
+    for (const m of source.matchAll(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) out.push(m[1]);
+    return out;
+  };
+  const read = (name: string): string => readFileSync(new URL(name, import.meta.url), 'utf8');
+  const preprocess = read('./preprocess.ts');
+  const phone = read('./phone-metadata.ts');
+  const generated = read('./lk-phone-metadata.generated.ts');
+
+  assert.deepEqual(specifiers(preprocess), ['./phone-metadata.ts']);
+  assert.deepEqual(specifiers(phone), ['./lk-phone-metadata.generated.ts']);
+  assert.deepEqual(specifiers(generated), []);
+  for (const specifier of [...specifiers(preprocess), ...specifiers(phone), ...specifiers(generated)]) {
+    assert.match(specifier, /^\.\/[\w.-]+\.ts$/, `unexpected import specifier: ${specifier}`);
+    assert.doesNotMatch(specifier, /(?:^|\/)(?:dns|net|http|https|tls|dgram)(?:\/|$)/);
+  }
 });

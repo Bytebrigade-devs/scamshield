@@ -4,7 +4,7 @@
 
 ## What this adds
 
-`src/lib/scam-checker/link-warning.ts` (+ `link-warning.test.ts`, 9 tests): `buildLinkWarningBanner()`.
+`src/lib/scam-checker/ui/link-warning.ts` (+ `link-warning.test.ts`, 9 tests): `buildLinkWarningBanner()`.
 
 | Rule | Behaviour |
 |---|---|
@@ -16,7 +16,7 @@
 
 ## Verification
 
-- `node src/lib/scam-checker/link-warning.test.ts` → **9/9 pass**
+- `node src/lib/scam-checker/ui/link-warning.test.ts` → **9/9 pass**
 - repository library suite → **228/228 pass** (14 files)
 - CI: ubuntu + windows
 

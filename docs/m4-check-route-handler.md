@@ -6,11 +6,11 @@
 
 | File | Purpose |
 |---|---|
-| `src/lib/scam-checker/m2-entitlement-adapter.ts` | Maps M2's `getSubscriptionContext(request)` result (`kind` + nested `entitlement`, ISO `expiresAt`, `user.id`) to M4's entitlement port; no I/O |
-| `src/lib/scam-checker/m2-entitlement-adapter.test.ts` | 12 tests using M2's sample fixtures/fixed clock |
-| `src/lib/scam-checker/route-handler.ts` | `parseCheckBody()` + `createCheckRoute(deps)` mapping M2 + boundary outcomes to HTTP responses |
-| `src/lib/scam-checker/route-handler.test.ts` | 11 tests covering every status and the no-echo guarantee |
-| `src/lib/scam-checker/history-store.ts` + docs | already merged in #33; not repeated here |
+| `src/lib/scam-checker/boundary/m2-entitlement-adapter.ts` | Maps M2's `getSubscriptionContext(request)` result (`kind` + nested `entitlement`, ISO `expiresAt`, `user.id`) to M4's entitlement port; no I/O |
+| `src/lib/scam-checker/boundary/m2-entitlement-adapter.test.ts` | 12 tests using M2's sample fixtures/fixed clock |
+| `src/lib/scam-checker/boundary/route-handler.ts` | `parseCheckBody()` + `createCheckRoute(deps)` mapping M2 + boundary outcomes to HTTP responses |
+| `src/lib/scam-checker/boundary/route-handler.test.ts` | 11 tests covering every status and the no-echo guarantee |
+| `src/lib/scam-checker/boundary/history-store.ts` + docs | already merged in #33; not repeated here |
 
 ## Route mapping
 
@@ -30,8 +30,8 @@ Denied/unauthenticated/unavailable paths never call the boundary or provider. Er
 
 ## Verification
 
-- `node src/lib/scam-checker/m2-entitlement-adapter.test.ts` → **12/12 pass**
-- `node src/lib/scam-checker/route-handler.test.ts` → **11/11 pass**
+- `node src/lib/scam-checker/boundary/m2-entitlement-adapter.test.ts` → **12/12 pass**
+- `node src/lib/scam-checker/boundary/route-handler.test.ts` → **11/11 pass**
 - full repository library suite → **209/209 pass** (12 files)
 - CI: ubuntu + windows
 

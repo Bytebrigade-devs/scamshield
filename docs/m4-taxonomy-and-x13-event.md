@@ -6,10 +6,10 @@
 
 | File | Purpose |
 |---|---|
-| `src/lib/scam-checker/taxonomy.ts` | Single source for the five X-13 category IDs, display labels and the `0.1.0-draft` taxonomy version; `normaliseCategory()` with the `unknown_other` fallback; `categoryLabel()` |
-| `src/lib/scam-checker/x13-event.ts` | Pure `buildCheckOutcomeEvent()` + `validateCheckOutcomeEvent()` for the eight-field `m4.check_outcome` event |
-| `src/lib/scam-checker/taxonomy.test.ts` | 9 tests: vocabulary, fallback, valid/invalid status-mode pairs, event shape, rejection of extra keys, no-network declaration |
-| `src/lib/scam-checker/check-boundary.ts` | Refactored to import the taxonomy source; behaviour unchanged (a non-string category still rejects the reply; an unknown string still falls back) |
+| `src/lib/scam-checker/boundary/taxonomy.ts` | Single source for the five X-13 category IDs, display labels and the `0.1.0-draft` taxonomy version; `normaliseCategory()` with the `unknown_other` fallback; `categoryLabel()` |
+| `src/lib/scam-checker/boundary/x13-event.ts` | Pure `buildCheckOutcomeEvent()` + `validateCheckOutcomeEvent()` for the eight-field `m4.check_outcome` event |
+| `src/lib/scam-checker/boundary/taxonomy.test.ts` | 9 tests: vocabulary, fallback, valid/invalid status-mode pairs, event shape, rejection of extra keys, no-network declaration |
+| `src/lib/scam-checker/boundary/check-boundary.ts` | Refactored to import the taxonomy source; behaviour unchanged (a non-string category still rejects the reply; an unknown string still falls back) |
 
 ## Event rules (X-13 §4.1)
 
@@ -23,7 +23,7 @@ Exactly eight fields: `contract_version`, `event_type`, `event_id`, `occurred_at
 
 ## Verification
 
-- `node src/lib/scam-checker/taxonomy.test.ts` → **9/9 pass**
+- `node src/lib/scam-checker/boundary/taxonomy.test.ts` → **9/9 pass**
 - full repository library suite → **175/175 pass** (9 files)
 - CI: ubuntu + windows on the pull request
 

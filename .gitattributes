@@ -1,0 +1,5 @@
+# M4 files are ported byte-identically from the owner workspace and several tests,
+# generators and fixtures pin exact bytes (SHA-256, string comparison).
+# Never apply end-of-line conversion on checkout, on any platform.
+src/lib/scam-checker/** -text
+src/lib/testing/** -text

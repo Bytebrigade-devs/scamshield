@@ -36,11 +36,41 @@ import { DRAFT_VERDICT_LABELS, MAX_REASON_CHARS, TAXONOMY_VERSION } from './chec
 export const DEFAULT_MODEL = 'gpt-5.6-luna';
 
 /** Draft provider deadline — the reviewed value is still open under OD-M4-04. */
-export const DEFAULT_DEADLINE_MS = 20_000;
+export const DEFAULT_DEADLINE_MS = 45_000;
 
 /** Draft per-attempt bounds, independent of the still-required aggregate budget gate. */
-export const MAX_OUTPUT_TOKENS = 1_000;
+export const MAX_OUTPUT_TOKENS = 4_096;
 export const MAX_RESPONSE_BYTES = 65_536;
+
+export type AiFailureCode = 'output-limit' | 'timeout' | 'rate-limited' | 'invalid-response' | 'network' | 'provider-error';
+export interface AiFailure {
+  code: AiFailureCode;
+  retryAfterSeconds?: number;
+}
+
+/** Options are server-owned; invalid budgets fall back to the bounded default. */
+export function outputTokenBudget(value: number | undefined): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 512 && value <= 8_192 ? value : MAX_OUTPUT_TOKENS;
+}
+
+/** Tiny positive deadlines remain injectable for deterministic offline timeout tests. */
+export function providerDeadline(value: number | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 60_000 ? value : DEFAULT_DEADLINE_MS;
+}
+
+export function httpFailure(response: Response): AiFailure {
+  if (response.status !== 429) return { code: 'provider-error' };
+  const raw = response.headers.get('retry-after');
+  if (!raw) return { code: 'rate-limited' };
+  const seconds = /^\d+$/.test(raw.trim()) ? Number(raw) : Math.ceil((Date.parse(raw) - Date.now()) / 1000);
+  return Number.isFinite(seconds) && seconds >= 0 && seconds <= 3_600
+    ? { code: 'rate-limited', retryAfterSeconds: Math.ceil(seconds) } : { code: 'rate-limited' };
+}
+
+/** A diagnostic consumer must not turn a completed transport attempt into another failure. */
+export function emitDiagnostic(callback: ((failure: AiFailure) => void) | undefined, failure: AiFailure): void {
+  try { callback?.(failure); } catch { /* Diagnostic reporting is best effort. */ }
+}
 
 const DEFAULT_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 
@@ -51,6 +81,8 @@ export interface OpenAIProviderOptions {
   /** Injectable for tests — never touch the network in tests. Defaults to global fetch. */
   fetchImpl?: typeof fetch;
   deadlineMs?: number;
+  maxOutputTokens?: number;
+  onDiagnostic?: (failure: AiFailure) => void;
   endpointUrl?: string;
   /** Draft object payload builder. The adapter always enforces its output-token cap. */
   buildPayload?: (text: string, model: string) => unknown;
@@ -69,7 +101,7 @@ function defaultPayload(text: string, model: string): unknown {
           `Reply with one JSON object. verdict must be one of ${JSON.stringify(DRAFT_VERDICT_LABELS)}; ` +
           `never claim a message is safe, legitimate or clean. "no obvious indicators" is not a safety guarantee. ` +
           `taxonomy_version must be "${TAXONOMY_VERSION}". category must be phishing, romance_scam, ` +
-          `fake_invoice, prize_lottery_scam or unknown_other. reason must be a string of at most ${MAX_REASON_CHARS} characters.`,
+          `fake_invoice, prize_lottery_scam or unknown_other. reason must be a string of at most ${Math.min(800, MAX_REASON_CHARS)} characters.`,
       },
       { role: 'user', content: text },
     ],
@@ -101,7 +133,7 @@ function extractReplyContent(envelope: unknown): unknown | null {
 }
 
 /** Bound actual streamed bytes, not a possibly absent/incorrect Content-Length header. */
-async function readBoundedBody(response: Response): Promise<string | null> {
+export async function readBoundedBody(response: Response): Promise<string | null> {
   if (response.body === null) return null;
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -130,7 +162,8 @@ async function readBoundedBody(response: Response): Promise<string | null> {
 export function createOpenAIProvider(options: OpenAIProviderOptions): ProviderPort {
   const apiKey = typeof options.apiKey === 'string' ? options.apiKey.trim() : '';
   const model = options.model ?? DEFAULT_MODEL;
-  const deadlineMs = options.deadlineMs ?? DEFAULT_DEADLINE_MS;
+  const deadlineMs = providerDeadline(options.deadlineMs);
+  const maxOutputTokens = outputTokenBudget(options.maxOutputTokens);
   const endpointUrl = options.endpointUrl ?? DEFAULT_ENDPOINT;
   const buildPayload = options.buildPayload ?? defaultPayload;
   const doFetch = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
@@ -145,6 +178,7 @@ export function createOpenAIProvider(options: OpenAIProviderOptions): ProviderPo
       try {
         const payload = buildPayload(text, model);
         if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+          emitDiagnostic(options.onDiagnostic, { code: 'invalid-response' });
           return { kind: 'failed', failure: 'bad-json' };
         }
         const response = await doFetch(endpointUrl, {
@@ -153,27 +187,45 @@ export function createOpenAIProvider(options: OpenAIProviderOptions): ProviderPo
             'content-type': 'application/json',
             authorization: `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({ ...payload, max_completion_tokens: MAX_OUTPUT_TOKENS }),
+          body: JSON.stringify({ ...payload, max_completion_tokens: maxOutputTokens }),
           signal: controller.signal,
         });
         if (!response.ok) {
+          emitDiagnostic(options.onDiagnostic, httpFailure(response));
           await response.body?.cancel().catch(() => {});
           return { kind: 'failed', failure: 'http-error' };
         }
         // Body read errors go to the outer catch so a deadline is not mislabeled network.
         const jsonText = await readBoundedBody(response);
-        if (jsonText === null) return { kind: 'failed', failure: 'bad-json' };
+        if (jsonText === null) {
+          emitDiagnostic(options.onDiagnostic, { code: 'invalid-response' });
+          return { kind: 'failed', failure: 'bad-json' };
+        }
         try {
           const parsed: unknown = JSON.parse(jsonText);
+          if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+              && Array.isArray((parsed as { choices?: unknown }).choices)
+              && (parsed as { choices: { finish_reason?: unknown }[] }).choices[0]?.finish_reason === 'length') {
+            emitDiagnostic(options.onDiagnostic, { code: 'output-limit' });
+            return { kind: 'failed', failure: 'bad-json' };
+          }
           const reply = extractReplyContent(parsed);
-          if (reply === null) return { kind: 'failed', failure: 'bad-json' };
+          if (reply === null) {
+            emitDiagnostic(options.onDiagnostic, { code: 'invalid-response' });
+            return { kind: 'failed', failure: 'bad-json' };
+          }
           return { kind: 'ok', json: reply };
         } catch {
+          emitDiagnostic(options.onDiagnostic, { code: 'invalid-response' });
           return { kind: 'failed', failure: 'bad-json' };
         }
       } catch {
         // A deadline abort is a timeout (FS-M4-06); anything else is a network failure.
-        if (controller.signal.aborted) return { kind: 'failed', failure: 'timeout' };
+        if (controller.signal.aborted) {
+          emitDiagnostic(options.onDiagnostic, { code: 'timeout' });
+          return { kind: 'failed', failure: 'timeout' };
+        }
+        emitDiagnostic(options.onDiagnostic, { code: 'network' });
         return { kind: 'failed', failure: 'network' };
       } finally {
         clearTimeout(timer);
