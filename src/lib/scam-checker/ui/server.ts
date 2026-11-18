@@ -17,8 +17,10 @@ import { readFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DEFAULT_LIMITS, TAXONOMY_VERSION } from '../boundary/check-boundary.ts';
-import { createCheckService, liveConfigFromEnv } from './check-service.ts';
+import { createCheckService, DEMO_SUBJECT_KEY, liveConfigFromEnv } from './check-service.ts';
 import type { CheckService } from './check-service.ts';
+import { createFeedbackSupport } from './feedback-endpoint.ts';
+import type { FeedbackSupport } from './feedback-endpoint.ts';
 
 const DEFAULT_PUBLIC_DIR = fileURLToPath(new URL('./public/', import.meta.url));
 const MAX_BODY_BYTES = 64 * 1024;
@@ -46,6 +48,8 @@ const HTML_CSP =
 export interface UiServerOptions {
   service: CheckService;
   publicDir?: string;
+  /** Injected for tests; defaults to the in-memory demo feedback store. */
+  feedback?: FeedbackSupport;
   /** Injected for tests; defaults to the real clock. */
   now?: () => number;
 }
@@ -144,6 +148,7 @@ async function serveStatic(
 export function createUiServer(options: UiServerOptions): Server {
   const { service } = options;
   const publicDir = options.publicDir ?? DEFAULT_PUBLIC_DIR;
+  const feedback = options.feedback ?? createFeedbackSupport({ subjectKey: DEMO_SUBJECT_KEY });
 
   return createHttpServer(async (req, res) => {
     const method = req.method ?? 'GET';
@@ -204,8 +209,12 @@ export function createUiServer(options: UiServerOptions): Server {
         // Provider selection and usage authority remain exclusively on the server.
         const text = record.text;
         const result = await service.check(text, record.sender);
+        // "Report a wrong result": the server generates an opaque check id and lists the
+        // agreed reason codes; the browser may only echo them back (owner decision, 18 Nov 2026).
+        const feedbackOption = feedback.forOutcome(result.outcome);
         sendJson(res, 200, {
           ...result,
+          ...(feedbackOption ? { feedback: feedbackOption } : {}),
           limits: {
             inputCharCap: DEFAULT_LIMITS.inputCharCap,
             burstMax: DEFAULT_LIMITS.burstMax,
@@ -213,6 +222,32 @@ export function createUiServer(options: UiServerOptions): Server {
           },
           taxonomyVersion: TAXONOMY_VERSION,
         });
+        return;
+      }
+
+      if (pathname === '/api/feedback') {
+        if (method !== 'POST') {
+          sendJson(res, 405, { error: 'method-not-allowed' });
+          return;
+        }
+        if (!isAllowedOrigin(req)) {
+          sendJson(res, 403, { error: 'forbidden-origin' });
+          return;
+        }
+        const mediaType = req.headers['content-type']?.split(';', 1)[0].trim().toLowerCase();
+        if (mediaType !== 'application/json') {
+          sendJson(res, 415, { error: 'unsupported-media-type' });
+          return;
+        }
+        let body: unknown;
+        try {
+          body = await readJson(req);
+        } catch {
+          sendJson(res, 400, { error: 'bad-request' });
+          return;
+        }
+        const outcome = feedback.report(body);
+        sendJson(res, outcome.status, outcome.body);
         return;
       }
 

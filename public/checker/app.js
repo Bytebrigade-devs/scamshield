@@ -8,6 +8,7 @@ import { createSummaryModel } from '/checker/summary.js';
 import { summaryCard } from '/checker/summary-card.js';
 import { formatCheckTime } from '/checker/evidence.js';
 import { linkWarningBanner } from '/checker/link-banner.js';
+import { feedbackControl, feedbackFailedText, feedbackSubmittedText } from '/checker/feedback.js';
 
 const view = document.getElementById('view');
 const navCheck = document.getElementById('nav-check');
@@ -393,6 +394,38 @@ function renderResult(payload) {
   // Local rule evidence is shown in every analysed state, including unavailable: stages 1–2
   // always ran, so hiding real evidence would leave the user with less than the server knows.
   view.append(evidenceCard(outcome.rules?.matches));
+  // "Report a wrong result" (owner decision, 17/18 November 2026): the server supplies the
+  // check id and the allowed reason codes; this only echoes them back. No message text.
+  const feedback = feedbackControl(payload.feedback, el);
+  if (feedback) {
+    view.append(feedback);
+    const submit = feedback.querySelector('#feedback-submit');
+    const statusLine = feedback.querySelector('#feedback-status');
+    submit.addEventListener('click', () => {
+      const checked = feedback.querySelector('input[name="feedback-reason"]:checked');
+      if (!checked) {
+        statusLine.textContent = 'Choose a reason first.';
+        return;
+      }
+      submit.disabled = true;
+      statusLine.textContent = 'Sending…';
+      fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ checkId: payload.feedback.checkId, reasonCode: checked.value }),
+      })
+        .then(response => {
+          if (!response.ok) throw new Error('report-failed');
+          statusLine.textContent = feedbackSubmittedText(checked.value);
+          feedback.querySelector('.feedback__options').remove();
+          submit.remove();
+        })
+        .catch(() => {
+          statusLine.textContent = feedbackFailedText();
+          submit.disabled = false;
+        });
+    });
+  }
   // Everything below is reference material until the user asks for it.
   const organizationCard = organizationChecksCard(payload.organizationVerification, el);
   const senderCard = senderVerificationCard(payload.senderVerification, el);

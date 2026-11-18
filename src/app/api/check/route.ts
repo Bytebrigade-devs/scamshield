@@ -1,6 +1,7 @@
 import { DEFAULT_LIMITS } from '@/lib/scam-checker/boundary/check-boundary';
 import { TAXONOMY_VERSION } from '@/lib/scam-checker/boundary/taxonomy';
 import { createCheckService } from '@/lib/scam-checker/ui/check-service';
+import { feedback } from '../feedback-support';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -50,8 +51,12 @@ export async function POST(request: Request): Promise<Response> {
   const record = body as Record<string, unknown>;
   try {
     const result = await service.check(record.text, record.sender);
+    // "Report a wrong result": the server generates an opaque check id and lists the agreed
+    // reason codes; the browser may only echo them back (owner decision, 18 November 2026).
+    const feedbackOption = feedback.forOutcome(result.outcome);
     return json(200, {
       ...result,
+      ...(feedbackOption ? { feedback: feedbackOption } : {}),
       limits: {
         inputCharCap: DEFAULT_LIMITS.inputCharCap,
         burstMax: DEFAULT_LIMITS.burstMax,

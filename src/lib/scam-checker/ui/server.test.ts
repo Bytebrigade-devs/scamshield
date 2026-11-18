@@ -278,3 +278,31 @@ test('M4-15/FS-M4-02: the 2,000-character cap holds through the HTTP path, with 
   assert.equal(accepted.json.outcome.analysisStatus, 'completed');
   assert.deepEqual(submitted, [atCap], 'the accepted text is forwarded verbatim');
 });
+
+test('feedback: a completed check carries an opaque id; a report stores bounded fields only', async () => {
+  const harness = await start(completedService());
+  const check = await postCheck(harness.baseUrl, { text: FIXTURE });
+  assert.equal(check.json.outcome.analysisStatus, 'completed');
+  assert.ok(check.json.feedback?.checkId, 'an analysed check is reportable');
+  assert.ok(Array.isArray(check.json.feedback.reasonCodes) && check.json.feedback.reasonCodes.length === 5);
+
+  const origin = { 'content-type': 'application/json', origin: harness.baseUrl };
+  const report = await fetch(`${harness.baseUrl}/api/feedback`, { method: 'POST', headers: origin, body: JSON.stringify({ checkId: check.json.feedback.checkId, reasonCode: 'missed_scam' }) });
+  assert.equal(report.status, 200);
+  assert.deepEqual(await report.json(), { accepted: true });
+
+  // The rejected-input case carries no feedback option and can never be reported.
+  const rejected = await postCheck(harness.baseUrl, { text: '   ' });
+  assert.equal(rejected.json.outcome.kind, 'rejected');
+  assert.equal(rejected.json.feedback, undefined);
+
+  // Unknown and malformed reports fail closed with no storage.
+  const unknown = await fetch(`${harness.baseUrl}/api/feedback`, { method: 'POST', headers: origin, body: JSON.stringify({ checkId: 'never-issued', reasonCode: 'other' }) });
+  assert.equal(unknown.status, 404);
+  const freeText = await fetch(`${harness.baseUrl}/api/feedback`, { method: 'POST', headers: origin, body: JSON.stringify({ checkId: check.json.feedback.checkId, reasonCode: 'free text' }) });
+  assert.equal(freeText.status, 400);
+  const crossOrigin = await fetch(`${harness.baseUrl}/api/feedback`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://evil.example' }, body: JSON.stringify({ checkId: 'x', reasonCode: 'other' }) });
+  assert.equal(crossOrigin.status, 403);
+  const wrongMethod = await fetch(`${harness.baseUrl}/api/feedback`);
+  assert.equal(wrongMethod.status, 405);
+});
