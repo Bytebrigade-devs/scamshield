@@ -24,5 +24,13 @@ export default defineConfig([
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  {
+    files: ["scripts/**/*.cjs"],
+    rules: {
+      // M2's subscription harness is intentionally CommonJS: it compiles the policy modules with
+      // the TypeScript API and executes them in a fresh `vm` context, so `require()` is the point.
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   globalIgnores([".next/**", ".dependencies-incomplete/**", "next-env.d.ts", "test-results/**", "playwright-report/**"]),
 ]);
