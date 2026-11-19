@@ -11,13 +11,25 @@
  * the key can enter a result, message or log.
  *
  * The request asks for the boundary's EXISTING draft reply shape (verdict, category,
- * taxonomy_version, reason). Prompt wording and verdict semantics remain OD-M4-04 (open).
+ * taxonomy_version, reason). Prompt wording and verdict semantics follow the accepted
+ * draft baseline (OD-M4-04, 19 November 2026) — a draft, not an approved product taxonomy.
+ *
+ * Every request also carries a self-identifying `user-agent` and a stable per-provider
+ * `x-opencode-session` id: the owner-authorized OpenCode Go testing gateway
+ * (https://opencode.ai/inference/go; native OpenAI remains the recorded production target)
+ * requires both — a client user agent rather than a generic SDK name, and a stable
+ * conversation id for routing and prompt caching. The session id is generated once per
+ * provider instance, is not derived from any submitted text, and is never a user
+ * identifier; other OpenAI-compatible endpoints ignore unknown headers.
  */
 import type { ProviderAttempt, ProviderPort } from '../boundary/check-boundary.ts';
 import { DEFAULT_DEADLINE_MS, MAX_OUTPUT_TOKENS, emitDiagnostic, httpFailure, outputTokenBudget, providerDeadline, readBoundedBody } from '../boundary/openai-adapter.ts';
 import type { AiFailure } from '../boundary/openai-adapter.ts';
 
 export const DEFAULT_RESPONSES_DEADLINE_MS = DEFAULT_DEADLINE_MS;
+
+/** Self-identifying client user agent (OpenCode Go requires a client name, not a generic SDK name). */
+export const RESPONSES_CLIENT_USER_AGENT = 'm4-scam-checker/1.0';
 
 export interface ResponsesProviderOptions {
   /** Server environment value only. Absent/empty disables live provider use. */
@@ -93,6 +105,8 @@ export function createResponsesProvider(options: ResponsesProviderOptions): Prov
   const deadlineMs = providerDeadline(options.deadlineMs);
   const maxOutputTokens = outputTokenBudget(options.maxOutputTokens);
   const doFetch = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
+  /** Stable per-provider conversation id; generated once, never derived from submitted text. */
+  const sessionId = `ses_${globalThis.crypto.randomUUID()}`;
 
   return {
     async analyze(text: string): Promise<ProviderAttempt> {
@@ -112,6 +126,8 @@ export function createResponsesProvider(options: ResponsesProviderOptions): Prov
           headers: {
             'content-type': 'application/json',
             authorization: `Bearer ${options.apiKey.trim()}`,
+            'user-agent': RESPONSES_CLIENT_USER_AGENT,
+            'x-opencode-session': sessionId,
           },
           body: JSON.stringify({ ...payload, max_output_tokens: maxOutputTokens }),
           signal: controller.signal,

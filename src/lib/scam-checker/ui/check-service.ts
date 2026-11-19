@@ -47,14 +47,16 @@ export interface LiveConfig {
   /**
    * Test-harness payload builder. It requests the boundary's EXISTING draft reply shape so a
    * live smoke check can exercise the completed path. It does not define analysis semantics:
-   * verdict meaning, category choice and prompting remain OD-M4-04 (open).
+   * verdict meaning, category choice and prompting follow the accepted draft baseline
+   * (OD-M4-04, 19 November 2026) — a draft, not an approved product taxonomy.
    */
   buildPayload?: (text: string, model: string) => unknown;
 }
 
 /**
- * Analysis instructions for the live provider (draft harness prompt; verdict semantics remain
- * OD-M4-04 open). The provider has no internet access: it may recognise a link or destination
+ * Analysis instructions for the live provider (draft harness prompt following the accepted
+ * draft baseline, OD-M4-04 19 November 2026 — not an approved product taxonomy). The provider
+ * has no internet access: it may recognise a link or destination
  * from prior knowledge, but it can never open, browse or live-verify anything, and the reason
  * it returns must make clear to an ordinary reader WHY the message is or is not a scam.
  */
@@ -64,6 +66,7 @@ const ANALYSIS_INSTRUCTIONS = [
   'Judge only from the message text, the local rule findings supplied below, and scam patterns you already know: popular bank, parcel-delivery, government-fine, prize/lottery, job, loan and investment scams, romance-investment fraud, and well-known brand-impersonation pages.',
   'If local rule findings are supplied, weigh them as evidence and mention the ones you used in plain words (never rule IDs).',
   'If no local rule findings are supplied, compare the message against those known scam patterns and the legitimate popular services they imitate.',
+  'Distinguish a scam request from a protective or routine notice. An explicit warning ("do not share your password or OTP", "never pay a fee", "no payment is needed") or guidance to an independent official channel (the banking app you already use, a branch, an independently listed contact) is not a scam request: with no other concrete indicator — a demand to send money, credentials, OTPs or identity documents via details given in the message, or an urgent supplied link to act on — conclude "no obvious indicators" and keep any caution in the reason. An unnamed sender or organization is not by itself a scam indicator, and a routine reminder, reconciliation or delivery notice without such a demand does not warrant a suspicious verdict.',
   'When the message names an organization or contains a website or phone number, use the server-supplied organization directory findings below to describe supported identities, contact matches, missing records and outdated records. These findings are reviewed offline records, not live web verification. Do not invent contact ownership from memory or claim an unlisted contact is fake.',
   'Distinguish an organization named in pasted text from the actual sender. Matching a directory contact or a licensed-bank record never authenticates the sender, proves safety, or overrides scam indicators such as requests for passwords, OTPs or payments. For domains, a contact match is not a link reputation, page-content or transaction check. Never suggest opening submitted links.',
   'Server-supplied possible-lookalike hostname findings are limited offline Unicode comparisons, not proof of fraud, ownership, sender identity or risk. Outdated references do not establish current official hosts. Unlisted hosts are unconfirmed, never known fakes merely because they are absent. Consider this evidence in context; never derive risk from a hostname finding alone.',
