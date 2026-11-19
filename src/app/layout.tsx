@@ -1,22 +1,7 @@
-import "./globals.css";
-import { DEMO_MODE } from "@/lib/m2-mode";
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import "./globals.css";
 
-// Font loaded once, centrally (docs/THEME-AND-TYPOGRAPHY.md §3). SIL Open Font License 1.1.
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-  variable: "--font-plus-jakarta",
-});
-
-export const metadata: Metadata = { title: "ScamShield" };
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en" className={jakarta.variable}>
-      <body className="min-h-screen bg-background font-sans text-text">{DEMO_MODE ? <div className="border-b border-border-subtle bg-primary-subtle px-4 py-2 text-center text-sm text-primary">Interim frontend demo · Dummy data only · No real accounts or payments</div> : <div className="border-b border-border-subtle bg-primary-subtle px-4 py-2 text-center text-sm text-primary">Test subscriptions · Payments are simulated</div>}{children}</body>
-    </html>
-  );
+export const metadata: Metadata = { title: "ScamShield — accounts, plans and vault", description: "ScamShield frontend: signup, subscription paywall and the password vault demo. Payments are simulated and no card data is stored." };
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <html lang="en"><body><a className="skip-link" href="#main">Skip to content</a>{children}</body></html>;
 }

@@ -1,13 +1,18 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 /*
  * ScamShield design tokens — source: docs/THEME-AND-TYPOGRAPHY.md (v1.1, team-approved).
- * Three layers (guide §7): primitive → semantic → component.
- * Components and Tailwind classes must use the semantic/component aliases, never raw hex.
+ * Three layers (guide §7): primitive → semantic → component, shared by every module.
+ * Tailwind 4 reads this file first; tailwind.config.ts is still loaded through @config so
+ * the semantic utility names (bg-surface, text-brand, rounded-card) stay identical to the
+ * M2 branch. Components and Tailwind classes use the semantic aliases, never raw hex.
  */
+@font-face { font-family: "Plus Jakarta Sans"; src: url("/fonts/PlusJakartaSans.ttf") format("truetype"); font-weight: 200 800; font-style: normal; font-display: swap; }
+
 :root {
+  color-scheme: light;
+
   /* ---------- 1. Primitive ---------- */
   --navy-900: #0f172a;
   --teal-50: #f0fdfa;
@@ -48,12 +53,14 @@
   --color-success: var(--green-700);
   --color-warning: var(--amber-700);
   --color-danger: var(--red-700);
+  --color-on-danger: var(--white);
+  --color-danger-hover: var(--red-800);
+  --color-danger-active: #7f1d1d;
   --color-disabled-bg: var(--slate-200);
   --color-disabled-text: var(--slate-500);
+  --color-focus: var(--teal-700);
 
-  /* PROPOSED (not yet in the guide — needs team approval via §7):
-     destructive hover/pressed state and tinted alert surfaces. */
-  --color-danger-hover: var(--red-800);
+  /* PROPOSED tinted surfaces (not yet in the guide — needs approval via §7). */
   --color-success-subtle: var(--green-50);
   --color-success-border: var(--green-200);
   --color-warning-subtle: var(--amber-50);
@@ -61,13 +68,20 @@
   --color-danger-subtle: var(--red-50);
   --color-danger-border: var(--red-200);
 
-  --font-body: var(--font-plus-jakarta), "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   --radius-control: var(--radius-12);
   --radius-card: var(--radius-16);
-  --shadow-surface: 0 4px 16px rgb(15 23 42 / 0.06);
+  --shadow-surface: 0 4px 16px rgb(15 23 42 / .06);
   --duration-feedback: 180ms;
+
+  /* Shared inverse surfaces use only the approved dark palette. */
+  --color-nav-background: #0f172a; --color-nav-surface: #1e293b;
+  --color-nav-text: #f8fafc; --color-nav-muted: #cbd5e1;
+  --color-nav-border: #334155; --color-nav-accent: #2dd4bf;
+  --color-nav-selected: #134e4a;
+  --color-overlay: rgb(15 23 42 / .45);
 
   /* ---------- 3. Component (guide §4, §5) ---------- */
   --button-radius: var(--radius-control);
@@ -82,28 +96,48 @@
   --focus-ring: 3px solid var(--color-primary);
 }
 
-@layer base {
-  html {
-    -webkit-text-size-adjust: 100%;
-  }
-  body {
-    background-color: var(--color-background);
-    color: var(--color-text);
-    font-family: var(--font-body);
-    font-size: 16px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-  }
-  h1,
-  h2,
-  h3 {
-    color: var(--color-brand);
-  }
-  :focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 2px;
-  }
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-brand: #f8fafc; --color-primary: #2dd4bf; --color-on-primary: #0f172a;
+  --color-primary-hover: #5eead4; --color-primary-active: #14b8a6; --color-primary-subtle: #134e4a;
+  --color-background: #0f172a; --color-surface: #1e293b; --color-text: #f8fafc; --color-text-muted: #cbd5e1;
+  --color-border-subtle: #334155; --color-border-control: #94a3b8;
+  --color-success: #4ade80; --color-warning: #fbbf24; --color-danger: #f87171;
+  --color-on-danger: #0f172a; --color-danger-hover: #fca5a5; --color-danger-active: #ef4444;
+  --color-danger-subtle: #450a0a; --color-danger-border: #991b1b;
+  --color-success-subtle: #052e16; --color-success-border: #166534;
+  --color-warning-subtle: #451a03; --color-warning-border: #92400e;
+  --color-disabled-bg: #334155; --color-disabled-text: #94a3b8; --color-focus: #2dd4bf;
+  --shadow-surface: 0 4px 16px rgb(0 0 0 / .20);
 }
+
+@theme inline {
+  --color-vault-brand: var(--color-brand); --color-vault-primary: var(--color-primary);
+  --color-vault-background: var(--color-background); --color-vault-surface: var(--color-surface);
+  --font-sans: var(--font-body);
+  --text-xs: 14px; --text-xs--line-height: 1.5;
+  --text-sm: 14px; --text-sm--line-height: 1.5;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font-family: var(--font-body); background: var(--color-background); color: var(--color-text); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+h1,h2,h3,p { margin: 0; }
+h1,h2,h3 { color: var(--color-brand); }
+button,input,select,textarea { font: inherit; }
+button,a,input,select,textarea { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+a { color: inherit; text-decoration: none; }
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+button,input,select,textarea { transition: background-color 180ms ease-out, border-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out; }
+svg { flex-shrink: 0; }
+h1 { font-size: clamp(28px, 2.5vw, 34px); line-height: 1.2; letter-spacing: -.035em; font-weight: 700; }
+h2 { font-size: 24px; font-weight: 600; line-height: 1.3; letter-spacing: -.025em; }
+h3 { font-weight: 600; font-size: 18px; }
+.skip-link { position: fixed; left: 16px; top: -100px; z-index: 100; padding: 12px 20px; background: var(--color-surface); border: 2px solid var(--color-primary); border-radius: 12px; }
+.skip-link:focus { top: 12px; }
 
 @layer components {
   /* ----- Buttons: smooth, not brick-like (guide §4) ----- */
@@ -130,85 +164,33 @@
       color var(--duration-feedback) ease-out,
       box-shadow var(--duration-feedback) ease-out;
   }
-  .btn:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 2px;
-  }
-  .btn-lg {
-    min-height: var(--button-height-lg);
-    padding: 0 24px;
-  }
-  .btn-block {
-    width: 100%;
-  }
+  .btn:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+  .btn-lg { min-height: var(--button-height-lg); padding: 0 24px; }
+  .btn-block { width: 100%; }
 
-  .btn-primary {
-    background-color: var(--button-primary-bg);
-    color: var(--color-on-primary);
-  }
-  .btn-primary:hover {
-    background-color: var(--button-primary-bg-hover);
-  }
-  .btn-primary:active {
-    background-color: var(--button-primary-bg-active);
-  }
+  .btn-primary { background-color: var(--button-primary-bg); color: var(--color-on-primary); }
+  .btn-primary:hover { background-color: var(--button-primary-bg-hover); }
+  .btn-primary:active { background-color: var(--button-primary-bg-active); }
 
-  .btn-secondary {
-    background-color: var(--color-surface);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-  .btn-secondary:hover {
-    background-color: var(--color-primary-subtle);
-  }
-  .btn-secondary:active {
-    background-color: var(--color-primary-subtle);
-    border-color: var(--color-primary-active);
-    color: var(--color-primary-active);
-  }
+  .btn-secondary { background-color: var(--color-surface); border-color: var(--color-primary); color: var(--color-primary); }
+  .btn-secondary:hover { background-color: var(--color-primary-subtle); }
+  .btn-secondary:active { background-color: var(--color-primary-subtle); border-color: var(--color-primary-active); color: var(--color-primary-active); }
 
-  .btn-text {
-    background-color: transparent;
-    color: var(--color-primary);
-    padding: 0 12px;
-  }
-  .btn-text:hover {
-    background-color: var(--color-primary-subtle);
-  }
-  .btn-text:active {
-    color: var(--color-primary-active);
-  }
+  .btn-text { background-color: transparent; color: var(--color-primary); padding: 0 12px; }
+  .btn-text:hover { background-color: var(--color-primary-subtle); }
+  .btn-text:active { color: var(--color-primary-active); }
 
-  .btn-danger {
-    background-color: var(--color-danger);
-    color: var(--color-on-primary);
-  }
-  .btn-danger:hover {
-    background-color: var(--color-danger-hover);
-  }
+  .btn-danger { background-color: var(--color-danger); color: var(--color-on-primary); }
+  .btn-danger:hover { background-color: var(--color-danger-hover); }
 
   /* Disabled: shared tokens, no hover/press feedback, no whole-component opacity. */
   .btn:disabled,
-  .btn[aria-disabled="true"] {
-    background-color: var(--color-disabled-bg);
-    border-color: transparent;
-    color: var(--color-disabled-text);
-    cursor: not-allowed;
-  }
+  .btn[aria-disabled="true"] { background-color: var(--color-disabled-bg); border-color: transparent; color: var(--color-disabled-text); cursor: not-allowed; }
   /* Loading keeps the variant colours but blocks interaction. */
-  .btn[aria-busy="true"] {
-    cursor: progress;
-  }
+  .btn[aria-busy="true"] { cursor: progress; }
 
   /* ----- Inputs (guide §5) ----- */
-  .field-label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    line-height: 1.4;
-    color: var(--color-text);
-  }
+  .field-label { display: block; margin-bottom: 6px; font-size: 0.875rem; font-weight: 500; line-height: 1.4; color: var(--color-text); }
   .input {
     width: 100%;
     min-height: var(--input-height);
@@ -219,87 +201,30 @@
     color: var(--color-text);
     font-family: inherit;
     font-size: 1rem;
-    transition:
-      border-color var(--duration-feedback) ease-out,
-      box-shadow var(--duration-feedback) ease-out;
+    transition: border-color var(--duration-feedback) ease-out, box-shadow var(--duration-feedback) ease-out;
   }
-  .input::placeholder {
-    color: var(--color-text-muted);
-  }
-  .input[type="password"]::-ms-reveal {
-    display: none;
-  }
-  .input:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 2px;
-    border-color: var(--color-primary);
-  }
-  .input[aria-invalid="true"] {
-    border-color: var(--color-danger);
-  }
-  .field-hint {
-    margin-top: 6px;
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-  }
-  .field-error {
-    margin-top: 6px;
-    font-size: 0.875rem;
-    color: var(--color-danger);
-  }
+  .input::placeholder { color: var(--color-text-muted); }
+  .input[type="password"]::-ms-reveal { display: none; }
+  .input:focus-visible { outline: var(--focus-ring); outline-offset: 2px; border-color: var(--color-primary); }
+  .input[aria-invalid="true"] { border-color: var(--color-danger); }
+  .field-hint { margin-top: 6px; font-size: 0.875rem; color: var(--color-text-muted); }
+  .field-error { margin-top: 6px; font-size: 0.875rem; color: var(--color-danger); }
 
   /* ----- Cards / panels ----- */
-  .card {
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--card-radius);
-    box-shadow: var(--shadow-surface);
-    padding: 24px;
-  }
+  .card { background-color: var(--color-surface); border: 1px solid var(--color-border-subtle); border-radius: var(--card-radius); box-shadow: var(--shadow-surface); padding: 24px; }
 
   /* ----- Alerts: colour + icon + text, never colour alone ----- */
-  .alert {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 12px 14px;
-    border: 1px solid;
-    border-radius: var(--radius-control);
-    font-size: 0.875rem;
-    line-height: 1.5;
-  }
-  .alert-success {
-    color: var(--color-success);
-    background-color: var(--color-success-subtle);
-    border-color: var(--color-success-border);
-  }
-  .alert-warning {
-    color: var(--color-warning);
-    background-color: var(--color-warning-subtle);
-    border-color: var(--color-warning-border);
-  }
-  .alert-danger {
-    color: var(--color-danger);
-    background-color: var(--color-danger-subtle);
-    border-color: var(--color-danger-border);
-  }
+  .alert { display: flex; align-items: flex-start; gap: 8px; padding: 12px 14px; border: 1px solid; border-radius: var(--radius-control); font-size: 0.875rem; line-height: 1.5; }
+  .alert-success { color: var(--color-success); background-color: var(--color-success-subtle); border-color: var(--color-success-border); }
+  .alert-warning { color: var(--color-warning); background-color: var(--color-warning-subtle); border-color: var(--color-warning-border); }
+  .alert-danger { color: var(--color-danger); background-color: var(--color-danger-subtle); border-color: var(--color-danger-border); }
 
   /* ----- Links ----- */
-  .link {
-    color: var(--color-primary);
-    font-weight: 500;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    transition: color var(--duration-feedback) ease-out;
-  }
-  .link:hover {
-    color: var(--color-primary-hover);
-  }
+  .link { color: var(--color-primary); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; transition: color var(--duration-feedback) ease-out; }
+  .link:hover { color: var(--color-primary-hover); }
 
   /* ----- Misc ----- */
-  .tabular {
-    font-variant-numeric: tabular-nums;
-  }
+  .tabular { font-variant-numeric: tabular-nums; }
   .spinner {
     width: 18px;
     height: 18px;
@@ -312,19 +237,11 @@
 }
 
 @keyframes ss-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 /* Respect reduced motion: keep state feedback, drop non-essential motion. */
 @media (prefers-reduced-motion: reduce) {
-  .btn,
-  .input,
-  .link {
-    transition: none;
-  }
-  .spinner {
-    animation-duration: 1.6s;
-  }
+  *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; transition: none !important; }
+  .spinner { animation-duration: 1.6s; }
 }

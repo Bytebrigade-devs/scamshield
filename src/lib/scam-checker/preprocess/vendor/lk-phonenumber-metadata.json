@@ -1,0 +1,35 @@
+{
+  "about": "Reviewed Sri Lankan (+94) phone-number SHAPE metadata extracted from a pinned libphonenumber-js metadata artifact. Shape classification only — not a verification that a number is allocated, reachable or the sender's. No operator attribution (number portability).",
+  "country": {
+    "iso": "LK",
+    "name": "Sri Lanka"
+  },
+  "provenance": {
+    "sourceName": "libphonenumber-js",
+    "sourceVersion": "1.12.10",
+    "sourceLicence": "MIT",
+    "sourceUrl": "https://unpkg.com/libphonenumber-js@1.12.10/metadata.max.json",
+    "upstream": "Google libphonenumber metadata (Apache-2.0), packaged by libphonenumber-js (MIT)",
+    "metadataFormatVersion": 4,
+    "downloadedAt": "2026-11-15",
+    "sourceArtifactSha256": "bf12a8429a7a9db1d292c74f0fea1830d921965b4eedbe4e4206d4a966d13e97",
+    "extractedAt": "2026-11-15",
+    "reviewedBy": "M4 workspace source review (Lead-run, 15 November 2026); owner acceptance pending"
+  },
+  "numbering": {
+    "countryCallingCode": "94",
+    "trunkPrefix": "0",
+    "internationalPrefix": "00",
+    "nationalNumberPattern": "[1-9]\\d{8}",
+    "possibleLengths": [9],
+    "mobilePattern": "7(?:[0-25-8]\\d|4[0-4])\\d{6}",
+    "fixedLinePattern": "(?:12[2-9]|602|8[12]\\d|9(?:1\\d|22|9[245]))\\d{6}|(?:11|2[13-7]|3[1-8]|4[157]|5[12457]|6[35-7])[2-57]\\d{6}"
+  },
+  "limits": [
+    "Classifies number SHAPE from reviewed metadata. It never proves the number is allocated, reachable, subscribed, or belongs to the sender.",
+    "No operator attribution is produced: mobile number portability means a prefix does not identify the current operator.",
+    "Only Sri Lankan (+94) numbers are normalised; other country codes are reported as unclassified, never invalid or safe.",
+    "Refresh procedure: download the pinned libphonenumber-js metadata version, verify the recorded SHA-256, extract the LK entry, update this file and re-run node code/preprocess/scripts/generate-lk-phone-metadata.ts. Version or hash movement is a reviewed decision, not a silent update.",
+    "No network access is performed at runtime or by the generator; this file is the reviewed, vendored source."
+  ]
+}

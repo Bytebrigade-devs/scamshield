@@ -1,12 +1,4 @@
-# Current backend work — 7 November 2026
-
-M2 screens now connect to the existing Next.js/TypeScript + Supabase backend by default. See [backend setup](docs/M2-BACKEND.md). Set NEXT_PUBLIC_M2_MODE=demo to use the earlier frontend-only presentation. Payments remain simulated.
-
 # ScamShield
-
-**Current M2 interim mode: frontend-only with dummy data.** Run `npm run dev` and open `/pricing` or `/account/subscription`. No backend configuration is needed. See [Frontend demo guide](docs/FRONTEND-DEMO.md) for presentation flows, dummy card details and reset controls. The older Supabase setup below is for the retained backend implementation.
-
-Module 2 interim setup and demo: [docs/M2-INTERIM.md](docs/M2-INTERIM.md). User stories and diagrams: [docs/M2-DESIGN.md](docs/M2-DESIGN.md).
 
 Digital safety platform combining a **password vault**, an **AI-powered scam checker** (OpenAI), and a **Digital Safety Score** — with a marketing funnel, mocked subscription paywall, and admin back office.
 
@@ -26,14 +18,14 @@ IS2901 Software Development Project · Group **Byte Brigade** · University of M
 
 | # | Module | Owner |
 |---|--------|-------|
-| 1 | Landing Page, Onboarding & Growth | TBD |
+| 1 | Landing Page, Onboarding & Growth | Suraji (@SurajiSaundarya) |
 | 2 | Signup, Paywall & Subscription | Lahiru Achintha (@lahiruachintha23-bit) |
-| 3 | Password Vault | TBD |
+| 3 | Password Vault | Prashni (@Prasnida) |
 | 4 | AI Scam Checker | Svishwa (@Svishwa2004) |
-| 5 | Admin Dashboard, Analytics & Operations | TBD |
-| 6 | Digital Safety Score | shared across modules (coordinator TBD) |
+| 5 | Admin Dashboard, Analytics & Operations | Vishmi (@Vish-Himaya) |
+| 6 | Digital Safety Score | shared across modules — coordinator: Suraji (@SurajiSaundarya) |
 
-*M2 and M4 assigned 17 Oct 2026. M1, M3, M5 and the M6 coordinator are decided at the ownership meeting.*
+*All five module owners assigned by 18 Oct 2026; the Module 6 coordinator and each member's score slice were confirmed the same day, and the coordinator was reassigned to Suraji (@SurajiSaundarya) on 25 Oct 2026. The second hats are confirmed at the ownership meeting.*
 
 ## Workflow Rules (all members)
 
@@ -47,3 +39,43 @@ See [GITHUB-GUIDE.md](GITHUB-GUIDE.md) for the full beginner walkthrough.
 ## Theme & Typography (all members)
 
 Every module's UI must follow the shared team spec: see [docs/THEME-AND-TYPOGRAPHY.md](docs/THEME-AND-TYPOGRAPHY.md) — colours, fonts, buttons and surfaces are defined there; don't invent module-local styling.
+
+## Run the Module 3 frontend
+
+Use the validated Node.js 24.19.0 version pinned in `.nvmrc` and pnpm 11.25.0. The package engine declares a minimum of Node 22.13.0; it is not a claim that every allowed version was tested.
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Open http://127.0.0.1:3000/vault. The home route redirects to the vault. No environment variables or external service credentials are needed for this frontend preview.
+
+The implementation follows all 30 supplied vault frames using Next.js App Router, React, Tailwind CSS v4, semantic theme tokens and a locally hosted Plus Jakarta Sans font. Logins, notes, folders, generator, health, activity, lock, mobile layouts and dialogs are interactive. See [the M3 frontend guide](docs/M3-FRONTEND.md) for the frame-to-route map and integration boundaries.
+
+This branch uses synthetic, in-memory records. Refreshing or locking resets demo changes. Supabase authentication, encrypted persistence, entitlement enforcement, production health estimation and the safety score formula remain backend integration work. Do not enter real credentials.
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test:vault
+pnpm build
+# With Microsoft Edge installed; Playwright starts its own local server:
+pnpm test:browser
+```
+
+The existing M4 source and tests are retained. The new app scaffold is Next.js 16; align the framework baseline with the M2 branch before merging shared infrastructure into main. Development and build scripts use Webpack. See [verification results and local setup notes](docs/M3-VERIFICATION.md).
+
+## Module 2 — signup, paywall and subscription (this branch)
+
+This branch carries the Module 2 work onto the shared Next.js 16 / Tailwind CSS 4 baseline, so it can be reviewed against `main` directly.
+
+- Routes: `/signup`, `/login`, `/forgot-password`, `/reset-password`, `/pricing`, `/checkout`, `/account/subscription`. The shared home route still redirects to `/vault`; open the Module 2 screens by URL.
+- API: `GET`, `PUT`, `POST` and `DELETE` on `/api/subscription`. The route verifies the Supabase bearer token, reads only that user's row and performs writes with the server-only service role key.
+- Access rules: `src/lib/entitlement.ts`; schema and RLS: `docs/m2-schema.sql`.
+- Environment: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, server-only `SUPABASE_SERVICE_ROLE_KEY`. Set `NEXT_PUBLIC_M2_MODE=demo` for the browser-only presentation and restart the dev server.
+- Validation: `pnpm test:subscription`, `pnpm typecheck`, `pnpm build`.
+- Payments remain simulated: no gateway, and no card numbers or security codes enter requests or storage.
+- Styling: `src/app/globals.css` loads Tailwind 4 first and still reads `tailwind.config.ts` through `@config`, so the semantic classes (`bg-surface`, `text-brand`, `rounded-card`, `shadow-surface`) behave exactly as before.
+
+Setup, email delivery and API details: [docs/M2-BACKEND.md](docs/M2-BACKEND.md).

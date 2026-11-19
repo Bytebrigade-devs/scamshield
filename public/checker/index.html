@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>ScamShield — Check a suspicious message</title>
+    <link rel="icon" type="image/svg+xml" href="/checker/favicon.svg" />
+    <link rel="stylesheet" href="/checker/styles.css" />
+  </head>
+  <body>
+<p role="note" style="margin:0;padding:8px 16px;background:#fff4e5;border-bottom:1px solid #f0d9b5;font:14px/1.4 system-ui,sans-serif;color:#5c3d00">Demo build — local pattern checks only. No sign-in, no saved history on the server, and no AI analysis is configured.</p>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <span class="wordmark">ScamShield</span>
+      <nav class="site-nav" aria-label="Scam checker">
+        <button id="nav-check" class="nav-link" type="button" aria-current="page">Check message</button>
+        <button id="nav-history" class="nav-link" type="button">History</button>
+      </nav>
+    </header>
+
+    <main id="main" class="page">
+      <div id="view" class="page__inner"></div>
+    </main>
+
+    <noscript>
+      <p class="noscript">Enable JavaScript to check a message and view your check history.</p>
+    </noscript>
+
+    <pre id="print-summary" class="print-summary" aria-hidden="true"></pre>
+    <script type="module" src="/checker/app.js"></script>
+  </body>
+</html>
