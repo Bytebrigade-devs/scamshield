@@ -6,7 +6,7 @@ This module demonstrates registration/login, password recovery, plan comparison,
 
 ## Run locally
 
-1. Install the project dependencies with `npm ci` (Node 20 or newer).
+1. Install the project dependencies with `pnpm install` (pnpm 11.25.0 and the Node version in `.nvmrc`; `package.json` requires Node 22.13.0 or newer).
 2. Copy `.env.example` to `.env.local` and enter your Supabase project's URL, anon key and **server-only** service role key. Never share or commit the service role key.
 3. Ask the team's schema steward to review `docs/m2-schema.sql`, then apply it in the Supabase SQL editor for the agreed development project. It is transactional and rerunnable. It intentionally aborts if old Free/Premium rows exist: agree their migration first; do not delete teammates' records to make it run.
 4. In Supabase Auth, enable email/password authentication. Configure the Site URL for the development/deployed site and allow its `/reset-password` redirect URL. With email confirmation enabled, confirm the account before logging in. Recovery emails require working Supabase email delivery.
@@ -41,7 +41,7 @@ M4 must atomically enforce monthly/daily/trial/burst limits and provider budgets
 
 The database field `renews_at` is retained for compatibility but means **entitlement expiry** here. No automatic renewal occurs. Expiry comparisons use the server clock; the account screen displays Sri Lanka time. `past_due` and `suspended` cannot be cleared through mock checkout. Valid paid-plan changes/reactivation and invoices remain later work.
 
-The M2 implementation is in the local working copy of `feat/m2-signup-paywall`. The shared base branch and CI or deployment availability still need team confirmation. Proposed ownership for M4 review is that M4 owns checker history and feedback records and scopes them by the authenticated Supabase `user.id`. M2 provides the server-side identity and entitlement contract.
+The M2 implementation is on `feat/m2-sync-main`, synced with `main` at `fa19c3d` and submitted as PR #46 against `main`. Shared app CI runs on every PR; a deployed test environment is still unconfirmed. Proposed ownership for M4 review is that M4 owns checker history and feedback records and scopes them by the authenticated Supabase `user.id`. M2 provides the server-side identity and entitlement contract.
 
 ## Manual demo and integration checklist
 
@@ -62,6 +62,6 @@ The user's screenshot correction replaces card-type selection with a rounded Add
 
 Automated policy and route tests are included. Record actual test/build output in the PR. Live Supabase/email/RLS tests require the configured shared development project and are not implied by passing local tests. Do not mark the manual checklist complete without running it.
 
-The working copy was created from the user's local code (including existing UI edits) and compared with GitHub branch `feat/m2-signup-paywall`, remote head `75f4dd43e1cc567c58387c66d4ebcf28459a2850`. Original files were left intact. Commit changes from the module owner's own account and submit a PR for @Svishwa2004 to review. Flag the M3/M4/M5 owners and schema steward because plan IDs, cycles and write permissions changed.
+This branch was rebuilt from the M2 work and merged with `main` (`fa19c3d`) on 20 November 2026, including the Next.js 16.4.6, React 19 and Tailwind CSS 4 baseline. Commit changes from the module owner's own account and submit a PR for @Svishwa2004 to review. Flag the M3/M4/M5 owners and schema steward because plan IDs, cycles and write permissions changed.
 
 See `M2-DESIGN.md` for user stories, diagrams and interim scope. These documents provide module material; they do not constitute the whole team's report, presentation or approved Figma designs.

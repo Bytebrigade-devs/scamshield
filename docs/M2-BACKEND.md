@@ -38,4 +38,4 @@ Run npm run test:subscription, npm run typecheck, and npm run build. Local tests
 
 Auth integration follows the Supabase API: https://supabase.com/docs/reference/javascript/auth-getuser and https://supabase.com/docs/guides/auth/passwords.
 
-Local verification on 7 November: 26 tests passed; TypeScript passed. Production build was attempted: the existing .next directory denied a write, and an isolated retry stopped because fonts.googleapis.com could not resolve. Temporary build configuration was restored. No .env.local is present; live Supabase/email/RLS verification is pending setup.
+Local verification on 20 November 2026: 28 subscription tests passed; typecheck and lint are clean; the production build succeeded on Next.js 16.4.6 with 14 routes, including every M2 screen and `/api/subscription`. Live Supabase, email and RLS verification still needs configured credentials wherever it runs.

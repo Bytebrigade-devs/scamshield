@@ -1,5 +1,13 @@
 # M2 local validation
 
+## Current head validation — 20 November 2026
+
+- `pnpm test:subscription`: 28 passed, zero failed.
+- `pnpm typecheck`: passed; `pnpm lint`: clean.
+- `pnpm build` on Next.js 16.4.6: passed; 14 routes, including the M2 screens and `/api/subscription`.
+- Shared app CI (`.github/workflows/app-ci.yml`) runs install, lint, typecheck, the subscription suite, build and the vault test on ubuntu and windows.
+- The sections below are historical evidence for earlier baselines, not this head.
+
 ## Current frontend demo validation — 26 October 2026
 
 - All 23 automated policy, retained API and frontend dummy-state tests passed.

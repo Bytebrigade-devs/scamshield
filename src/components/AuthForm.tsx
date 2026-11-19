@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { DEMO_MODE } from "@/lib/m2-mode";
 import { getSupabase } from "@/lib/supabase";
 import { demoSignIn } from "@/lib/demo-store";
+import { authPath } from "@/lib/checkout-path";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Alert, Card } from "@/components/ui/Card";
 import { ShieldIcon } from "@/components/ui/icons";
 
-export default function AuthForm({ mode }: { mode: "signup" | "login" }) {
+export default function AuthForm({ mode, next = null }: { mode: "signup" | "login"; next?: string | null }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,7 +42,7 @@ export default function AuthForm({ mode }: { mode: "signup" | "login" }) {
       if (!data.session) { setPassword(""); setInfo("Check your email to confirm your account, then log in."); return; }
     }
     setPassword("");
-    router.push(mode === "signup" ? "/pricing" : "/account/subscription");
+    router.push(next ?? (mode === "signup" ? "/pricing" : "/account/subscription"));
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to connect. Please retry."); }
     finally { setBusy(false); }
   }
@@ -86,7 +87,7 @@ export default function AuthForm({ mode }: { mode: "signup" | "login" }) {
       </Card>
       <p className="mt-6 text-center text-sm text-muted">
         {isSignup ? "Already have an account? " : "No account yet? "}
-        <Link className="link" href={isSignup ? "/login" : "/signup"}>
+        <Link className="link" href={authPath(isSignup ? "login" : "signup", next)}>
           {isSignup ? "Log in" : "Sign up"}
         </Link>
       </p>

@@ -11,6 +11,8 @@ import { PaymentCardIcon } from "@/components/ui/icons";
 import { DemoCardForm } from "@/components/DemoCardForm";
 import { DEMO_MODE } from "@/lib/m2-mode";
 import { readDemo } from "@/lib/demo-store";
+import { authPath, checkoutPath } from "@/lib/checkout-path";
+import { getSupabase } from "@/lib/supabase";
 import { TEST_CARDS, TEST_CARD_STARTING_BALANCES, type TestCardId } from "@/lib/test-cards";
 
 function Checkout() {
@@ -23,13 +25,24 @@ function Checkout() {
     if (!DEMO_MODE) return;
     const demo = readDemo();
     if (demo.card) {
-// The demo store lives in localStorage, so it can only be read after mount;
+      // The demo store lives in localStorage, so it can only be read after mount;
       // reading it during render would cause a hydration mismatch.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSaved(true);
       setCardId(demo.card.last4);
     }
   }, []);
+  // Backend checkout needs a signed-in session: send the visitor to login and return to this plan.
+  useEffect(() => {
+    if (DEMO_MODE) return;
+    const back = checkoutPath(plan, cycle);
+    if (!back) return;
+    let client: ReturnType<typeof getSupabase>;
+    try { client = getSupabase(); } catch { return; }
+    void client.auth.getSession().then(({ data }) => {
+      if (!data.session) router.replace(authPath("login", back));
+    });
+  }, [plan, cycle, router]);
   const [promo, setPromo] = useState("");
   const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   async function pay(e: React.FormEvent) {
@@ -69,7 +82,7 @@ function Checkout() {
           <p className="mt-5 border-t border-border-subtle pt-4 text-sm text-muted">One simulated payment. No automatic renewal.</p>
         </Card>
         <Alert tone="warning">Test checkout. Use dummy card details only. Payments are simulated; no money is charged.</Alert>
-        <Link href="/login" className="link inline-block text-sm">Log in to your account</Link>
+        <Link href={authPath("login", checkoutPath(plan, cycle))} className="link inline-block text-sm">Log in to your account</Link>
       </section>
       <Card className="p-6 sm:p-8">
         {!cardId ? <DemoCardForm onAdded={id => {

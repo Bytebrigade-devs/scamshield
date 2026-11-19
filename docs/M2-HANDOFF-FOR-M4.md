@@ -28,9 +28,9 @@ M4 anchors the monthly allowance at first use. Failed, rejected and AI-unavailab
 
 ## Shared app and test environment
 
-The shared app uses Next.js App Router, TypeScript, and Supabase. The helper and its tests are in the local M2 working copy on `feat/m2-signup-paywall`. Use the contract above to develop the M4 adapter with test doubles. The shared target branch and availability of CI or a deployed test environment still need team confirmation.
+The shared app uses Next.js App Router, TypeScript, and Supabase. The helper and its tests are on `feat/m2-sync-main`, synced with `main` and submitted as PR #46. CI runs install, lint, typecheck, build, the vault test and the subscription suite on every PR. Use the contract above to develop the M4 adapter with test doubles. A deployed test environment remains unconfirmed.
 
-The local production build, TypeScript check, and 27 subscription tests passed. The last live check found Supabase Auth reachable and the `public.subscriptions` table missing. Live trial, checkout, cancellation, and row access checks are pending schema setup. Payments are simulated. See `docs/M2-BACKEND.md` for setup.
+The local production build, TypeScript check, lint and 28 subscription tests passed on the Next.js 16.4.6 baseline. The Supabase development project has `public.subscriptions` applied (seven columns, RLS enabled, one row; owner-verified 19 November 2026), so the live trial, checkout, cancellation and row-access checks can now be run against it. Payments are simulated. See `docs/M2-BACKEND.md` for setup.
 
 ## History and feedback ownership
 

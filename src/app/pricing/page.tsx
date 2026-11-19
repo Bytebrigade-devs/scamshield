@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CHECK_LIMITS, PLANS, BillingCycle, money, cycleLabel } from "@/lib/plans";
 import { subscriptionRequest } from "@/lib/subscription-client";
+import { checkoutPath } from "@/lib/checkout-path";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { Alert, Card } from "@/components/ui/Card";
 import { CheckIcon } from "@/components/ui/icons";
@@ -40,7 +41,7 @@ export default function PricingPage() {
         <p className="tabular mt-6 text-[32px] font-bold text-brand">{money(plan.price[cycle])}</p>
         <p className="text-sm text-muted">per {cycle === "monthly" ? "month" : cycle === "quarterly" ? "3 months" : "year"} · simulated billing</p>
         <ul className="my-6 flex-1 space-y-3">{[`${plan.monthlyChecks} completed checks per month`, `Up to ${plan.dailyChecks} completed checks per day`].map(feature => <li key={feature} className="flex gap-2"><CheckIcon size={18} className="mt-1 shrink-0 text-primary"/><span>{feature}</span></li>)}</ul>
-        <Link href={`/checkout?plan=${plan.id}&cycle=${cycle}`} className={buttonClass({ variant: plan.id === "guardian" ? "primary" : "secondary", size: "lg" })}>Choose {plan.name}</Link>
+        <Link href={checkoutPath(plan.id, cycle) ?? "/pricing"} className={buttonClass({ variant: plan.id === "guardian" ? "primary" : "secondary", size: "lg" })}>Choose {plan.name}</Link>
       </Card>)}
     </div>
     <p className="mx-auto mt-4 max-w-2xl text-center text-sm text-muted">

@@ -10,7 +10,7 @@ Hi Svishwa, thanks for confirming that M4 owns checker history and feedback, sco
 - **Reasons.** Entitlement decisions return exactly `valid_entitlement` or `subscription_required`. A missing subscription yields a verified user with a denied decision. The separate helper results `unauthenticated` and `unavailable` map to HTTP 401 and 503 respectively. Treat thrown errors as 503.
 - **Environment.** The read helper uses `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` with the caller’s bearer token. M2’s write routes separately use `SUPABASE_SERVICE_ROLE_KEY` on the server. Use `NEXT_PUBLIC_M2_MODE=backend` for the shared app’s live M2 UI.
 
-The helper is currently in the local M2 working copy on `feat/m2-signup-paywall`. The team still needs to confirm the shared target branch and CI or a deployed test environment. I’ll flag the helper once it lands on the shared base. The last Supabase check found Auth reachable and `public.subscriptions` missing, so a live entitlement test still needs the schema applied.
+The helper is on `feat/m2-sync-main`, synced with `main` and submitted as PR #46; CI runs install, lint, typecheck, build, the vault test and the subscription suite. Use `NEXT_PUBLIC_M2_MODE=backend` for the live M2 UI. As of the 19 November 2026 owner check, the Supabase development project has `public.subscriptions` applied with RLS and one row, so a live entitlement test can run there; email delivery still depends on SMTP configuration.
 
 ## Sample results for adapter tests
 

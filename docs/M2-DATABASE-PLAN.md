@@ -59,7 +59,7 @@ M2 returns plan limits as entitlement metadata but does not maintain check count
 
 ## Current status
 
-The branch contains the M2 schema and server-side subscription routes. This document is a rollout plan; it does not mean the SQL has been applied or live Supabase permissions have been verified. The schema, Auth email delivery, account isolation, and Module 4 quota enforcement still need development-project verification. Changes are on `feat/m2-signup-paywall`; they have not been merged into `main`.
+The branch contains the M2 schema and server-side subscription routes. The schema is applied in the Supabase development project (seven columns, RLS enabled, one row; owner-verified 19 November 2026); Auth email delivery, account isolation and Module 4 quota enforcement still need verification there. Changes are on `feat/m2-sync-main`, synced with `main`, and submitted as PR #46.
 
 ## Related files
 

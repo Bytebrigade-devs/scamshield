@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@config "../../tailwind.config.ts";
 
 /*
  * ScamShield design tokens — source: docs/THEME-AND-TYPOGRAPHY.md (v1.1, team-approved).
@@ -37,43 +36,8 @@
   --radius-12: 12px;
   --radius-16: 16px;
 
-  /* ---------- 2. Semantic (guide §2) ---------- */
-  --color-brand: var(--navy-900);
-  --color-primary: var(--teal-700);
-  --color-on-primary: var(--white);
-  --color-primary-hover: var(--teal-800);
-  --color-primary-active: var(--teal-900);
-  --color-primary-subtle: var(--teal-50);
-  --color-background: var(--slate-50);
-  --color-surface: var(--white);
-  --color-text: var(--navy-900);
-  --color-text-muted: var(--slate-600);
-  --color-border-subtle: var(--slate-200);
-  --color-border-control: var(--slate-500);
-  --color-success: var(--green-700);
-  --color-warning: var(--amber-700);
-  --color-danger: var(--red-700);
-  --color-on-danger: var(--white);
-  --color-danger-hover: var(--red-800);
-  --color-danger-active: #7f1d1d;
-  --color-disabled-bg: var(--slate-200);
-  --color-disabled-text: var(--slate-500);
-  --color-focus: var(--teal-700);
-
-  /* PROPOSED tinted surfaces (not yet in the guide — needs approval via §7). */
-  --color-success-subtle: var(--green-50);
-  --color-success-border: var(--green-200);
-  --color-warning-subtle: var(--amber-50);
-  --color-warning-border: var(--amber-200);
-  --color-danger-subtle: var(--red-50);
-  --color-danger-border: var(--red-200);
-
   --font-body: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
-  --radius-control: var(--radius-12);
-  --radius-card: var(--radius-16);
-  --shadow-surface: 0 4px 16px rgb(15 23 42 / .06);
   --duration-feedback: 180ms;
 
   /* Shared inverse surfaces use only the approved dark palette. */
@@ -94,6 +58,52 @@
   --input-height: 44px;
   --card-radius: var(--radius-card);
   --focus-ring: 3px solid var(--color-primary);
+}
+
+/*
+ * Semantic tokens are declared once, in the Tailwind theme: each value emits a CSS variable for
+ * hand-written CSS (components use var(--color-surface) and so on) and generates the matching
+ * utility class (bg-surface, text-brand, rounded-card, shadow-surface). `[data-theme="dark"]`
+ * below overrides the same variables, so utilities and plain CSS follow the theme together.
+ */
+@theme {
+  --color-brand: var(--navy-900);
+  --color-primary: var(--teal-700);
+  --color-on-primary: var(--white);
+  --color-primary-hover: var(--teal-800);
+  --color-primary-active: var(--teal-900);
+  --color-primary-subtle: var(--teal-50);
+  --color-background: var(--slate-50);
+  --color-surface: var(--white);
+  --color-text: var(--navy-900);
+  --color-text-muted: var(--slate-600);
+  --color-muted: var(--slate-600);
+  --color-border-subtle: var(--slate-200);
+  --color-border-control: var(--slate-500);
+  --color-success: var(--green-700);
+  --color-warning: var(--amber-700);
+  --color-danger: var(--red-700);
+  --color-on-danger: var(--white);
+  --color-danger-hover: var(--red-800);
+  --color-danger-active: #7f1d1d;
+  --color-disabled-bg: var(--slate-200);
+  --color-disabled-text: var(--slate-500);
+  --color-focus: var(--teal-700);
+
+  /* PROPOSED tinted surfaces (not yet in the guide — needs approval via §7). */
+  --color-success-subtle: var(--green-50);
+  --color-success-border: var(--green-200);
+  --color-warning-subtle: var(--amber-50);
+  --color-warning-border: var(--amber-200);
+  --color-danger-subtle: var(--red-50);
+  --color-danger-border: var(--red-200);
+
+  --font-sans: var(--font-body);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --radius-control: var(--radius-12);
+  --radius-card: var(--radius-16);
+  --shadow-surface: 0 4px 16px rgb(15 23 42 / .06);
 }
 
 [data-theme="dark"] {
@@ -123,7 +133,6 @@
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; font-family: var(--font-body); background: var(--color-background); color: var(--color-text); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
 h1,h2,h3,p { margin: 0; }
-h1,h2,h3 { color: var(--color-brand); }
 button,input,select,textarea { font: inherit; }
 button,a,input,select,textarea { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
