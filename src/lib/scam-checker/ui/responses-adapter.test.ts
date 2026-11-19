@@ -79,6 +79,27 @@ test('posts the Responses shape and returns the parsed reply', async () => {
   assert.match(body.instructions, /taxonomy_version/);
 });
 
+test('requests carry a self-identifying user agent and a stable session header (OpenCode Go)', async () => {
+  const captured: Captured[] = [];
+  const provider = createResponsesProvider({
+    apiKey: 'test-key',
+    endpointUrl: ENDPOINT,
+    model: 'gpt-5.6-luna',
+    fetchImpl: fakeFetch(() => jsonResponse(responsesEnvelope(JSON.stringify(VALID_REPLY))), captured),
+  });
+  await provider.analyze('first synthetic message');
+  await provider.analyze('second synthetic message');
+  assert.equal(captured.length, 2);
+  for (const call of captured) {
+    const headers = call.init.headers as Record<string, string>;
+    assert.equal(headers['user-agent'], 'm4-scam-checker/1.0');
+    assert.match(headers['x-opencode-session'], /^ses_[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/);
+  }
+  const first = (captured[0].init.headers as Record<string, string>)['x-opencode-session'];
+  const second = (captured[1].init.headers as Record<string, string>)['x-opencode-session'];
+  assert.equal(first, second); // stable per provider instance — routing/prompt-cache continuity
+});
+
 test('accepts the top-level output_text convenience field', async () => {
   const provider = createResponsesProvider({
     apiKey: 'k',
