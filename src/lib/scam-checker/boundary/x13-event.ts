@@ -110,3 +110,74 @@ export function validateCheckOutcomeEvent(value: unknown): value is CheckOutcome
   if (event.analysis_status === 'unavailable' && event.category_id !== 'unknown_other') return false;
   return true;
 }
+
+// ---- 0.2.0-draft revision: nine fields (agreed 19 November 2026) ----
+// The reference field name `subject_ref` was confirmed by Vishmi (M5) + Lahiru (M2) on
+// 19 November 2026. This is an additive revision: the 0.1.0-draft builder/validator above
+// remain unchanged, so existing eight-field events stay valid. No emitter/delivery exists.
+
+export const EVENT_CONTRACT_VERSION_V2 = '0.2.0-draft';
+/** Agreed reference field name (Vishmi + Lahiru, 19 Nov 2026). */
+export const SUBJECT_REF_FIELD = 'subject_ref';
+
+export interface CheckOutcomeEventV2 extends CheckOutcomeEvent {
+  /** Opaque, server-generated per-user reference; never a raw id/email/token. */
+  subject_ref: string;
+}
+
+const EVENT_KEYS_V2 = [...EVENT_KEYS, SUBJECT_REF_FIELD] as const;
+
+/**
+ * Same opaque-reference hygiene as the M6 evidence summary: shape only, not subject binding.
+ * Binding the ref to the signed-in subject is the caller's responsibility.
+ */
+function normaliseSubjectRef(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const ref = value.trim();
+  if (ref.length === 0 || ref.length > 128) return null;
+  if (/\s/.test(ref)) return null;
+  if (/[\u0000-\u001F\u007F]/.test(ref)) return null;
+  if (ref.includes('@')) return null;
+  if (/^\+?\d{7,}$/.test(ref)) return null;
+  if (/^eyJ[\w-]*\./.test(ref)) return null;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(ref)) return null;
+  return ref;
+}
+
+/**
+ * Build the nine-field `0.2.0-draft` event. Returns null for any invalid outcome/meta or an
+ * unusable subject reference. The reference must be supplied server-side by the caller.
+ */
+export function buildCheckOutcomeEventV2(
+  outcome: CheckOutcome,
+  meta: { eventId: unknown; occurredAt: unknown; subjectRef: unknown },
+): CheckOutcomeEventV2 | null {
+  const base = buildCheckOutcomeEvent(outcome, meta);
+  if (base === null) return null;
+  const ref = normaliseSubjectRef(meta.subjectRef);
+  if (ref === null) return null;
+  return Object.freeze({
+    ...base,
+    contract_version: EVENT_CONTRACT_VERSION_V2,
+    subject_ref: ref,
+  });
+}
+
+/** Structural validation for the nine-field revision: exact keys, types, pairs, ref hygiene. */
+export function validateCheckOutcomeEventV2(value: unknown): value is CheckOutcomeEventV2 {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const event = value as Record<string, unknown>;
+  const keys = Object.keys(event);
+  if (keys.length !== EVENT_KEYS_V2.length || !EVENT_KEYS_V2.every(key => keys.includes(key))) return false;
+  if (event.contract_version !== EVENT_CONTRACT_VERSION_V2) return false;
+  if (event.event_type !== EVENT_TYPE) return false;
+  if (!isEventId(event.event_id) || !isRfc3339Utc(event.occurred_at)) return false;
+  if (event.taxonomy_version !== TAXONOMY_VERSION) return false;
+  if (!(CATEGORY_IDS as readonly string[]).includes(event.category_id as string)) return false;
+  if (event.analysis_status !== 'completed' && event.analysis_status !== 'limited' && event.analysis_status !== 'unavailable') return false;
+  if (event.analysis_mode !== 'rules_and_ai' && event.analysis_mode !== 'rules_only' && event.analysis_mode !== 'none') return false;
+  if (!pairIsValid(event.analysis_status, event.analysis_mode)) return false;
+  if (event.analysis_status === 'unavailable' && event.category_id !== 'unknown_other') return false;
+  if (normaliseSubjectRef(event.subject_ref) !== event.subject_ref) return false;
+  return true;
+}

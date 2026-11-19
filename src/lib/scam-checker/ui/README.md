@@ -1,5 +1,11 @@
 # ScamShield — local scam checker
 
+## Live provider and prompt baseline — 19 November 2026
+
+The configured **testing** provider is now the owner's **OpenCode Go** subscription — gateway `https://opencode.ai/inference/go` (OpenAI-compatible Responses API), the recorded primary model **`gpt-5.6-luna`**, the same listed rates, and the Go usage allowance (Extra Usage off) as the hard stop. The Responses adapter sends the Go-required `user-agent` and a stable `x-opencode-session` header; the key stays local-only in the gitignored `code/ui/.env.local`. **X-09 is closed owner-self-certified** (key accepted, single smoke 3/3 completed), and the live work is recorded: the **40-pair pilot (80/80)** and the **500-message detector run (500/500; scam 350/350 flagged)**. The amended OD-M4-04 prompt instruction is **accepted as the draft baseline** (28/32 control overflags cleared, 20-message scam canary 20/20, sweep 103/103). Native OpenAI remains the recorded production target. [Amendment](../../evidence/M4-x09-opencode-go-provider-amendment-20261119.md) · [Closure](../../evidence/M4-x09-closure-20261119.md) · [Pilot](../../evidence/M4-pilot-live-80-20261119.md) · [500-message run](../../evidence/M4-500-live-run-20261119.md) · [OD-M4-04 acceptance](../../evidence/M4-od-m4-04-acceptance-and-adjudication-20261119.md).
+
+Verification at this boundary: workspace suite **500/500**, strict sweep **103/103**; repository `main` = **`c946e13`** with **495/495** library tests (PR #44). The Netlify demo is unchanged by this round; no accuracy, real-world-coverage or deployment claim follows.
+
 ## Result-page layout — minimal hierarchy, 17 November 2026
 
 Owner-reported problem: the result page felt like a long stack of unrelated cards ("I feel lost in the
@@ -172,7 +178,7 @@ Provider selection belongs to the server:
 `POST /api/check` reads `text` and optional `sender`; browser-supplied provider selectors, identity, plan and quota
 fields have no authority. `GET /api/config` reports capability and limits without credentials.
 
-The live prompt is a documented draft (OD-M4-04 open). The submitted text travels as a pristine
+The live prompt is a documented draft; the round-1 instruction is **accepted as the OD-M4-04 draft baseline** (19 November 2026), while reply/deadline semantics remain tracked. The submitted text travels as a pristine
 user message; the system message carries the analysis instructions plus this text's local rule
 findings (matched excerpt, rule id, context) so the provider can use them as evidence — a verdict
 still comes only from the provider. The provider is told it has no internet access and may never

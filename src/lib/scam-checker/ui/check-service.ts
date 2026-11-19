@@ -19,6 +19,8 @@ import type {
   ProviderPort,
 } from '../boundary/check-boundary.ts';
 import { createInMemoryUsageStore } from '../boundary/usage-store.ts';
+import { createInMemoryPersistence, type StoredUsageEvent } from '../boundary/persistence-port.ts';
+import { emitCheckOutcome, type EventSink } from '../boundary/event-emitter.ts';
 import { createOpenAIProvider, DEFAULT_DEADLINE_MS, DEFAULT_MODEL, MAX_OUTPUT_TOKENS } from '../boundary/openai-adapter.ts';
 import type { AiFailure } from '../boundary/openai-adapter.ts';
 import { createResponsesProvider } from './responses-adapter.ts';
@@ -128,6 +130,11 @@ export interface CheckServiceOptions {
   organizationDirectory?: readonly OrganizationRecord[];
   /** Separate, server-owned reviewed help catalog. Never read before admission. */
   guidanceDirectory?: readonly GuidanceRecord[];
+  /**
+   * Server-construction injection for the local X-13 event sink (tests); `null` disables
+   * emission entirely. Never accepted from an HTTP request.
+   */
+  events?: EventSink | null;
 }
 
 export interface CheckServiceResult {
@@ -147,6 +154,12 @@ export interface CheckService {
   readonly model: string | null;
   /** Transport style of the configured live provider (for honest UI labelling). */
   readonly api: 'chat' | 'responses' | null;
+  /**
+   * Local in-memory X-13 event log (`0.2.0-draft`, nine fields). Per-process only — a restart
+   * forgets it, and nothing is ever delivered to a consumer. Reads the service-internal
+   * store; an injected test sink receives the emissions instead.
+   */
+  listEvents(): StoredUsageEvent[];
   check(text: unknown, sender?: unknown): Promise<CheckServiceResult>;
 }
 
@@ -198,6 +211,12 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
   const budget = { isProviderCallPermitted: () => ({ permitted: true as const }) };
 
   const usage = createInMemoryUsageStore();
+  // X-13: one local 0.2.0-draft event per accepted analysed outcome (in-memory only; no
+  // delivery to any consumer). The reference is the same server-derived demo subject the
+  // feedback surfaces use — never a browser-supplied value.
+  const persistence = createInMemoryPersistence();
+  const events: EventSink | null = options.events === null ? null : options.events ?? persistence.events;
+  let eventSeq = 0;
   // No credentials means rules only, never a fabricated AI reply. Test provider injection
   // is available only when constructing the service, not through the public request body.
   const providerFor = (verification: () => OrganizationVerification, sender: () => SenderVerification | undefined,
@@ -234,6 +253,7 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
     liveConfigured: live !== null,
     model: live?.model ?? null,
     api: live !== null ? (live.api ?? 'chat') : null,
+    listEvents: () => persistence.events.listAll(),
     async check(text: unknown, sender?: unknown): Promise<CheckServiceResult> {
       if (sender !== undefined && (typeof sender !== 'string' || sender.length > 254)) {
         return { outcome: { kind: 'rejected', reason: 'invalid-input', message: 'Sender information must be text of at most 254 characters.' },
@@ -277,6 +297,14 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
       };
       const outcome = await runCheck({ text }, deps);
       if (outcome.kind === 'analysed' && outcome.analysisStatus === 'unavailable' && !aiFailure) aiFailure = { code: 'invalid-response' };
+      if (outcome.kind === 'analysed' && events) {
+        // Idempotent by event id; the boolean result is not a check-failure signal.
+        emitCheckOutcome(events, outcome, {
+          subjectRef: DEMO_SUBJECT_KEY,
+          eventId: `evt-${++eventSeq}`,
+          occurredAt: new Date(now()).toISOString(),
+        });
+      }
       return { outcome, providerMode: live === null ? 'live-unconfigured' : 'live',
         ...(outcome.kind === 'analysed' ? { organizationVerification, linkInspection, guidanceResources,
           ...(senderVerification ? { senderVerification } : {}),
