@@ -47,14 +47,16 @@ export interface LiveConfig {
   /**
    * Test-harness payload builder. It requests the boundary's EXISTING draft reply shape so a
    * live smoke check can exercise the completed path. It does not define analysis semantics:
-   * verdict meaning, category choice and prompting remain OD-M4-04 (open).
+   * verdict meaning, category choice and prompting follow the accepted draft baseline
+   * (OD-M4-04, 19 November 2026) — a draft, not an approved product taxonomy.
    */
   buildPayload?: (text: string, model: string) => unknown;
 }
 
 /**
- * Analysis instructions for the live provider (draft harness prompt; verdict semantics remain
- * OD-M4-04 open). The provider has no internet access: it may recognise a link or destination
+ * Analysis instructions for the live provider (draft harness prompt following the accepted
+ * draft baseline, OD-M4-04 19 November 2026 — not an approved product taxonomy). The provider
+ * has no internet access: it may recognise a link or destination
  * from prior knowledge, but it can never open, browse or live-verify anything, and the reason
  * it returns must make clear to an ordinary reader WHY the message is or is not a scam.
  */

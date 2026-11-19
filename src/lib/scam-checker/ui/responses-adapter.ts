@@ -11,10 +11,12 @@
  * the key can enter a result, message or log.
  *
  * The request asks for the boundary's EXISTING draft reply shape (verdict, category,
- * taxonomy_version, reason). Prompt wording and verdict semantics remain OD-M4-04 (open).
+ * taxonomy_version, reason). Prompt wording and verdict semantics follow the accepted
+ * draft baseline (OD-M4-04, 19 November 2026) — a draft, not an approved product taxonomy.
  *
  * Every request also carries a self-identifying `user-agent` and a stable per-provider
- * `x-opencode-session` id: the OpenCode Go gateway (https://opencode.ai/inference/go)
+ * `x-opencode-session` id: the owner-authorized OpenCode Go testing gateway
+ * (https://opencode.ai/inference/go; native OpenAI remains the recorded production target)
  * requires both — a client user agent rather than a generic SDK name, and a stable
  * conversation id for routing and prompt caching. The session id is generated once per
  * provider instance, is not derived from any submitted text, and is never a user
