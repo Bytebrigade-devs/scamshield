@@ -332,3 +332,61 @@ test('M4-15/FS-M4-04: Tamil text is analysed as text only — no language or saf
   assert.deepEqual(outcome.limitations, [RULES_ONLY_LIMITATION]);
   assert.deepEqual(outcome.candidates.urls, ['https://example.lk/help'], 'extraction is script-agnostic; no translation occurs');
 });
+
+// ---- X-13 0.2.0-draft local event emission (19 November 2026 additions) ----
+
+test('an analysed outcome emits one local 0.2.0-draft event with the demo subject', async () => {
+  const service = createCheckService();
+  const { outcome } = await service.check(FIXTURE);
+  assert.equal(outcome.kind, 'analysed');
+  const events = service.listEvents();
+  assert.equal(events.length, 1);
+  const [event] = events;
+  assert.equal(event.contract_version, '0.2.0-draft');
+  assert.equal(event.event_type, 'm4.check_outcome');
+  assert.equal((event as { subject_ref?: string }).subject_ref, 'local-ui-demo-subject');
+  assert.equal(Object.keys(event).length, 9);
+  assert.ok(event.occurred_at.endsWith('Z'), 'the terminal check time is UTC RFC-3339');
+});
+
+test('a completed AI outcome emits with its validated category; unavailable stays unknown_other', async () => {
+  const completed = createCheckService({ live: LIVE, provider: completedProvider });
+  assert.equal((await completed.check(FIXTURE)).outcome.kind, 'analysed');
+  const [event] = completed.listEvents();
+  assert.equal(event.analysis_status, 'completed');
+  assert.equal(event.category_id, 'phishing');
+
+  const unavailable = createCheckService({ live: LIVE, provider: { analyze: async () => ({ kind: 'failed', failure: 'timeout' }) } });
+  assert.equal((await unavailable.check(FIXTURE)).outcome.kind, 'analysed');
+  const [failed] = unavailable.listEvents();
+  assert.equal(failed.analysis_status, 'unavailable');
+  assert.equal(failed.category_id, 'unknown_other');
+});
+
+test('rejected outcomes emit no event; accepted checks get distinct ids', async () => {
+  const service = createCheckService();
+  assert.equal((await service.check('x'.repeat(2001))).outcome.kind, 'rejected');
+  assert.equal(service.listEvents().length, 0);
+  await service.check(FIXTURE);
+  await service.check(FIXTURE);
+  const events = service.listEvents();
+  assert.equal(events.length, 2);
+  assert.notEqual(events[0].event_id, events[1].event_id);
+});
+
+test('an injected sink receives exactly one append per analysed check', async () => {
+  const appended: unknown[] = [];
+  const service = createCheckService({ events: { append: (event) => { appended.push(event); return true; } } });
+  const { outcome } = await service.check(FIXTURE);
+  assert.equal(outcome.kind, 'analysed');
+  assert.equal(appended.length, 1);
+  assert.equal((appended[0] as { subject_ref?: string }).subject_ref, 'local-ui-demo-subject');
+  assert.equal(service.listEvents().length, 0, 'an injected sink replaces the internal store');
+});
+
+test('events: null disables emission without affecting the check', async () => {
+  const service = createCheckService({ events: null });
+  const { outcome } = await service.check(FIXTURE);
+  assert.equal(outcome.kind, 'analysed');
+  assert.equal(service.listEvents().length, 0);
+});

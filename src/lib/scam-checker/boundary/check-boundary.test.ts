@@ -309,6 +309,25 @@ test('FS-M4-08: a spent daily cap denies the check before any provider call', as
   assert.equal(calls.length, 0);
 });
 
+test('quota rule: a rules-only limited result releases its reservation and never consumes quota', async () => {
+  let counted = 0;
+  let released = 0;
+  const usage: UsagePort = {
+    admitCheck: () => null,
+    recordCompletion: () => { counted += 1; },
+    releaseCheck: () => { released += 1; },
+  };
+  const { deps } = makeDeps({ usage, providerAttempt: { kind: 'unconfigured' } });
+  const outcome = await runCheck({ text: VALID_TEXT }, deps);
+  assert.equal(outcome.kind, 'analysed');
+  if (outcome.kind === 'analysed') {
+    assert.equal(outcome.analysisStatus, 'limited');
+    assert.equal(outcome.analysisMode, 'rules_only');
+  }
+  assert.equal(counted, 0, 'only completed analyses may consume quota');
+  assert.equal(released, 1, 'a limited result must release its admission reservation');
+});
+
 test('FS-M4-08: the burst guard denies the sixth check in a minute with zero further provider calls', async () => {
   const { deps, calls } = makeDeps(); // guardian: daily 15, so only the burst guard (5/min) can fire
   for (let i = 0; i < 5; i += 1) {
