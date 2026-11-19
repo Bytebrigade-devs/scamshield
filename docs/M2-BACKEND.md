@@ -8,7 +8,7 @@ The saved team design uses Next.js App Router, TypeScript and Supabase Auth/Post
 2. Review docs/m2-schema.sql with the team schema steward, then apply it to the development Supabase project. Existing legacy Free/Premium records require an agreed migration; the SQL intentionally aborts rather than converting them.
 3. Enable email/password Auth. Set Site URL and allow the site's /account/subscription and /reset-password redirect URLs. Configure custom SMTP in Supabase Auth settings for delivery to ordinary user addresses; Supabase's default mailer is restricted to pre-authorized team addresses. The reset form uses `resetPasswordForEmail` and does not send email in demo mode.
    To send trial-start confirmations, optionally configure `RESEND_API_KEY` and `TRIAL_EMAIL_FROM` with a verified sender domain. If these are missing or delivery fails, the trial still starts and the account page reports that no confirmation email was sent.
-4. Run npm run dev. Sign up, confirm email, log in, start a trial, inspect subscription, cancel, and test recovery email/password replacement.
+4. Run pnpm dev. Sign up, confirm email, log in, start a trial, inspect subscription, cancel, and test recovery email/password replacement.
 5. Verify two accounts cannot read each other's subscriptions and direct browser database writes are denied. These checks require a configured Supabase project and have not been run locally.
 
 ## API
@@ -34,7 +34,7 @@ M4 must enforce usage limits atomically and call the server entitlement helper f
 
 ## Validation
 
-Run npm run test:subscription, npm run typecheck, and npm run build. Local tests use mocked Supabase responses; they do not establish live database permissions, email delivery or payment processing.
+Run pnpm test:subscription, pnpm typecheck, and pnpm build. Local tests use mocked Supabase responses; they do not establish live database permissions, email delivery or payment processing.
 
 Auth integration follows the Supabase API: https://supabase.com/docs/reference/javascript/auth-getuser and https://supabase.com/docs/guides/auth/passwords.
 

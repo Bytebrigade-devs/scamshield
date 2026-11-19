@@ -10,8 +10,8 @@ This module demonstrates registration/login, password recovery, plan comparison,
 2. Copy `.env.example` to `.env.local` and enter your Supabase project's URL, anon key and **server-only** service role key. Never share or commit the service role key.
 3. Ask the team's schema steward to review `docs/m2-schema.sql`, then apply it in the Supabase SQL editor for the agreed development project. It is transactional and rerunnable. It intentionally aborts if old Free/Premium rows exist: agree their migration first; do not delete teammates' records to make it run.
 4. In Supabase Auth, enable email/password authentication. Configure the Site URL for the development/deployed site and allow its `/reset-password` redirect URL. With email confirmation enabled, confirm the account before logging in. Recovery emails require working Supabase email delivery.
-5. Run `npm run dev`, then open `http://localhost:3000/pricing`.
-6. Run `npm run test:subscription`, `npm run typecheck`, and `npm run build` before your PR.
+5. Run `pnpm dev`, then open `http://localhost:3000/pricing`.
+6. Run `pnpm test:subscription`, `pnpm typecheck`, and `pnpm build` before your PR.
 
 The service role key is required because authenticated browsers can only **read their own subscription**. Browser insert/update/delete privileges are revoked; trusted routes verify the bearer token with Supabase before writing. This prevents a forged browser request to Supabase from granting a plan or changing expiry. The simulated checkout API intentionally allows registered accounts to create mock entitlements; it is not a production payment integration.
 

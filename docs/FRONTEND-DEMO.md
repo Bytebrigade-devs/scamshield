@@ -22,4 +22,4 @@ Run `pnpm dev` and open `/pricing`, `/login`, or `/account/subscription`.
 
 State persists in localStorage under `scamshield-interim-demo-v1` for this browser/origin. Demo identities share one presentation state; this is not an account database or authentication. Use dummy information only. `src/lib/demo-store.ts` is the frontend state adapter, and `subscription-client.ts` invokes it without fetch. Backend mode is the default (`NEXT_PUBLIC_M2_MODE=backend`), so the shipped UI calls `/api/subscription`; this adapter is used only in demo mode. Never use this client state to grant real access.
 
-Validation: `npm run test:subscription`, `npm run typecheck`, `npm run build`, plus browser checks of the complete demo flow and no external account/payment requests.
+Validation: `pnpm test:subscription`, `pnpm typecheck`, `pnpm build`, plus browser checks of the complete demo flow and no external account/payment requests.
