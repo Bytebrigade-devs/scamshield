@@ -27,7 +27,13 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
         else { setReady(true); setError(""); }
       }).catch(() => setError("Unable to verify your recovery session. Request a new link."));
       return () => listener.subscription.unsubscribe();
-    } catch (e) { setError(e instanceof Error ? e.message : "Account service unavailable."); }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Account service unavailable.";
+      // The Supabase client throws synchronously when its configuration is missing,
+      // so the message can only surface after mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError(message);
+    }
   }, [reset]);
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setError("");

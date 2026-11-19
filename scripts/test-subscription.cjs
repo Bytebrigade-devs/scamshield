@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS test script executed by `node --test`. */
 // Compile the isolated policy modules and test expiry/limits without real accounts.
 const ts = require('typescript');
 const fs = require('node:fs');

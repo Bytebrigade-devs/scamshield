@@ -23,6 +23,9 @@ function Checkout() {
     if (!DEMO_MODE) return;
     const demo = readDemo();
     if (demo.card) {
+// The demo store lives in localStorage, so it can only be read after mount;
+      // reading it during render would cause a hydration mismatch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSaved(true);
       setCardId(demo.card.last4);
     }

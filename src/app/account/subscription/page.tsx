@@ -22,6 +22,7 @@ export default function SubscriptionPage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [email, setEmail] = useState("");
   const [card, setCard] = useState<DemoCard | null>(null);
+  const [nowMs, setNowMs] = useState(0);
   const load = useCallback(async () => {
     setError("");
     try {
@@ -39,14 +40,16 @@ export default function SubscriptionPage() {
       }
     }
     catch (e) { setError(e instanceof Error ? e.message : "Subscription unavailable."); setAccess(null); setSub(null); setEmail(""); setCard(null); }
-    finally { setLoading(false); }
+    finally { setLoading(false); setNowMs(Date.now()); }
   }, []);
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- the loader and the query-param notice both need browser APIs, so they can only run after mount. */
     void load();
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") setInfo("Simulated payment successful. Your subscription is now active.");
     if (params.get("trialEmail") === "sent") setInfo("Your 7-day trial is active. A confirmation with your expiry date and check limits was sent to your account email.");
     if (params.get("trialEmail") === "unavailable") setInfo("Your 7-day trial is active, but the confirmation email could not be sent. Configure the email sender to enable delivery.");
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [load]);
   // Keep the frontend demo in sync when its simulated access period ends.
   useEffect(() => {
@@ -82,7 +85,7 @@ export default function SubscriptionPage() {
     {info && <Alert tone="success" className="mt-4">{info}</Alert>}
     {!error && !sub && <Card className="mt-6"><h2 className="text-xl font-semibold">Choose how to get started</h2><p className="mt-2 text-muted">Start your one-time trial or select a mock subscription.</p><Link href="/pricing" className={buttonClass({ className: "mt-4" })}>Choose a plan</Link></Card>}
     {sub && <Card className="mt-6">
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">{PLANS[sub.plan]?.name ?? "Unknown"}{sub.billing_cycle === null ? " trial" : " plan"}</h2><span className="rounded-full bg-primary-subtle px-3 py-1 text-sm font-medium capitalize">{sub.renews_at && Date.parse(sub.renews_at) <= Date.now() ? "expired" : sub.status}</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">{PLANS[sub.plan]?.name ?? "Unknown"}{sub.billing_cycle === null ? " trial" : " plan"}</h2><span className="rounded-full bg-primary-subtle px-3 py-1 text-sm font-medium capitalize">{sub.renews_at && Date.parse(sub.renews_at) <= nowMs ? "expired" : sub.status}</span></div>
       <dl className="mt-4 divide-y divide-border-subtle">
         <Row label="Billing" value={sub.billing_cycle ? `${cycleLabel[sub.billing_cycle]} (mock)` : "No billing · one-time trial"}/>
         <Row label="Started" value={fmt(sub.started_at)}/>
