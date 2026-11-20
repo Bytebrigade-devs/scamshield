@@ -65,3 +65,17 @@ pnpm test:browser
 ```
 
 The existing M4 source and tests are retained. The new app scaffold is Next.js 16; align the framework baseline with the M2 branch before merging shared infrastructure into main. Development and build scripts use Webpack. See [verification results and local setup notes](docs/M3-VERIFICATION.md).
+
+## Module 2 — signup, paywall and subscription (this branch)
+
+This branch carries the Module 2 work onto the shared Next.js 16 / Tailwind CSS 4 baseline, so it can be reviewed against `main` directly.
+
+- Routes: `/signup`, `/login`, `/forgot-password`, `/reset-password`, `/pricing`, `/checkout`, `/account/subscription`. The shared home route still redirects to `/vault`; open the Module 2 screens by URL.
+- API: `GET`, `PUT`, `POST` and `DELETE` on `/api/subscription`. The route verifies the Supabase bearer token, reads only that user's row and performs writes with the server-only service role key.
+- Access rules: `src/lib/entitlement.ts`; schema and RLS: `docs/m2-schema.sql`.
+- Environment: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, server-only `SUPABASE_SERVICE_ROLE_KEY`. Set `NEXT_PUBLIC_M2_MODE=demo` for the browser-only presentation and restart the dev server.
+- Validation: `pnpm test:subscription`, `pnpm typecheck`, `pnpm build`.
+- Payments remain simulated: no gateway, and no card numbers or security codes enter requests or storage.
+- Styling: `src/app/globals.css` declares the semantic tokens once in a CSS-first `@theme` block, which emits both the CSS variables and the utilities (`bg-surface`, `text-brand`, `rounded-card`, `shadow-surface`); there is no JavaScript Tailwind config.
+
+Setup, email delivery and API details: [docs/M2-BACKEND.md](docs/M2-BACKEND.md).
