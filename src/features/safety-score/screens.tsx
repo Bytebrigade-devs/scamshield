@@ -423,12 +423,11 @@ export function IntegrationPanel({ details = false }: { details?: boolean }) {
 }
 const metricLabels: Record<string, string> = {
   emailConfirmed: "Email confirmed",
-  totalEntries: "Vault entries",
-  weakCount: "Weak password flags",
-  reusedCount: "Reused password flags",
-  commonCount: "Common password flags",
-  checksCompleted: "Checks processed",
-  latestAttemptComplete: "Latest attempt complete",
+  totalLoginCount: "Login entries",
+  assessedLoginCount: "Assessed login entries",
+  weakPasswordCount: "Weak passwords",
+  reusedPasswordEntryCount: "Entries using a reused password",
+  commonPasswordMatchCount: "Common password matches",
 };
 function SourceCard({
   source,
@@ -502,6 +501,27 @@ function SourceCard({
           </dl>
         ) : (
           <p>No metric values available.</p>
+        )}
+        {source.id === "scams" && source.evidence && (
+          <>
+            <p>
+              Processing evidence: {source.evidence.availability}. This does not
+              verify protective action.
+            </p>
+            {source.evidence.latest_attempt && (
+              <p>
+                Latest attempt:{" "}
+                {timeLabel(source.evidence.latest_attempt.occurred_at)};{" "}
+                {source.evidence.latest_attempt.analysis_status},{" "}
+                {source.evidence.latest_attempt.analysis_mode}.
+              </p>
+            )}
+            <ul>
+              {source.evidence.limitations.map((id) => (
+                <li key={id}>{id.replaceAll("_", " ")}</li>
+              ))}
+            </ul>
+          </>
         )}
         <ul>
           {source.limitations.map((line) => (

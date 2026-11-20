@@ -1,6 +1,6 @@
 # Module 6 verification
 
-Latest verification: **2 November 2026**, Node **24.22.1**. All 16 M6 tests, scoped and full typechecks, lint and the full production build passed. Browser QA is explicitly deferred. Earlier results are retained below, followed by the dated review follow-up.
+Latest verification: **20 November 2026**, on shared baseline `fa19c3d954a4a73d563d4119088440d2484b4284`. See the current follow-up below for the cached-dependency limitation; the 2 November results below are historical, not a validation of today's lockfile.
 
 ## Original verification — 29 October 2026
 
@@ -97,3 +97,40 @@ Run the listed checks in an unrestricted team browser before claiming browser, v
 ### PR description
 
 The accompanying PR #25 description records scope, evidence boundaries, Node 24.22.1 results, the inherited M4 fix, the retained npm-fallback limitation and this browser QA deferral. No new scoring formula, backend behavior, event delivery or dependency is introduced by the review follow-up.
+
+## Round 2 follow-up — 20 November 2026
+
+Review: [PR #25 round 2](https://github.com/Bytebrigade-devs/scamshield/pull/25#issuecomment-6893766210).
+
+## Environment and reproducibility limit
+
+Node **24.22.1** on Windows was selected explicitly, matching shared CI. The inherited `.nvmrc` stays **24.19.0**, the root engine range stays `>=22.13.0`, and pnpm stays 11.25.0. Neither module changes shared dependency declarations or `pnpm-lock.yaml` relative to main. No PR #24 pin-upgrade dependency remains. `@types/node` stays on the shared 22 baseline deliberately: these frontend changes require no Node-24-only APIs. A Node-types/pin upgrade belongs to a separate owner-reviewed setup change with a full shared rerun, not this frontend PR.
+
+**The current lockfile environment has not been reproduced locally.** The managed Windows pnpm store-registration symlink remains denied (`EPERM`), as in the previous records. In addition, shared main now declares/locks Next **16.4.6**; an attempted local installation returned npm `ETARGET`, “No matching version found for next@16.4.6”. The existing fallback dependency tree uses Next **16.4.3**, React 19.3.1, TypeScript 5.9.3, ESLint 9.39.5 and Tailwind 4.3.3. The results below are observations against that cached tree, not proof of the current frozen lockfile or identical transitive dependencies. No npm lockfile, machine-specific workaround, dependency downgrade or disabled build check is committed.
+
+The shared CI remains responsible for `pnpm install --frozen-lockfile` plus lint, typecheck, build and model tests against the committed lockfile on Linux and Windows. A new workflow step is not an observed remote pass. If the normal team environment also cannot resolve main's Next version, the shared setup owner must resolve that dependency declaration/lockfile; these module PRs do not silently replace it.
+
+### Current observed results
+
+| Check | Result |
+| --- | --- |
+| M6 model and mocked-service suite | **18 passed** |
+| Combined M4 recursive library, vault and M6 suites | **561 passed**, none failed/skipped |
+| Full repository lint | **Passed**, no errors/warnings |
+| Full shared TypeScript | **Passed** |
+| Full Webpack production build | **Passed on cached Next 16.4.3**, including all seven `/safety-score` pages, inherited vault/checker/API routes |
+| Shared pin/engines/dependencies/lockfile comparison | Unchanged relative to main; only `test:m6` added to manifest |
+| Git whitespace check | Passed |
+| Browser/visual/keyboard/screen-reader acceptance | **Deferred; no pass claimed** |
+
+The M3 boundary now uses all five Appendix C.2 count names including `assessedLoginCount`, requires a complete bounded count set and rejects partial/invalid data. The M4 boundary retains the exact seven-field draft payload, validated by its existing library validator; invented check-count metrics are rejected. Tests cover both changes. The wrapper mapping is documented in `integration.md`, without claiming consumer approval, a final account-security exporter, approved freshness or scoring policy.
+
+`pnpm test:m6` is now available and shared app CI conditionally runs it on Linux and Windows. Both modules use identical conditional workflow additions so their merge order does not require competing workflow edits. No observed remote CI result is claimed here.
+
+Build details: the first attempt compiled/typechecked/generated the pages, then exited with a security alert for cached Next 16.4.3. A retry exposed an `EPERM` in the old generated `.next` directory. That generated cache was moved outside the checkout, and a clean build passed without disabling any checks. The security upgrade reminder persisted. Upgrade the cached framework before deployment; this passing build does not clear the advisory or establish the current lockfile environment.
+
+### Dated browser and consumer-review plan
+
+Proposed owner-run acceptance slot: **21 November 2026, before merge**. Suraji should run the seven-screen journey in a normal team browser and record results: checklist validation/back/cancel/save/refresh/reset and failures; every navigation transition; all source preview states/details; timestamps/aggregate suppression; chart/table/filter/CSV consistency; keyboard/skip-link/focus/labels; screen-reader order; desktop/mobile/dark/200% zoom/reduced motion; CSS isolation with vault/checker. Confirmation of the slot and completed evidence remain owed. No session is booked by this document, and the deferred checks above remain open until results exist.
+
+M6-09 remains pending: written yes/no/changes on M4's scam-activity input, guidance/destinations, and compatibility of both supplied design inputs. Code-level field alignment does not sign off those design inputs or approve a numeric formula. M4 evidence is non-scoring in every default fixture. No live summary endpoint, subject isolation test, database, production history, provider processing, or corrective-action completion is implemented by this PR.

@@ -1,3 +1,8 @@
+import {
+  validateScamActivityEvidence,
+  type ScamActivityEvidence,
+} from "../../lib/scam-checker/boundary/activity-evidence.ts";
+
 export const DEMO_KEY = "scamshield.m6.checklist-demo.v1";
 export const DEMO_RULE = "checklist-demo-v1";
 export const practices = [
@@ -122,6 +127,7 @@ export interface SourceSummary {
   version: string;
   scoringEligible: boolean;
   metrics: Record<string, number | boolean>;
+  evidence?: ScamActivityEvidence | null;
   limitations: string[];
 }
 export interface SafetySummary {
@@ -134,12 +140,13 @@ export interface SafetySummary {
 const metricTypes: Record<SourceId, Record<string, "number" | "boolean">> = {
   account: { emailConfirmed: "boolean" },
   passwords: {
-    totalEntries: "number",
-    weakCount: "number",
-    reusedCount: "number",
-    commonCount: "number",
+    totalLoginCount: "number",
+    assessedLoginCount: "number",
+    weakPasswordCount: "number",
+    reusedPasswordEntryCount: "number",
+    commonPasswordMatchCount: "number",
   },
-  scams: { checksCompleted: "number", latestAttemptComplete: "boolean" },
+  scams: {},
 };
 function record(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
@@ -198,6 +205,7 @@ export function parseSummary(raw: unknown): SafetySummary {
         "scoringEligible",
         "metrics",
         "limitations",
+        ...(s.id === "scams" ? ["evidence"] : []),
       ]) ||
       !["account", "passwords", "scams"].includes(String(s.id)) ||
       seen.has(String(s.id)) ||
@@ -223,6 +231,40 @@ export function parseSummary(raw: unknown): SafetySummary {
         (typeof v === "number" && (!Number.isSafeInteger(v) || v < 0))
       )
         throw new Error("The summary contains unsupported metrics.");
+    }
+    if (
+      s.id === "passwords" &&
+      (s.state === "current" || Object.keys(s.metrics).length > 0)
+    ) {
+      if (!exact(s.metrics, Object.keys(metricTypes.passwords)))
+        throw new Error(
+          "The password summary requires all five agreed draft count fields.",
+        );
+      const total = s.metrics.totalLoginCount as number;
+      if (Object.values(s.metrics).some((v) => (v as number) > total))
+        throw new Error(
+          "A password summary count exceeds its LOGIN-entry total.",
+        );
+    }
+    if (s.id === "scams") {
+      if (s.evidence !== null && !validateScamActivityEvidence(s.evidence))
+        throw new Error(
+          "The M4 evidence does not match its seven-field draft contract.",
+        );
+      if (
+        s.state === "current" &&
+        (!s.evidence ||
+          (s.evidence as ScamActivityEvidence).availability !== "available")
+      )
+        throw new Error("A current M4 source requires available evidence.");
+      if (
+        s.evidence &&
+        s.observedAt !== null &&
+        s.observedAt !== (s.evidence as ScamActivityEvidence).as_of
+      )
+        throw new Error(
+          "M4 observation time must match the producer's as_of field.",
+        );
     }
   }
   return raw as unknown as SafetySummary;

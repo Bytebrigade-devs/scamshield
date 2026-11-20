@@ -26,9 +26,18 @@ The implementation expands the desktop layout, adds a responsive stacked mobile 
 
 The report’s existing prototype did not establish real persistence. This new frontend implements actual **local session-only demo persistence**, with honest failure feedback; it does not claim server persistence. Draft selections remain in memory until saved. The saved record contains five fixed practice IDs and a timestamp, not passwords or real account data. Synthetic historical dates are relative fixtures, not observations of a user.
 
-The API view schema, exact endpoint and optional server-display conditions are new draft frontend contracts for team review. They do not claim that the original M2/M3/M4 producer contracts have been accepted. No migrations, formula approval, signatures or account creation are performed.
+The endpoint and server-display conditions remain draft assembly work. M3 count names now follow the supplied Appendix C.2 draft, and the exact seven-field M4 payload is validated with its existing shared-library validator; see the integration mapping. This alignment is not M6-09 consumer approval. They do not claim that the original M2/M3/M4 producer contracts have been accepted. No migrations, formula approval, signatures or account creation are performed.
 
 
 ## Shared-app source locations
 
 Routes: `src/app/safety-score`. Components, model, fixtures and adapter: `src/features/safety-score`. Tests: `tests/safety-score-model.test.ts` and `tests/safety-score-service.test.ts`. The existing root font and palette are reused; module CSS is scoped under `.m6-app`. Authentication and producer/scoring contract acceptance remain server/team responsibilities.
+
+## Round-2 follow-up — 20 November 2026
+
+| Item | Resolution / remaining boundary |
+| --- | --- |
+| E#48 | M3's five canonical draft count names retained; M4's exact seven-field payload validated using its existing producer validator. Mapping documented; consumer/design sign-off is still pending. |
+| E#49 | Inherited Node pin explicitly recorded; 24.22.1 is an explicit validation/CI runtime, with no dependency on PR #24 upgrading the pin. |
+| E#50 | `test:m6` and conditional Linux/Windows CI step added. Browser/visual/accessibility acceptance deferred to the proposed 21 November owner-run slot, with results and slot confirmation owed. |
+| E#51 | Root README adds M6 run/check notes; module guide no longer assumes a home redirect or merge order. |

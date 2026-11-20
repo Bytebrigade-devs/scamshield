@@ -1,6 +1,6 @@
 # Module 6 frontend
 
-Suraji's Digital Safety Score frontend is integrated into the shared Next.js app at **`/safety-score`**. It reuses the root font, semantic theme tokens, package versions and app layout. No second application scaffold or dependency upgrade is introduced. The existing home redirect and vault routes remain unchanged.
+Suraji's Digital Safety Score frontend is integrated into the shared Next.js app at **`/safety-score`**. It reuses the root font, semantic theme tokens, package versions and app layout. No second application scaffold or dependency upgrade is introduced. The module mounts only its `/safety-score` route family. The home page is owned by the landing/shared-app integration; open `/vault` directly for M3, regardless of the order in which M1 and M6 merge.
 
 ## Run
 
@@ -38,13 +38,13 @@ No real authentication, scoring service, database or other module route is conne
 ## Checks
 
 ```text
-node --experimental-strip-types --test tests/safety-score-model.test.ts tests/safety-score-service.test.ts
+pnpm test:m6
 pnpm typecheck
 pnpm lint
 pnpm build
 ```
 
-See [verification](m6/verification.md) for the dated 2 November 2026 rerun on Node 24.22.1: all 16 M6 tests, scoped and full typechecks, lint and the full production build passed after syncing the M4 owner’s merged fix. Browser interaction, visual and screen-reader QA are explicitly deferred due to the managed environment limits; model/API tests do not establish browser acceptance or server authorization.
+See [verification](m6/verification.md) for the latest dated rerun and dependency-install limits. The shared CI now runs `test:m6` on Linux and Windows when M6 tests are present. An added workflow step is not a claim that its remote run has passed. Browser interaction, visual and screen-reader QA are explicitly deferred due to the managed environment limits; model/API tests do not establish browser acceptance or server authorization.
 
 ## Source and integration notes
 
@@ -53,3 +53,7 @@ See [verification](m6/verification.md) for the dated 2 November 2026 rerun on No
 - [Optional environment example](m6/env.example)
 
 The Module 6 report sections and embedded Figures 70–74 supplied by the owner informed the frontend. Report declarations, pending approvals and design instructions are reference content, not authorization to approve a scoring policy, send messages or create accounts.
+
+## Runtime and merge order — 20 November 2026
+
+The inherited `.nvmrc` remains 24.19.0; shared CI and local follow-up checks select 24.22.1 explicitly. M6 does not require PR #24 to upgrade Node first, and does not change the pin, engine range, dependency declarations or lockfile relative to current main. `@types/node` 22 remains an intentional shared-infrastructure deferral: these modules add no Node-24-only API dependency. An upgrade of shared Node types/pin needs the setup owners' dependency/lockfile review and full-module validation.

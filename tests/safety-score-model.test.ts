@@ -124,6 +124,37 @@ test("all synthetic summary scenarios pass the display schema", () => {
     assert.deepEqual(parseSummary(s), s);
   }
 });
+test("M3 uses the five recorded LOGIN-count fields and rejects partial or inconsistent summaries", () => {
+  const s = makeSummary("ready", now);
+  const counts = s.sources[1].metrics;
+  assert.deepEqual(counts, {
+    totalLoginCount: 12,
+    assessedLoginCount: 12,
+    weakPasswordCount: 3,
+    reusedPasswordEntryCount: 4,
+    commonPasswordMatchCount: 2,
+  });
+  Reflect.deleteProperty(counts, "assessedLoginCount");
+  assert.throws(() => parseSummary(s));
+  counts.assessedLoginCount = 13;
+  assert.throws(() => parseSummary(s));
+});
+test("M4 keeps its validated seven-field producer payload without activity-count metrics", () => {
+  const s = makeSummary("ready", now);
+  const source = s.sources[2];
+  assert.equal(Object.keys(source.evidence!).length, 7);
+  assert.equal(
+    parseSummary(s).sources[2].evidence?.latest_attempt?.analysis_mode,
+    "rules_only",
+  );
+  source.metrics.checksCompleted = 100;
+  assert.throws(() => parseSummary(s));
+  source.metrics = {};
+  source.evidence!.limitations = [];
+  assert.throws(() => parseSummary(s));
+  source.evidence = null;
+  assert.throws(() => parseSummary(s));
+});
 test("schema rejects duplicate sources, secret fields and invalid metrics", () => {
   const base = makeSummary("ready", now);
   const duplicate = structuredClone(base);
@@ -133,7 +164,7 @@ test("schema rejects duplicate sources, secret fields and invalid metrics", () =
   const metric = structuredClone(base);
   metric.sources[1].metrics.rawPassword = 12;
   assert.throws(() => parseSummary(metric));
-  metric.sources[1].metrics = { totalEntries: -1 };
+  metric.sources[1].metrics = { totalLoginCount: -1 };
   assert.throws(() => parseSummary(metric));
   const score = structuredClone(base);
   score.aggregate.value = 101;
@@ -181,7 +212,7 @@ test("the frontend displays an eligible server total without recalculating it", 
   s.sources.forEach((x) => (x.scoringEligible = true));
   s.aggregate = { value: 81, band: "Server label" };
   assert.equal(aggregateView(s, now).value, 81);
-  s.sources[2].metrics.checksCompleted = 9999;
+  s.sources[1].metrics.totalLoginCount = 9999;
   assert.equal(aggregateView(s, now).value, 81);
   s.aggregate.value = null;
   assert.equal(aggregateView(s, now).value, null);

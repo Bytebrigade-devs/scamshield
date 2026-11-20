@@ -33,10 +33,11 @@ export function makeSummary(
       version: "m3-view-draft-v1",
       scoringEligible: false,
       metrics: {
-        totalEntries: 12,
-        weakCount: 2,
-        reusedCount: 3,
-        commonCount: 1,
+        totalLoginCount: 12,
+        assessedLoginCount: 12,
+        weakPasswordCount: 3,
+        reusedPasswordEntryCount: 4,
+        commonPasswordMatchCount: 2,
       },
       limitations: [
         "Counts may overlap. No password, username, note or vault entry is exposed. Normalisation remains unapproved.",
@@ -49,7 +50,24 @@ export function makeSummary(
       freshUntil: expiry,
       version: "m4-view-draft-v1",
       scoringEligible: false,
-      metrics: { checksCompleted: 4, latestAttemptComplete: true },
+      metrics: {},
+      evidence: {
+        contract_version: "0.1.0-draft",
+        summary_type: "m4.scam_activity_evidence",
+        subject_ref: "synthetic-subject-01",
+        as_of: current,
+        availability: "available",
+        latest_attempt: {
+          occurred_at: current,
+          analysis_status: "limited",
+          analysis_mode: "rules_only",
+        },
+        limitations: [
+          "self_selected_checks",
+          "classification_not_verified_incident",
+          "no_protective_action_verified",
+        ],
+      },
       limitations: [
         "Processing evidence is not proof of protective behaviour. Repeated checks do not raise a score. Raw messages are excluded.",
       ],
@@ -62,6 +80,7 @@ export function makeSummary(
       observedAt: null,
       freshUntil: null,
       metrics: {},
+      evidence: null,
       limitations: [
         "No current M4 evidence summary is available. This does not mean the user is safe.",
       ],

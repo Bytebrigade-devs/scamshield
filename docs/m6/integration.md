@@ -1,104 +1,53 @@
-# Module 06 integration guide
+# Module 6 integration and producer mapping
 
-This frontend runs inside the shared Next.js app under `/safety-score`. The default build uses synthetic data and makes no API requests. The connected view contract below is a **draft presentation adapter**, not an approved producer schema or a scoring algorithm.
+Updated 20 November 2026. M6 runs in the shared app at `/safety-score`. Default data is synthetic and makes no requests. This presentation envelope assembles producer summaries; it does not supersede their draft contracts or sign off M6-09.
 
-## Configure a read-only summary endpoint
+## Recorded inputs retained
 
-Use `docs/m6/env.example` as the reference for the shared root `.env.local`, set `NEXT_PUBLIC_M6_API_PATH=/api/safety-summary/`, implement that route in the shared application and rebuild. Only same-origin `/api/` paths without query parameters are accepted. The shared application owns routing and deployment; no standalone HTML build is added by this branch.
+**M3:** the supplied interim report Appendix C.2 defines `version`, `generatedAt`, `totalLoginCount`, `assessedLoginCount`, `weakPasswordCount`, `reusedPasswordEntryCount`, `commonPasswordMatchCount`. The view uses those five count names unchanged in `metrics`. Map producer `generatedAt` to source `observedAt` and producer version to the source contract version (the fixture label is `m3-view-draft-v1`). Server assembly supplies `freshUntil`; the fixture deadline is not an approved freshness rule. All five counts are required when present, nonnegative safe integers and no larger than the LOGIN total. Empty/missing data never means healthy. Counts can overlap; reused count means entries in exact duplicate groups, not groups. No normalization or score is derived from them. Only LOGIN entries count; secure notes are excluded.
 
-The adapter requests JSON using GET, same-origin credentials and no-store caching. The request supplies no user ID or client total. A ten-second cancellation deadline applies. HTTP 401 displays sign-in required; 403 displays access unavailable; other failures or malformed responses display an error and no score. Refresh removes the previous aggregate from the current view while loading.
+**M4:** source `evidence` retains the exact seven-field `m4.scam_activity_evidence` draft from `src/lib/scam-checker/boundary/activity-evidence.ts`: `contract_version`, `summary_type`, `subject_ref`, `as_of`, `availability`, `latest_attempt`, `limitations`. M6 reuses the producer's validator rather than defining a third activity schema. `latest_attempt` is the existing three-field object or null. Controlled limitation IDs are kept; the UI renders readable labels. No check-count metric, verdict, confidence, raw message, contact, action-completion claim or numeric contribution is invented.
 
-The **server** must authenticate through M2, derive the subject from the verified session, enforce record ownership and authorize every source retrieval. Client-side shape checks are not access control. Do not trust browser-provided identity, completion claims or score values. Do not accept this UI’s demo session record as real evidence.
-
-## Draft response envelope
+Example M4 payload nested under the scams source (synthetic subject only):
 
 ```json
 {
-  "version": 1,
-  "generatedAt": "2026-10-26T06:00:00.000Z",
-  "policy": { "status": "pending", "version": null },
-  "aggregate": { "value": null, "band": null },
-  "sources": [
-    {
-      "id": "account",
-      "state": "current",
-      "observedAt": "2026-10-26T05:55:00.000Z",
-      "freshUntil": "2026-10-26T06:10:00.000Z",
-      "version": "m2-view-draft-v1",
-      "scoringEligible": false,
-      "metrics": { "emailConfirmed": true },
-      "limitations": ["Illustrative exporter contract; review pending."]
-    },
-    {
-      "id": "passwords",
-      "state": "missing",
-      "observedAt": null,
-      "freshUntil": null,
-      "version": "m3-view-draft-v1",
-      "scoringEligible": false,
-      "metrics": {},
-      "limitations": ["No current summary is available."]
-    },
-    {
-      "id": "scams",
-      "state": "missing",
-      "observedAt": null,
-      "freshUntil": null,
-      "version": "m4-view-draft-v1",
-      "scoringEligible": false,
-      "metrics": {},
-      "limitations": ["Processing volume alone is not protective evidence."]
-    }
-  ]
+  "contract_version": "0.1.0-draft",
+  "summary_type": "m4.scam_activity_evidence",
+  "subject_ref": "synthetic-subject-01",
+  "as_of": "2026-11-20T06:00:00Z",
+  "availability": "available",
+  "latest_attempt": {
+    "occurred_at": "2026-11-20T06:00:00Z",
+    "analysis_status": "limited",
+    "analysis_mode": "rules_only"
+  },
+  "limitations": ["self_selected_checks", "classification_not_verified_incident", "no_protective_action_verified"]
 }
 ```
 
-Exactly three unique source IDs are required: account, passwords and scams. Accepted states: current, missing, stale and error. Unknown root/source fields and metric names are rejected. Rendered strings are plain React text, never HTML.
+Map `as_of` to `observedAt`; `available` to current only while the separately supplied freshness deadline is valid; `stale` to stale; `unavailable` to missing/error as appropriate. A current source requires available evidence. A missing source can carry `evidence: null`. Its `metrics` is always empty. `subject_ref` is validated but never displayed or copied to demo storage/CSV; the server must bind it to the authenticated subject. Shape validation cannot prove ownership. M4 processing evidence remains non-scoring in all default fixtures. More checks do not establish improved safety.
 
-Allowed display metrics:
+**M2:** `emailConfirmed` remains an explicitly unapproved presentation placeholder, not a new account-security producer contract. No account exporter is connected.
 
-| Source | Metric keys | Types |
-|---|---|---|
-| account | emailConfirmed | boolean |
-| passwords | totalEntries, weakCount, reusedCount, commonCount | nonnegative safe integers |
-| scams | checksCompleted, latestAttemptComplete | nonnegative safe integer, boolean |
+## Optional read-only presentation endpoint
 
-Counts may overlap; this UI does not sum health flags into a derived score. Do not forward raw passwords, usernames, vault records, notes, tokens, recovery URLs, payment data, private messages or AI submissions. `limitations` contains up to ten plain-text explanation strings, not raw user content.
+`NEXT_PUBLIC_M6_API_PATH=/api/safety-summary/` accepts only a same-origin `/api/` path without a query. GET uses same-origin credentials, no-store caching and a ten-second abort deadline. The browser supplies no identity, counts or score. 401 requests sign-in, 403 reports access unavailable, malformed/network failures suppress results. Refresh clears the prior aggregate while loading.
 
-The server supplies `freshUntil` using agreed source rules. The frontend checks timestamps against the current clock every minute. Expired current summaries become stale, missing dates become unavailable, and invalid/future observations are unusable. Demo fixture deadlines are examples only, not an approved policy.
+The existing root envelope is `{version: 1, generatedAt, policy: {status, version}, aggregate: {value, band}, sources}`. Exactly three unique source IDs are required: account, passwords, scams. Each source has `id`, `state`, `observedAt`, `freshUntil`, `version`, `scoringEligible`, `metrics`, `limitations`; scams additionally requires `evidence`. Unknown root/source/metric keys are rejected. Source explanation strings are rendered as plain text. The new fields are a draft assembly boundary only; no backend route is implemented by M6.
 
-## Aggregate display rules
+The server authenticates through M2, derives the user from the session, authorizes each retrieval and enforces ownership/RLS. It must never return vault records, passwords, usernames, notes, keys, payment data or submitted messages. Do not accept a demo checklist as protective evidence. No source summary is persisted by this UI.
 
-No production formula exists in this package. A server-provided value can be displayed only when:
+## Display conditions and pending decisions
 
-1. The envelope is valid and not future-dated.
-2. All three required sources are current.
-3. The policy is explicitly approved and has a version.
-4. Every source is marked scoring-eligible by the reviewed service.
-5. A finite server value from 0 to 100 exists.
+The frontend calculates no production score. A supplied result is displayed only for a valid non-future envelope, all three current sources, explicitly approved/versioned policy, all sources scoring-eligible, and a finite server total from 0 to 100. Otherwise total and band are suppressed. Every default fixture has pending policy and non-scoring sources; source age is reevaluated each minute. Future observations and expired/missing dates are unusable.
 
-Otherwise both total and band are suppressed. The frontend never averages components, redistributes missing weights, rewards payment or adds points for check volume. The default fixtures always have policy pending and sources not scoring-eligible. The earlier checklist’s 65/90 values remain in a separate labelled demo view.
+The 65/90 checklist remains a separately labelled synthetic flow. Payment, check volume and missing inputs never add points. Formula, weights, bands, subject binding, freshness, retention and numeric fixtures still need joint owner review. Alignment with recorded draft fields is not consumer sign-off: Suraji's yes/no on the scam-activity definition, guidance/destinations and compatibility of both design inputs remains owed. Proposed review slot from the team correspondence: 21 November 2026; no approval/session booking is asserted by this code.
 
-These display conditions do not approve the model. The service owners must agree meaning, weights, uncertainty, bands, normalisation, retention and authority, validate source subjects, and test server calculation against approved fixtures. Do not return arbitrary `approved` flags to make the sample UI show a number.
+## History, actions and local state
 
-## History and corrective actions
+Only synthetic `checklist-demo-v1` history is shown/exported; integrated history is unconnected. Account/health/checker destinations require explicit shared integration and normal authorization before enabling. Although `/checker` now exists on main, this PR does not claim the M6 guidance/destination review is complete.
 
-The sample history belongs only to `checklist-demo-v1`. Integrated history is explicitly unconnected; agree a separate authorized timestamped history contract before implementing it. Keep rule versions per snapshot and distinguish previous snapshots from the current result. The CSV download exports synthetic rows only.
+`sessionStorage` key `scamshield.m6.checklist-demo.v1` stores only version 1, the five practice IDs and a saved timestamp. Writes succeed before the UI claims a save. Failures retain choices; unsaved preview says not saved; repeated saves remain at 90. Reset removes only this demo key. No authentication, encryption or production scoring is implied.
 
-Buttons for account settings, vault health and the scam checker are disabled because those routes are not included. Connect only existing module routes and preserve their server authorization checks. Billing and plan changes must never count as score improvements.
-
-## Local checklist storage
-
-Key: `scamshield.m6.checklist-demo.v1` in sessionStorage.
-
-```json
-{"version":1,"checked":["unique","long","manager","replace","private"],"savedAt":"2026-10-26T06:00:00.000Z"}
-```
-
-A commit writes first, then updates the saved UI. Failed writes retain choices and do not show a successful save. The explicit unsaved-preview option shows a not-saved result. Repeated saves keep the demo at 90. Reset clears this module’s demo key; it does not alter any real account, vault or M1 storage. Same-tab refresh restores a valid record where browser storage is available. Corrupt records generate a warning and can be reset.
-
-## Shared-app integration status
-
-The branch already mounts `SafetyProvider` in `src/app/safety-score/layout.tsx` and places the feature under `src/features/safety-score`. Navigation is prefixed with `/safety-score`; the existing home redirect and vault remain unchanged. The application root owns font loading and semantic palette values. Module styles are scoped under `.m6-app` and consume those aliases. No package manifest or lockfile is changed.
-
-The API schema and authorization/scoring service remain draft integration work. Keep secrets server-side; this frontend requires none. Complete producer review, subject isolation, approved scoring fixtures and browser acceptance before describing the data integration as production ready.
+M6's route mount and vault access do not depend on the home-page destination or PR #24's merge order. Shared font/theme/package configuration is reused. Only the `test:m6` script and conditional shared-CI test step are added to existing setup.

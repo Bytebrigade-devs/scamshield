@@ -65,3 +65,9 @@ pnpm test:browser
 ```
 
 The existing M4 source and tests are retained. The new app scaffold is Next.js 16; align the framework baseline with the M2 branch before merging shared infrastructure into main. Development and build scripts use Webpack. See [verification results and local setup notes](docs/M3-VERIFICATION.md).
+
+## Run the Module 6 frontend
+
+Use the shared root checkout, `.nvmrc` and pnpm 11.25.0: `pnpm install --frozen-lockfile`, then `pnpm dev`. Open http://127.0.0.1:3000/safety-score directly. The home-page destination is independent of this module's mount and M1's merge order. No API key is required for its labelled synthetic preview.
+
+Run `pnpm test:m6`, `pnpm lint`, `pnpm typecheck` and `pnpm build`. Shared CI includes the M6 model/service suite when present. See [the frontend guide](docs/M6-FRONTEND.md), [draft producer mapping](docs/m6/integration.md) and [verification/remaining acceptance](docs/m6/verification.md). The checklist's 65-to-90 demonstration is illustrative; the integrated score remains unavailable until a reviewed service and approved scoring policy exist.
