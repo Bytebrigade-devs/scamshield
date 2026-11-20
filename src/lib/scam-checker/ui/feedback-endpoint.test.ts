@@ -97,3 +97,39 @@ test('no message text, snippet or contact can enter the stored entry', () => {
   assert.equal(store.list('subject-a').length, 0, 'the malformed report was rejected outright');
   assert.doesNotMatch(serialised, /secret|0771234567/);
 });
+
+test('an authenticated caller files feedback under their resolved subject, not the demo subject', () => {
+  const { feedback, store } = support();
+  const caller = feedback.forOutcome(analysed('phishing'), 'verified-user-42')!;
+  assert.ok(caller, 'a valid resolved subject is accepted');
+  assert.equal(feedback.report({ checkId: caller.checkId, reasonCode: 'wrong_category' }).status, 200);
+  assert.equal(store.list('subject-a').length, 0, 'nothing filed under the demo subject');
+  const filed = store.list('verified-user-42');
+  assert.equal(filed.length, 1);
+  assert.equal(filed[0].subjectKey, 'verified-user-42');
+  assert.equal(filed[0].reasonCode, 'wrong_category');
+  // The demo path is untouched.
+  const demo = feedback.forOutcome(analysed('phishing'))!;
+  assert.equal(feedback.report({ checkId: demo.checkId, reasonCode: 'other' }).status, 200);
+  assert.equal(store.list('subject-a').length, 1);
+});
+
+test('a malformed resolved subject never issues a check id and never files feedback', () => {
+  const { feedback, store } = support();
+  for (const bad of ['', '   ', 'has space', 'x'.repeat(129), 42, null]) {
+    assert.equal(feedback.forOutcome(analysed('phishing'), bad as unknown as string), null, `must reject: ${String(bad)}`);
+  }
+  assert.equal(store.list('subject-a').length, 0);
+  assert.equal(store.count('subject-a'), 0);
+});
+
+test('entries() defaults to the demo subject and can be queried per subject', () => {
+  const { feedback } = support();
+  const caller = feedback.forOutcome(analysed('romance_scam'), 'verified-user-7')!;
+  feedback.report({ checkId: caller.checkId, reasonCode: 'missed_scam' });
+  const demo = feedback.forOutcome(analysed('phishing'))!;
+  feedback.report({ checkId: demo.checkId, reasonCode: 'other' });
+  assert.equal(feedback.entries().length, 1, 'demo view only');
+  assert.equal(feedback.entries('verified-user-7').length, 1);
+  assert.equal(feedback.entries('verified-user-7')[0].subjectKey, 'verified-user-7');
+});

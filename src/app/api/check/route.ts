@@ -1,6 +1,8 @@
 import { DEFAULT_LIMITS } from '@/lib/scam-checker/boundary/check-boundary';
 import { TAXONOMY_VERSION } from '@/lib/scam-checker/boundary/taxonomy';
 import { createCheckService } from '@/lib/scam-checker/ui/check-service';
+import { getSubscriptionContext } from '@/lib/subscription-server';
+import { gateRequestAccess } from '@/lib/scam-checker/boundary/request-entitlement';
 import { feedback } from '../feedback-support';
 
 export const dynamic = 'force-dynamic';
@@ -50,10 +52,27 @@ export async function POST(request: Request): Promise<Response> {
 
   const record = body as Record<string, unknown>;
   try {
+    // Entitlement (owner decision D3, 20 Nov 2026): requests without an Authorization header
+    // (every browser request today, until M2 wires the session into the page) run under the
+    // labelled demo subject. A caller claiming identity gets real enforcement and is never
+    // silently downgraded to demo; their resolved subject also keys the feedback report.
+    const hasAuthorization = request.headers.get('authorization') !== null;
+    let subjectKey: string | undefined;
+    if (hasAuthorization) {
+      let decision: Awaited<ReturnType<typeof getSubscriptionContext>> | null = null;
+      try {
+        decision = await getSubscriptionContext(request);
+      } catch {
+        decision = null; // unreachable decision never authorizes a check
+      }
+      const gate = gateRequestAccess(decision, true, Date.now());
+      if (gate.kind === 'rejected') return json(gate.status, { error: gate.error });
+      if (gate.kind === 'allowed') subjectKey = gate.subjectKey;
+    }
     const result = await service.check(record.text, record.sender);
     // "Report a wrong result": the server generates an opaque check id and lists the agreed
     // reason codes; the browser may only echo them back (owner decision, 18 November 2026).
-    const feedbackOption = feedback.forOutcome(result.outcome);
+    const feedbackOption = feedback.forOutcome(result.outcome, subjectKey);
     return json(200, {
       ...result,
       ...(feedbackOption ? { feedback: feedbackOption } : {}),
