@@ -38,3 +38,7 @@ The review corrections replace component colour literals with shared aliases, re
 FR01–FR08 now map to routes and explicitly distinguish demo coverage from backend work in `M3-FRONTEND.md`. Dark rendering remains a preview, not a design-steward acceptance claim. The M2/M5 framework/package-manager/root-page decision and PR #12/#22 merge order are still unresolved. Theme and traceability fixes do not clear that integration blocker.
 
 Connect verified account/session checks, ownership enforcement and Supabase RLS, reviewed encryption and key management, durable storage, production strength/common-password checks, and the agreed safety-score contract. Until then, use fictional details only; refreshing or locking discards demo changes.
+
+## M1 integration note — 20 November 2026
+
+The results above are historical M3 runs, not a new browser run. M1 now owns `/` on its branch; open `/vault` directly. The shared `.nvmrc` remains 24.19.0 and the engine range remains inherited from main. M1 reruns vault model regressions plus shared lint/type/build checks explicitly on 24.22.1; see [its current record](m1/verification.md). The 30-frame/Edge suite has not been rerun by M1 on that runtime. No Node-pin merge-order authorization is needed because this PR no longer changes the shared pin; any future pin upgrade belongs in an owner-reviewed setup change.

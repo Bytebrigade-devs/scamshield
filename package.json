@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:browser": "playwright test",
-    "test:vault": "node --experimental-strip-types --test tests/vault-model.test.ts"
+    "test:vault": "node --experimental-strip-types --test tests/vault-model.test.ts",
+    "test:m1": "node --experimental-strip-types --test tests/landing-model.test.ts tests/landing-events.test.ts"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

@@ -58,3 +58,9 @@ jobs:
         run: pnpm build
       - name: Vault model test
         run: pnpm test:vault
+      - name: Module 1 model and event tests
+        if: ${{ hashFiles('tests/landing-model.test.ts') != '' }}
+        run: pnpm test:m1
+      - name: Module 6 model and service tests
+        if: ${{ hashFiles('tests/safety-score-model.test.ts') != '' }}
+        run: pnpm test:m6

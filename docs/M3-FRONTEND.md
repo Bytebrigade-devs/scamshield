@@ -60,7 +60,7 @@ These IDs refer to the interim report's Module 3 FR01–FR08. A working demo int
 
 ## Integration decision still required before merge
 
-PR #22 and PR #12 introduce competing application foundations. The M2/M5 owners must agree the Next.js/React/Tailwind versions, package manager, root-page owner and merge order. No agreement is implied by this frontend implementation. The current `/` → `/vault` redirect is a temporary demo entry point and must be replaced by the agreed landing/funnel route during integration. Do not merge either competing scaffold until this decision is recorded.
+Integration note — 20 November 2026: M3 is already present on shared main. On the M1 branch, `/` now renders the landing/funnel page and `/vault` remains the direct M3 entry. The inherited Node 24.19.0 pin and engine range are retained. M1's Node 24.22.1 rerun covers vault model regressions and shared static/build checks only; it does not rerun or replace M3's historical Edge/browser acceptance. Any remaining M2 scaffold or infrastructure decision still belongs to its owners; no approval is asserted here.
 
 ## Structure
 
