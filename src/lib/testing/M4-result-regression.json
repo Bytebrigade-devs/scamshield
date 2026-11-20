@@ -1,0 +1,12 @@
+{
+  "note": "Offline presentation regression only. The stored AI wording is supplied reference text, not a verified claim about domain reputation or government services. Never visit the embedded destination.",
+  "text": "Case Number: SF-2026-685423  Pursuant to Sri Lanka's *Motor Traffic Act*, we hereby officially notify you that a vehicle registered in your name has been identified as having violated road traffic regulations. This violation was automatically detected and recorded by a fixed traffic surveillance system (Device Code: VRM-865).  To view details regarding the violation and to pay the associated fine, please visit the following link: [**https://govpay.cfd/en/spot-fine**](https://govpay.cfd/en/spot-fine)  In accordance with current road traffic regulations, please ensure that the fine is settled within 14 days.",
+  "reply": {
+    "verdict": "High risk",
+    "category": "phishing",
+    "taxonomy_version": "0.1.0-draft",
+    "risk_level": "high",
+    "reason": "This is a classic fake government-fine lure: it claims a traffic camera (\"Device Code: VRM-865\") caught a vehicle registered in your name and pushes you to pay within 14 days, using a deadline to rush you before you check anything. The payment link, https://govpay.cfd/en/spot-fine, does not belong to any Sri Lankan government domain (official services use .gov.lk), and the .cfd address space is commonly used for throwaway scam pages; the local scanner also flagged it for a hostile link shape, supporting a hostile-destination reading rather than a real payment portal. The message is generic — no vehicle plate, no verifiable case reference — and it asks you to click a link and pay rather than directing you to an official portal or confirming details through a known channel. I could not verify the link, so it should be treated as unverified and unsafe; do not open or pay through it, and check directly with the relevant Sri Lankan authority using a number or site you find yourself.",
+    "reason_highlights": ["fake government-fine lure", "deadline to rush you before you check anything", "does not belong to any Sri Lankan government domain", "do not open or pay through it"]
+  }
+}

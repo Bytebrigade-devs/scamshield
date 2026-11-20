@@ -32,4 +32,4 @@ jobs:
         with:
           node-version: '24.22.1'
       - name: Run network-free library regressions (no dependency installation)
-        run: node --test src/lib/scam-checker/*.test.ts
+        run: node --test "src/lib/scam-checker/**/*.test.ts"

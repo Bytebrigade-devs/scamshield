@@ -1,0 +1,10 @@
+# M4 files are ported byte-identically from the owner workspace and several tests,
+# generators and fixtures pin exact bytes (SHA-256, string comparison).
+# Never apply end-of-line conversion on checkout, on any platform.
+src/lib/scam-checker/** -text
+src/lib/testing/** -text
+
+# Generated from the files above by ui/scripts/sync-public.ts, and compared byte-for-byte
+# by the mirror test — so it must check out verbatim too.
+public/checker/** -text
+src/app/checker/shell.generated.ts -text
