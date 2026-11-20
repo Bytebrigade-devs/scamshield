@@ -8,6 +8,8 @@
  * Design (owner-approved 18 November 2026): the check response carries a server-generated
  * opaque `checkId` plus the allowed reason codes; the browser never invents an id and carries
  * no message content. The report is validated against a bounded in-memory map before storing.
+ * When the issuing caller supplies a resolved subject key (an authenticated caller), the
+ * report is filed under **that** subject; without one, the demo subject applies.
  *
  * HONESTY BOUNDARY: storage is in-memory and process-local by design. A restart forgets
  * everything; durable persistence is gated on M2's RLS convention and the shared schema
@@ -34,12 +36,16 @@ export interface FeedbackReportResult {
 }
 
 export interface FeedbackSupport {
-  /** Attach to a `GET /api/check`-style response; null for rejected/unreportable outcomes. */
-  forOutcome(outcome: CheckOutcome): FeedbackOption | null;
+  /**
+   * Attach to a `GET /api/check`-style response; null for rejected/unreportable outcomes.
+   * The optional subject override (the resolved caller's server-derived subject key) is stored
+   * with the check so the report is filed under whoever actually ran it; omitted = demo subject.
+   */
+  forOutcome(outcome: CheckOutcome, subjectKey?: string): FeedbackOption | null;
   /** Validate and store a `{ checkId, reasonCode }` report. */
   report(body: unknown): FeedbackReportResult;
   /** Read-only view for tests; never exposed over HTTP. */
-  entries(): readonly FeedbackEntry[];
+  entries(subjectKey?: string): readonly FeedbackEntry[];
 }
 
 export interface FeedbackSupportOptions {
@@ -56,16 +62,27 @@ export interface FeedbackSupportOptions {
 export function createFeedbackSupport(options: FeedbackSupportOptions): FeedbackSupport {
   const store = options.store ?? createInMemoryFeedbackStore();
   const now = options.now ?? (() => Date.now());
-  const tracked = new Map<string, string>(); // checkId -> category
+  const tracked = new Map<string, { category: string; subjectKey: string }>(); // checkId -> check facts
 
-  function forOutcome(outcome: CheckOutcome): FeedbackOption | null {
+  /** Server-derived subjects only: trimmed, non-empty, no whitespace, bounded. */
+  function subjectFor(subjectKey: string | undefined): string | null {
+    if (subjectKey === undefined) return options.subjectKey;
+    if (typeof subjectKey !== 'string') return null;
+    const trimmed = subjectKey.trim();
+    if (trimmed.length === 0 || trimmed.length > 128 || /\s/.test(trimmed)) return null;
+    return trimmed;
+  }
+
+  function forOutcome(outcome: CheckOutcome, subjectKey?: string): FeedbackOption | null {
     if (!outcome || outcome.kind !== 'analysed') return null;
+    const subject = subjectFor(subjectKey);
+    if (subject === null) return null;
     if (tracked.size >= MAX_TRACKED_CHECKS) {
       const oldest = tracked.keys().next().value;
       if (oldest !== undefined) tracked.delete(oldest);
     }
     const checkId = randomUUID();
-    tracked.set(checkId, outcome.category);
+    tracked.set(checkId, { category: outcome.category, subjectKey: subject });
     return { checkId, reasonCodes: FEEDBACK_REASON_CODES };
   }
 
@@ -84,14 +101,14 @@ export function createFeedbackSupport(options: FeedbackSupportOptions): Feedback
     if (!isFeedbackReasonCode(record.reasonCode)) {
       return { status: 400, body: { error: 'bad-reason-code' } };
     }
-    const category = tracked.get(record.checkId);
-    if (category === undefined) {
+    const trackedCheck = tracked.get(record.checkId);
+    if (trackedCheck === undefined) {
       return { status: 404, body: { error: 'unknown-check' } };
     }
     const entry = store.save({
-      subjectKey: options.subjectKey,
+      subjectKey: trackedCheck.subjectKey,
       checkId: record.checkId,
-      category: category as FeedbackEntry['category'],
+      category: trackedCheck.category as FeedbackEntry['category'],
       reasonCode: record.reasonCode,
       createdAt: now(),
     });
@@ -102,6 +119,6 @@ export function createFeedbackSupport(options: FeedbackSupportOptions): Feedback
   return {
     forOutcome,
     report,
-    entries: () => store.list(options.subjectKey),
+    entries: (subjectKey?: string) => store.list(subjectKey ?? options.subjectKey),
   };
 }
