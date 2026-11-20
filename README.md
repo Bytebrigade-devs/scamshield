@@ -76,6 +76,6 @@ This branch carries the Module 2 work onto the shared Next.js 16 / Tailwind CSS 
 - Environment: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, server-only `SUPABASE_SERVICE_ROLE_KEY`. Set `NEXT_PUBLIC_M2_MODE=demo` for the browser-only presentation and restart the dev server.
 - Validation: `pnpm test:subscription`, `pnpm typecheck`, `pnpm build`.
 - Payments remain simulated: no gateway, and no card numbers or security codes enter requests or storage.
-- Styling: `src/app/globals.css` loads Tailwind 4 first and still reads `tailwind.config.ts` through `@config`, so the semantic classes (`bg-surface`, `text-brand`, `rounded-card`, `shadow-surface`) behave exactly as before.
+- Styling: `src/app/globals.css` declares the semantic tokens once in a CSS-first `@theme` block, which emits both the CSS variables and the utilities (`bg-surface`, `text-brand`, `rounded-card`, `shadow-surface`); there is no JavaScript Tailwind config.
 
 Setup, email delivery and API details: [docs/M2-BACKEND.md](docs/M2-BACKEND.md).

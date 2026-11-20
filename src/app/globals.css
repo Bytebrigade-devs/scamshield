@@ -3,9 +3,10 @@
 /*
  * ScamShield design tokens — source: docs/THEME-AND-TYPOGRAPHY.md (v1.1, team-approved).
  * Three layers (guide §7): primitive → semantic → component, shared by every module.
- * Tailwind 4 reads this file first; tailwind.config.ts is still loaded through @config so
- * the semantic utility names (bg-surface, text-brand, rounded-card) stay identical to the
- * M2 branch. Components and Tailwind classes use the semantic aliases, never raw hex.
+ * The semantic tokens are declared once in the @theme block below, which emits both the CSS
+ * variables used by hand-written CSS and the utilities (bg-surface, text-brand, rounded-card).
+ * [data-theme="dark"] overrides those same variables, so utilities and plain CSS follow the
+ * theme together. Components and Tailwind classes use the semantic aliases, never raw hex.
  */
 @font-face { font-family: "Plus Jakarta Sans"; src: url("/fonts/PlusJakartaSans.ttf") format("truetype"); font-weight: 200 800; font-style: normal; font-display: swap; }
 
@@ -98,7 +99,6 @@
   --color-danger-subtle: var(--red-50);
   --color-danger-border: var(--red-200);
 
-  --font-sans: var(--font-body);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   --radius-control: var(--radius-12);

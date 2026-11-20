@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { demoSignOut, readDemo, resetDemo, saveDemoCard, DemoCard } from "@/lib/demo-store";
+import { demoSignOut, readDemo, resetDemo } from "@/lib/demo-store";
 import { subscriptionRequest } from "@/lib/subscription-client";
 import { Subscription, PLANS, cycleLabel } from "@/lib/plans";
 import { evaluateEntitlement } from "@/lib/entitlement";
@@ -21,7 +21,6 @@ export default function SubscriptionPage() {
   const [error, setError] = useState(""); const [info, setInfo] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [email, setEmail] = useState("");
-  const [card, setCard] = useState<DemoCard | null>(null);
   const [nowMs, setNowMs] = useState(0);
   const load = useCallback(async () => {
     setError("");
@@ -32,14 +31,13 @@ export default function SubscriptionPage() {
       if (DEMO_MODE) {
         const demo = readDemo();
         setEmail(demo.user.email);
-        setCard(demo.card);
       } else {
         const { data, error } = await getSupabase().auth.getUser();
         if (error) throw error;
         setEmail(data.user?.email ?? "");
       }
     }
-    catch (e) { setError(e instanceof Error ? e.message : "Subscription unavailable."); setAccess(null); setSub(null); setEmail(""); setCard(null); }
+    catch (e) { setError(e instanceof Error ? e.message : "Subscription unavailable."); setAccess(null); setSub(null); setEmail(""); }
     finally { setLoading(false); setNowMs(Date.now()); }
   }, []);
   useEffect(() => {
@@ -113,8 +111,7 @@ export default function SubscriptionPage() {
       </div>
       {confirmCancel && <div className="mt-4 rounded-control border border-border-subtle p-4"><p>Cancel this entitlement? Access will continue until the expiry shown above. No refund or real payment occurs.</p><div className="mt-3 flex flex-wrap gap-3"><Button variant="danger" loading={busy} loadingLabel="Cancelling…" onClick={cancel}>Confirm cancellation</Button><Button variant="text" disabled={busy} onClick={() => setConfirmCancel(false)}>Keep plan</Button></div></div>}
     </Card>}
-    {DEMO_MODE && <Card className="mt-6"><h2 className="text-xl font-semibold">Payment method</h2>{card ? <div className="mt-4"><p className="font-medium">Demo card ending in {card.last4}</p><p className="mt-1 text-sm text-muted">Expires {card.expiry} · dummy card saved in this browser</p><Button className="mt-3" variant="text" onClick={() => { saveDemoCard(null); setCard(null); setInfo("Saved dummy card removed."); }}>Remove card</Button></div> : <p className="mt-3 text-muted">No saved dummy card. Add one during checkout and select Save my card.</p>}<Link href="/checkout?plan=guardian&cycle=monthly" className="link mt-3 inline-block">{card ? "Update demo card" : "Add demo card"}</Link></Card>}
-    {DEMO_MODE && <details className="mt-6 rounded-card border border-border-subtle bg-surface p-5"><summary className="cursor-pointer font-semibold text-primary">Demo controls</summary><p className="mt-3 text-sm text-muted">Load a sample scenario for your presentation. New account clears the dummy plan and saved card so you can repeat signup, trial and payment.</p><div className="mt-4 flex flex-wrap gap-2">{([['new', 'New account'], ['active', 'Active plan'], ['trial', 'Trial account'], ['expired', 'Expired plan']] as const).map(([scenario, label]) => <Button key={scenario} variant="secondary" disabled={busy} onClick={() => void showScenario(scenario)}>{label}</Button>)}</div></details>}
+    {DEMO_MODE && <details className="mt-6 rounded-card border border-border-subtle bg-surface p-5"><summary className="cursor-pointer font-semibold text-primary">Demo controls</summary><p className="mt-3 text-sm text-muted">Load a sample scenario for your presentation. New account clears the dummy plan so you can repeat signup, trial and payment.</p><div className="mt-4 flex flex-wrap gap-2">{([['new', 'New account'], ['active', 'Active plan'], ['trial', 'Trial account'], ['expired', 'Expired plan']] as const).map(([scenario, label]) => <Button key={scenario} variant="secondary" disabled={busy} onClick={() => void showScenario(scenario)}>{label}</Button>)}</div></details>}
     <Button variant="text" className="mt-6" disabled={busy} onClick={logout}>Log out</Button>
   </main>;
 }
