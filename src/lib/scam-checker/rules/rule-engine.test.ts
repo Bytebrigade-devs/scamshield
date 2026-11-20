@@ -307,6 +307,87 @@ test('Singlish starter set: M4-SL10-S fires R-M4-13; M4-SL10-L is silent', () =>
   assert.deepEqual(firedIds(SL10_L), []);
 });
 
+// ---- v0.5-draft (20 Nov 2026): the bare Singlish verb "karanna" is not evidence on its own ----
+// "karanna" (කරන්න, "to do") is an ordinary verb: 40 of the 100 singlish_mixed corpus records use
+// it, 7 of them controls. It is only a claim-demand cue when the message also carries a
+// destination that is NOT a reviewed official host.
+
+test('v0.5: "karanna" never fires R-M4-13 on its own', () => {
+  for (const text of [
+    'Oya prize ekak win kara. Confirm karanna.',
+    'Meka karanna.',
+    'Api prize draw ekak karanna.',
+    'Mama prize eka ganna karanna ona deyak balala gatta.',
+  ]) assert.ok(!firedIds(text).includes('R-M4-13'), text);
+});
+
+test('v0.5: "karanna" + a reviewed official host stays silent (the false positive this gate fixes)', () => {
+  // Real reviewed domains only — a genuine promotion linked to the bank's own site must not fire
+  // merely because an ordinary verb appears in the sentence.
+  for (const text of [
+    'Api prize draw ekak karanna. Details balanna: https://www.sampath.lk/promotions',
+    'Bank eken katha karanna. Prize eka ganna branch ekata enna: https://sampath.lk/branch',
+    'HNB prize draw ekak karanna. Balanna: https://www.hnb.net/offers',
+    'Meka karanna: https://www.boc.lk/help',
+  ]) assert.ok(!firedIds(text).includes('R-M4-13'), text);
+});
+
+test('v0.5: "karanna" + an unreviewed destination still fires (genuine detections preserved)', () => {
+  // M4-SL10-S and the 500-set record M4-500-190 both depend on this path.
+  for (const text of [
+    SL10_S,
+    'Oya Dialog Mega Wasana draw eken Rs 1,000,000 win kara! Confirm karanna: https://dialog-claim.example',
+  ]) assert.ok(firedIds(text).includes('R-M4-13'), text);
+});
+
+test('v0.5: the gate is scoped to "karanna" — English and Sinhala claim wording is unaffected', () => {
+  // English claim-demand with a reviewed official host still fires: the wording itself is the claim.
+  assert.ok(firedIds('You are a prize winner. Claim your prize at https://www.sampath.lk/promotions').includes('R-M4-13'));
+  // Sinhala තහවුරු කරන්න likewise.
+  assert.ok(firedIds('ඔබ ලොතරැයි දිනුමක් දිනා ඇත. තහවුරු කරන්න: https://www.sampath.lk/promotions').includes('R-M4-13'));
+});
+
+test('v0.5: benign "karanna" in ordinary messages stays silent with no link', () => {
+  for (const text of [
+    'Mama ada bank ekata giya, FD eka renew karanna. Officer kiyanawa branch ekenma sign karanna one.',
+    'Fine ekak thiyenawa nam counter eken pay karanna. SMS link ekak enne na.',
+    'Ammi, me mama new number. Urgent na, Saturday ennam. 6ta passe call karanna.',
+  ]) assert.deepEqual(firedIds(text), [], text);
+});
+
+// ---- v0.6-draft (20 Nov 2026): no rule may rest on Singlish tokens alone ----
+// Romanised Sinhala has no standard spelling (dakwa/dakva, naya/nayak, rina/rin), so a romanised
+// token is weak evidence. A match whose entire evidence is Singlish + numbers + URLs is reported
+// only when another rule corroborates it on the same message.
+
+test('v0.6: a Singlish prize message alone is not reported', () => {
+  // lutharayi + jayagrahak + karanna are all romanised; the link is a plain .example host.
+  assert.deepEqual(firedIds('Oya lutharayi jayagrahakayek! Karanna: https://claim.example/win'), []);
+});
+
+test('v0.6: the same Singlish prize message IS reported with an English claim cue', () => {
+  assert.ok(firedIds('Oya lutharayi win kara! Claim your prize: https://claim.example/win').includes('R-M4-13'));
+});
+
+test('v0.6: Sinhala-script evidence is NOT treated as weak (script is unambiguous)', () => {
+  // Same scenario in Sinhala script must keep firing — the gate targets romanisation only.
+  assert.ok(firedIds('ඔබ ලොතරැයි දිනුමක් දිනා ඇත. තහවුරු කරන්න: https://claim.example/win').includes('R-M4-13'));
+});
+
+test('v0.6: a URL-only shape flag is never gated (it contains no Singlish token)', () => {
+  // Regression pin: an early draft classified pure-URL spans as "no language signal" and
+  // suppressed every shape flag. A shape flag must not depend on the corroboration gate.
+  assert.ok(firedIds('Install Pethpost-verify.apk from https://pethpost-update.example/app').includes('R-M4-19'));
+  assert.ok(firedIds('Details: bit.ly/pethpost-info').includes('R-M4-18'));
+  assert.ok(firedIds('Go to https://boc-verify-account.xyz/login').includes('R-M4-19'));
+});
+
+test('v0.6: corroboration keeps the stronger evidence, not the first anchor', () => {
+  // "dakwa" (Singlish) appears before "loan" (English). The rule must be judged on the English
+  // evidence, not gated because the romanised token happened to come first in the text.
+  assert.ok(firedIds('120 000 dakwa loan at https://lender.example/apply').includes('R-M4-20'));
+});
+
 test('R-M4-20: M4-SL11-S (Singlish instant loan + link) fires; M4-SL11-L (branch application) is silent', () => {
   assert.ok(firedIds(SL11_S).includes('R-M4-20'));
   assert.deepEqual(firedIds(SL11_L), []);
@@ -351,6 +432,92 @@ test('review hardening: loan amounts stay on one line and preserve grouped curre
   for (const amount of ['LKR 5,000', 'Rs. 250 000', 'LKR\t300 000', 'LKR 2,000,000', 'LKR 5000.50', '300000']) {
     assert.ok(firedIds(`Instant loan ${amount} at https://lender.example/apply`).includes('R-M4-20'), amount);
   }
+});
+
+// ---- v0.4-draft (20 Nov 2026): Singlish loan vocabulary, "rupiyal"/"k" amounts, bare-domain
+// destinations. Provenance: an owner-supplied batch of 13 real messages (10 scam, 2 legitimate
+// telco promos, 1 inconclusive remittance teaser) in which R-M4-20 fired on only 3 of the 10
+// scams. All texts below are ADAPTED synthetic wording on reserved `.example` hosts per the
+// authoring conventions (testing/M4-test-messages-500-README.md §8): no real message text and no
+// real scam domain is copied into this suite. These pin draft-rule behaviour only — they are
+// not an accuracy measurement and not a claim about any real sender.
+
+test('R-M4-20 v0.4: Singlish debt/loan words fire where the v0.2 cue set stayed silent', () => {
+  // "naya"/"nayak" (ණය), "rina"/"rin" (රුණ) and the "dakva" spelling variant of "dakwa".
+  // v0.6-draft: these fire only when the rule's evidence is NOT Singlish-only. Cases A and B carry
+  // an English currency prefix ("Rs.") inside the amount cue, so they remain reported.
+  const cases = [
+    'Obata vishesha naya dimanawak Rs. 200 000 ada ganna: https://q7x2.example/uRKRcjd',
+    'Wadi labak! Rs.250000 adu faida rina. Balanna: https://m1o1.example/2zNP4ix',
+  ];
+  for (const text of cases) assert.ok(firedIds(text).includes('R-M4-20'), text);
+});
+
+test('R-M4-20 v0.6: a purely Singlish loan message is NOT reported without corroboration', () => {
+  // Owner instruction (20 Nov 2026): a romanised token is not accurate enough to stand alone.
+  // These three v0.4 cases rest entirely on Singlish + digits + a URL, so they are now gated.
+  // This is a deliberate precision-over-recall decision, recorded in catalogue v0.6-draft.
+  const gated = [
+    'Apey rin sewa - 250 000 LKR. Apply: https://f1n0.example/xdYhxud',
+    'Obe vaetupata pera mudal avasyada? Rupiyal 120 000 dakva apen laba ganna https://finag.example/ry2Vz7V',
+    'Obata hadisi mudal avasyada? 120 000 dakva nayak toranna https://finag.example/67UfoTT',
+    'Ikmanin rupiyal 300 000 https://m4x8.example/Tfdx1ih',
+  ];
+  for (const text of gated) assert.deepEqual(firedIds(text), [], text);
+});
+
+test('R-M4-20 v0.6: the same Singlish message IS reported once another signal corroborates it', () => {
+  // An English loan word supplies independent cue evidence…
+  assert.ok(firedIds('Ikmanin rupiyal 300 000 loan https://x.example/a').includes('R-M4-20'));
+  // …and a hostile-shape or shortener link corroborates via a different rule.
+  assert.ok(firedIds('Ikmanin rupiyal 300 000 https://x.top/a').includes('R-M4-19'));
+  assert.ok(firedIds('Ikmanin rupiyal 300 000 bit.ly/abc').includes('R-M4-18'));
+});
+
+test('R-M4-20 v0.4: "mudal" alone is NOT a loan cue (deliberately excluded)', () => {
+  // "mudal" (මුදල් = money) is too generic to carry the loan-context cue on its own; every
+  // message in the real batch that used it also carried "ikmanin"/"dakva"/"rupiyal". Requiring
+  // one of those keeps ordinary money talk silent.
+  assert.ok(!firedIds('Mudal avashyada? Danma laba ganna.').includes('R-M4-20'));
+  assert.ok(!firedIds('Obata avashya mudal sandaha amata kathaa karanna, branch ekata enna.').includes('R-M4-20'));
+});
+
+test('R-M4-20 v0.4: a schemeless domain WITH a path is a message-supplied destination', () => {
+  // The real batch used advertorial links written without a scheme, e.g. `cashx.lk/sl/qh`.
+  assert.ok(firedIds('50% wattamakata rupiyal 300 000k dakwa nayak gatha haka! >>> quickcash.example/sl/qh ikman karanna')
+    .includes('R-M4-20'));
+  // A domain mention with no path segment stays silent — "has a domain" is not a destination cue.
+  assert.ok(!firedIds('rupiyal 300 000k dakwa loan apply quickcash.example').includes('R-M4-20'));
+  // Dotted words, version numbers and file names are not hosts.
+  for (const text of ['rin 300 000k see fig.1/overview', 'rin 300 000k version 1.2.3/notes',
+    'rin 300 000k report.pdf/page', 'rin 300 000k e.g./apply']) {
+    assert.ok(!firedIds(text).includes('R-M4-20'), text);
+  }
+});
+
+test('R-M4-20 v0.4: the trailing "k" suffix does not lower the bare-amount floor', () => {
+  // Regression pin. An early draft of the v0.4 amount pattern dropped the required final `\d`
+  // from the bare-number branch, which silently shortened its 6-character floor and began
+  // treating 4- and 5-digit numbers such as "3,000" as loan amounts.
+  for (const amount of ['300 000k', '120 000', '250 000k']) {
+    assert.ok(firedIds(`${amount} dakwa loan at https://lender.example/apply`).includes('R-M4-20'), amount);
+  }
+  for (const short of ['3,000', '1,000', '12,34', '5,00']) {
+    assert.ok(!firedIds(`${short} dakwa loan at https://lender.example/apply`).includes('R-M4-20'), short);
+  }
+  // Unchanged pre-existing behaviour, pinned so the two branches are not confused: a currency
+  // prefix disambiguates a short amount, so "rupiyal 3,000" legitimately counts as money.
+  assert.ok(firedIds('rupiyal 3,000 dakwa loan at https://lender.example/apply').includes('R-M4-20'));
+});
+
+test('R-M4-20 v0.4: legitimate telco promos from the same batch stay silent', () => {
+  // Adapted from the two legitimate messages in the batch: a conditional data-bonus reload
+  // promo and an app-onboarding promo that needs no bank details. Neither carries loan/debt
+  // vocabulary, so the widened cue set must not pull them in.
+  const reloadPromo = 'Havent RECHARGED yet? Your 5GB FREE is still waiting! Recharge Rs.500 or more via the Mobile App or https://reloadpay.telco.example/en before midnight and claim it instantly. Prepaid only. T&Cs apply. Stop promo SMS dial *159';
+  const appPromo = '2GB free data today! Without bank details, create your payment QR from the official app in under a minute! https://app.telco.example/campaign';
+  assert.deepEqual(firedIds(reloadPromo), []);
+  assert.deepEqual(firedIds(appPromo), []);
 });
 
 test('review follow-up: complete email and Unicode hostname tokens cannot be truncated into shorteners', () => {

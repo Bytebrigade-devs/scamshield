@@ -43,6 +43,43 @@
  * — parsed locally, never fetched, never a reputation/impersonation/malicious-domain finding.
  * Thresholds and reference limits are catalogue decisions (testing/M4-rule-catalogue.md v0.3).
  *
+ * v0.4-draft (20 November 2026) R-M4-20 cue-vocabulary amendment, derived from an owner-supplied
+ * batch of 13 real messages (10 scam, 2 legitimate telco promos, 1 inconclusive remittance
+ * teaser) in which R-M4-20 fired on only 3 of the 10 scams. Three cue regexes widen:
+ * LOAN_CTX_RE gains the Singlish debt/loan words naya/nayak/rina/rin and the "dakva" spelling
+ * variant; LOAN_AMOUNT_RE gains the "rupiyal" prefix and a trailing "k" thousand suffix while
+ * PRESERVING its 6-character bare-amount floor; DESTINATION_RE accepts a schemeless domain that
+ * carries an explicit path segment. No rule ID, arity, threshold or honesty boundary changed,
+ * and every added token has zero occurrences across the 604-message corpus (104 frozen fixture
+ * + 500-set), so this is new coverage rather than fixture fitting. Details and the deliberate
+ * exclusions are in testing/M4-rule-catalogue.md (v0.4-draft amendment).
+ *
+ * v0.5-draft (20 November 2026) Singlish "karanna" gate: the bare verb "karanna" (Sinhala කරන්න,
+ * "to do") was carried inside CLAIM_DEMAND_RE and could fire R-M4-13 as a claim demand by itself.
+ * It appears in 40 of the 100 singlish_mixed corpus records (7 of them controls) because it is an
+ * ordinary verb — "renew karanna", "call karanna", "check karanna" — and it fired R-M4-13 on a
+ * genuine promotion linked to a reviewed official domain, the exact false positive the v0.3 rules
+ * exist to avoid. The token now counts only when the message also carries a destination that is
+ * NOT a reviewed official host (an unreviewed-destination gate, never a maliciousness claim; a
+ * genuine but unlisted promotion containing the verb and a link still fires — documented
+ * limitation). When no parseable URL is present the gate does not apply, so phone/email
+ * destinations keep their previous behaviour. English claim wording and තහවුරු කරන්න are
+ * unaffected: the gate matches on the cue VALUE, not the rule. No rule ID, arity or threshold changed.
+ *
+ * v0.6-draft (20 November 2026) Singlish corroboration requirement: NO rule may rest on romanised
+ * Sinhala ("Singlish") tokens alone. Singlish has no standard spelling — `dakwa`/`dakva`,
+ * `naya`/`nayak`, `rina`/`rin` are variants of the same words, and several tokens (`karanna`,
+ * `danma`, `rin`) are ordinary vocabulary — so a romanised token is weak evidence. A match whose
+ * entire cue evidence is Singlish tokens plus neutral characters (digits, punctuation, URLs) is
+ * reported only when another match on the same message carries independent evidence; shape flags
+ * (R-M4-18/19/21/22/23) count as corroboration. `selectEvidence` now prefers a non-Singlish-only
+ * evidence set, so a message carrying both romanised and English/Sinhala evidence is judged on its
+ * stronger evidence rather than on whichever anchor came first. Sinhala-SCRIPT cues are deliberately
+ * NOT treated as weak: the script is unambiguous, unlike romanisation. Measured: 500-set and frozen
+ * fixture both UNCHANGED (0 records gained/lost/changed); the gate bites only on purely-Singlish
+ * inputs, where it removes 3 of the 5 adapted v0.4 loan cases — a deliberate precision-over-recall
+ * decision on the owner's instruction, recorded in catalogue v0.6-draft. No rule ID or arity changed.
+ *
  * Runner: Node built-in `node --test` (zero dependencies) — M4-19/X-06 PROPOSED convention.
  */
 
@@ -99,8 +136,17 @@ const PRESSURE_RE =
   /\b(\d+\s*(?:minutes?|hours?|days?|[ap]\.?m\.?)|today|tonight|now|immediately|right\s+away|within\s+(?:\d+|the\s+hour)|within\s+a\s+(?:week|day|few\s+hours)|unless\s+you|deadline)\b/i;
 const ACTION_RE =
   /\b(?:verify|confirm|update|restore|enter)\s+(?:\w+\s+){0,3}(?:password|pin|otp|login|account|bank\s+details)\b|\b(click|log\s?in|pay|send|reply(?:\s+with)?|buy|deposit|transfer)\b/i;
+/**
+ * Message-supplied destination.
+ *
+ * v0.4-draft (20 Nov 2026) adds a **bare registrable domain followed by an explicit path
+ * segment** (`cashx.lk/sl/qh`), the SMS-advertorial shape that omits the scheme. The required
+ * `/path` is the guard: a plain domain mention, a dotted word or a file name does not match.
+ * A destination cue is evidence of "a link is present", never a claim about that destination —
+ * no fetch, DNS or reputation lookup is performed.
+ */
 const DESTINATION_RE =
-  /\b(?:https?:\/\/|www\.)\S+|[\w.+-]+@[\w-]+\.[\w.-]+|\+?\d[\d\s().-]{7,}\d/i;
+  /\b(?:https?:\/\/|www\.)\S+|(?<![\w@/.-])(?:[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?\.)+(?:com|lk|io|net|org|me|top|xyz|online|info|help|site|shop|store|app|co|biz|club|vip|example)\/[^\s"'<>]+|[\w.+-]+@[\w-]+\.[\w.-]+|\+?\d[\d\s().-]{7,}\d/i;
 
 const ROMANCE_RE = /\b(my\s+(love|darling|dear|sweetheart|baby|heart)|darling|dearest|sweetheart|online\s+(?:romance|dating)|dated\s+online|our\s+love)\b/i;
 const MONEY_DEMAND_RE =
@@ -144,6 +190,66 @@ const FINE_CTX_RE =
   /\b(?:traffic|parking|unpaid|spot)\s+fines?\b|\bfine\s+of\b|\bcourt\s+action\b|\bprosecut\w+|(?<![\u0D80-\u0DFF])දඩ(?:\s*මුදල්)?(?!ය)/iu;
 const CLAIM_DEMAND_RE =
   /\b(?:claim|collect|confirm|verify)\s+(?:your\s+|the\s+)?(?:[\w,.]+\s+){0,3}(?:prize|winnings?|reward(?:\s+points?)?|gift|voucher|cash)\b|(?<![\u0D80-\u0DFF])තහවුරු\s*කරන්න|\bkaranna\b/iu;
+
+/**
+ * v0.5-draft (20 November 2026) — the bare Singlish verb "karanna" (Sinhala කරන්න, "to do") is
+ * NOT evidence on its own.
+ *
+ * It was carried inside CLAIM_DEMAND_RE and therefore fired R-M4-13 as a claim demand by itself.
+ * That is wrong in both directions: the token appears in 40 of the 100 `singlish_mixed` records
+ * (7 of them controls) because it is an ordinary verb — "renew karanna", "call karanna",
+ * "check karanna". Measured consequence: it fired R-M4-13 on a genuine promotion linked to the
+ * bank's own reviewed domain (`…prize draw ekak karanna… https://www.sampath.lk/promotions`),
+ * which is precisely the reviewed-official-domain false positive the v0.3 rules exist to avoid.
+ *
+ * The token now only counts when the message also carries a destination that is NOT a reviewed
+ * official host. This is an **unreviewed-destination** gate, not proof that a destination is
+ * malicious: a genuine but unlisted promotion containing the verb and a link still fires
+ * (documented limitation, same tradition as R-M4-20's link requirement). When a message carries
+ * no parseable URL at all, the gate does not apply and matching is unchanged, so phone/email
+ * destinations keep their previous behaviour.
+ *
+ * Matched later against the cue VALUE, so the English claim-demand wording and the Sinhala
+ * තහවුරු කරන්න branch of CLAIM_DEMAND_RE are unaffected.
+ */
+const SINGLISH_DO_TOKEN_RE = /^\s*karanna\s*$/i;
+
+/**
+ * v0.6-draft (20 November 2026) — a Singlish token is never sufficient evidence on its own.
+ *
+ * Romanised Sinhala ("Singlish") has no standard spelling, so a romanised token is a weak signal:
+ * `dakwa`/`dakva`, `naya`/`nayak`, `rina`/`rin` are spelling variants of the same words, and several
+ * (`karanna`, `danma`, `rin`) are ordinary vocabulary. A rule whose ENTIRE linguistic evidence is
+ * Singlish tokens — with only numbers, punctuation and URLs alongside — is therefore not reported
+ * unless another rule corroborates it on the same message.
+ *
+ * This is a corroboration requirement, not a accuracy claim about Singlish, and it does not weaken
+ * any rule: the same message still fires when an English cue, a Sinhala-script cue, or a second
+ * rule supplies independent evidence. Sinhala-script cues are deliberately NOT treated as weak —
+ * the script itself is unambiguous, unlike romanisation.
+ */
+const SINGLISH_TOKEN_RE =
+  /\b(?:lutharayi|jayagrahak(?:ayek|aya|ayan)?|jaya\s?grahak(?:ayek|aya|ayan)?|karanna|ikmanin|dakwa|dakva|danma|naya|nayak|rina|rin|rupiyal)\b/giu;
+
+/** Characters that carry no language signal: digits, currency marks, punctuation, whitespace. */
+const NEUTRAL_CHARS_RE = /[\d\s.,:;!?()[\]{}'"“”‘’/\\|@#$%&*+=<>~`^\-–—…]/gu;
+
+/**
+ * True when a cue's evidence span carries no language signal beyond Singlish tokens and neutral
+ * characters. URLs are neutral: a link is a destination, not linguistic evidence of a scam pattern.
+ */
+function isSinglishOnlySpan(value: string): boolean {
+  const withoutUrls = value.replace(/(?:https?:\/\/|www\.)[^\s"'<>]+/giu, ' ');
+  const withoutSinglish = withoutUrls.replace(SINGLISH_TOKEN_RE, ' ');
+  const residual = withoutSinglish.replace(NEUTRAL_CHARS_RE, '');
+  return residual.length === 0;
+}
+
+/** True when the span actually contains a Singlish token (so the rule depends on romanisation). */
+function containsSinglishToken(value: string): boolean {
+  SINGLISH_TOKEN_RE.lastIndex = 0;
+  return SINGLISH_TOKEN_RE.test(value);
+}
 const TXN_CTX_RE = /\b(?:transfers?|transactions?|payments?|withdrawals?)\b/i;
 const UNAUTHORIZED_RE =
   /\bif\s+this\s+is\s+not\s+you\b|\bdid\s+not\s+(?:make|authorize|authorise)\b|\b(?:un|not\s+)authorized?\b|\bsuspicious\s+activity\b/i;
@@ -176,12 +282,24 @@ const LOOKALIKE_HOST_RE = /(?:^|\.)[\w-]+-(?:verify|secure|pay|claim|release|ren
 // tokens "ikmanin" (ඉක්මනින්), "dakwa", "danma") + a money amount + a message-supplied link.
 // Licensed-bank promos WITHOUT a message link stay silent; a genuine lender promo that does
 // include a link would fire — evidence for review, never a verdict (documented limitation).
+//
+// v0.4-draft (20 Nov 2026) Singlish loan-debt vocabulary, from a 13-message owner-supplied real
+// batch (10 scam / 2 legitimate / 1 inconclusive). The romanised debt/loan words "naya" and
+// "nayak" (ණය), "rina"/"rin" (රුණ), the "dakva" spelling variant of "dakwa", and "rupiyal"
+// (රුපියල්) all appear in genuine scam SMS that the v0.2 cue set missed. Every added token has
+// ZERO occurrences in the 604-message corpus (104 frozen fixture + 500-set), so this widens
+// coverage rather than fitting the fixtures. The Sinhala-script form රුණ was considered and
+// deliberately NOT added — unevidenced by this batch (see catalogue v0.4-draft).
 const LOAN_CTX_RE =
-  /\bloans?\b|\bcredit\b|\bno\s+collateral\b|instant\s+(?:approval|loan|cash)|approval\s+in\s+\d+|\b(?:ikmanin|dakwa|danma)\b|(?<![\u0D80-\u0DFF])ණය/iu;
+  /\bloans?\b|\bcredit\b|\bno\s+collateral\b|instant\s+(?:approval|loan|cash)|approval\s+in\s+\d+|\b(?:ikmanin|dakwa|dakva|danma)\b|\b(?:naya|nayak|rina|rin)\b|(?<![\u0D80-\u0DFF])ණය/iu;
 // Currency and amount must be on one line; bound the numeric token rather than bridging
 // paragraphs. Grouped amounts such as Rs. 250 000 remain valid; bare large amounts stay
 // a documented heuristic, not proof that a number is money.
-const LOAN_AMOUNT_RE = /\b(?:lkr|rs\.?|rupees?)[ \t]{0,3}\d(?:[\d,.]|[ \t](?=\d)){0,19}(?![\d,.])|(?<![\d,.])\b\d[\d, \t]{4,18}\d\b(?![\d,.])/i;
+// v0.4-draft: "rupiyal" (රුපියල්) joins the currency prefixes, and a trailing "k" thousand
+// suffix is allowed ("300 000k"). The 6-character floor of the bare-amount branch is PRESERVED
+// — an early draft dropped the final `\d` and silently began matching 4-digit numbers such as
+// "3,000"; that regression is pinned by rule-engine.test.ts.
+const LOAN_AMOUNT_RE = /\b(?:lkr|rs\.?|rupees?|rupiyal)[ \t]{0,3}\d(?:[\d,.]|[ \t](?=\d)){0,19}[ \t]?k?(?![\d,.])|(?<![\d,.])\b\d[\d, \t]{4,18}\d[ \t]?k?\b(?![\d,.])/i;
 
 // ---- v0.3-draft URL-shape rules (R-M4-21…23) ----
 // Parse candidates locally; no fetch, no DNS, no reputation. Bare domains are included so an
@@ -433,6 +551,17 @@ function hasShortenerHost(value: string): boolean {
   }
 }
 
+/**
+ * v0.5-draft gate for the bare Singlish verb "karanna" (see SINGLISH_DO_TOKEN_RE).
+ *
+ * Returns true when the message carries at least one parseable destination whose host is NOT a
+ * reviewed official host. Pure function over already-parsed candidates — no fetch, no DNS, no
+ * reputation lookup, and no claim that an unlisted host is malicious or fake.
+ */
+function hasUnreviewedDestination(candidates: ParsedCandidate[]): boolean {
+  return candidates.some((candidate) => !isReviewedOfficialHost(candidate.host));
+}
+
 interface ParsedCandidate {
   start: number;
   end: number;
@@ -535,11 +664,15 @@ function shapeMatches(text: string): RuleMatch[] {
   return out;
 }
 
-function cueSpans(text: string, segs: Segment[], cue: Cue): Span[] {
+function cueSpans(text: string, segs: Segment[], cue: Cue, candidates: ParsedCandidate[]): Span[] {
   const out: Span[] = [];
+  // v0.5-draft: the bare Singlish "karanna" only counts as a claim demand when the message also
+  // carries an unreviewed destination. English/`තහවුරු කරන්න` claim wording is untouched.
+  const gateSinglishDo = !hasUnreviewedDestination(candidates);
   for (const m of text.matchAll(new RegExp(cue.re.source, cue.re.flags.includes('g') ? cue.re.flags : cue.re.flags + 'g'))) {
     const start = m.index ?? 0;
     const value = m[0];
+    if (gateSinglishDo && SINGLISH_DO_TOKEN_RE.test(value)) continue;
     if (cue.name === 'hostile-link-shape' && !hasHostileShape(value)) continue;
     if (cue.name === 'shortened-url' && !hasShortenerHost(value)) continue;
     if (cue.guarded) {
@@ -568,7 +701,7 @@ function connected(text: string, spans: Span[]): boolean {
 }
 
 /** Bind evidence to a qualifying pair first, then attach only nearby context cues. */
-function selectEvidence(text: string, segs: Segment[], rule: Rule, found: Map<string, Span[]>): Span | undefined {
+function selectEvidence(text: string, segs: Segment[], rule: Rule, found: Map<string, Span[]>, candidates: ParsedCandidate[]): Map<string, Span> | undefined {
   const primary = rule.cues.find((c) => c.primary) ?? rule.cues[0];
   const anchors: Map<string, Span>[] = [];
   if (rule.proximity) {
@@ -583,6 +716,10 @@ function selectEvidence(text: string, segs: Segment[], rule: Rule, found: Map<st
   } else {
     for (const span of found.get(primary.name) ?? []) anchors.push(new Map([[primary.name, span]]));
   }
+  // v0.6-draft: collect every qualifying evidence set, then prefer one that is NOT Singlish-only.
+  // A message carrying both romanised and English/Sinhala evidence must be judged on its stronger
+  // evidence, not on whichever anchor happened to come first in the text.
+  const qualifying: Map<string, Span>[] = [];
   for (const selected of anchors) {
     const anchor = selected.get(primary.name);
     if (!anchor) continue;
@@ -595,11 +732,17 @@ function selectEvidence(text: string, segs: Segment[], rule: Rule, found: Map<st
       selected.set(cue.name, nearest);
     }
     if (selected.size !== rule.cues.length) continue;
-    const suppressed = rule.noneOf?.some((cue) => cueSpans(text, segs, cue)
+    const suppressed = rule.noneOf?.some((cue) => cueSpans(text, segs, cue, candidates)
       .some((span) => connected(text, [...selected.values(), span])));
-    if (!suppressed) return anchor;
+    if (!suppressed) qualifying.push(selected);
   }
-  return undefined;
+  if (qualifying.length === 0) return undefined;
+  // Prefer an evidence set that does not rest solely on Singlish tokens.
+  const strong = qualifying.find((set) => {
+    const spans = [...set.values()];
+    return !(spans.some((s) => containsSinglishToken(s.value)) && spans.every((s) => isSinglishOnlySpan(s.value)));
+  });
+  return strong ?? qualifying[0];
 }
 
 /**
@@ -610,13 +753,17 @@ function selectEvidence(text: string, segs: Segment[], rule: Rule, found: Map<st
 export function analyzeRules(text: string): RuleAnalysis {
   if (typeof text !== 'string' || text.length === 0) return { matches: [] };
   const segs = segments(text);
+  const candidates = parsedUrlCandidates(text);
   const matches: RuleMatch[] = [];
+  // v0.6-draft: remember which matches rest entirely on Singlish tokens, so they can be
+  // dropped afterwards unless another rule corroborates them on the same message.
+  const singlishOnly = new Set<number>();
 
   for (const rule of RULES) {
     const found = new Map<string, Span[]>();
     let allPresent = true;
     for (const cue of rule.cues) {
-      const spans = cueSpans(text, segs, cue);
+      const spans = cueSpans(text, segs, cue, candidates);
       if (spans.length === 0) {
         allPresent = false;
         break;
@@ -626,8 +773,18 @@ export function analyzeRules(text: string): RuleAnalysis {
     if (!allPresent) continue;
 
     const primary = rule.cues.find((c) => c.primary) ?? rule.cues[0];
-    const excerpt = selectEvidence(text, segs, rule, found);
+    const selected = selectEvidence(text, segs, rule, found, candidates);
+    if (!selected) continue;
+    const excerpt = selected.get(primary.name);
     if (!excerpt) continue;
+    // A rule is Singlish-only when it actually DEPENDS on a Singlish token (at least one cue span
+    // contains one) AND every cue span carries no language signal beyond Singlish tokens and
+    // neutral characters. A pure-URL shape flag contains no Singlish token, so it is never gated.
+    const spans = [...selected.values()];
+    if (spans.some((span) => containsSinglishToken(span.value))
+      && spans.every((span) => isSinglishOnlySpan(span.value))) {
+      singlishOnly.add(matches.length);
+    }
     matches.push({ ruleId: rule.id, excerpt: excerpt.value, start: excerpt.start, end: excerpt.end, contextNote: primary.name });
   }
 
@@ -637,6 +794,16 @@ export function analyzeRules(text: string): RuleAnalysis {
     if (matches.some(existing => existing.ruleId === match.ruleId
       && existing.start === match.start && existing.end === match.end)) continue;
     matches.push(match);
+  }
+
+  // v0.6-draft corroboration gate: a Singlish-only match is reported only when at least one
+  // OTHER match on this message carries independent (non-Singlish) evidence. Shape flags
+  // (R-M4-18/19/21/22/23) count as corroboration — they are host/attachment evidence, not
+  // romanised vocabulary. With no corroborating match, the Singlish-only match is dropped.
+  if (singlishOnly.size > 0) {
+    const corroborated = matches.some((_, index) => !singlishOnly.has(index));
+    if (!corroborated) return { matches: [] };
+    return { matches: matches.filter((_, index) => !singlishOnly.has(index)) };
   }
 
   return { matches };

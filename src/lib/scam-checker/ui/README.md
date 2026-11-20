@@ -6,6 +6,50 @@ The configured **testing** provider is now the owner's **OpenCode Go** subscript
 
 Verification at this boundary: workspace suite **500/500**, strict sweep **103/103**; repository `main` = **`c946e13`** with **495/495** library tests (PR #44). The Netlify demo is unchanged by this round; no accuracy, real-world-coverage or deployment claim follows.
 
+## Result-page refinement + feature-harness repair — 20 November 2026
+
+Owner-approved presentation round (review items 1–3, then item 5 polish, then item 4 on sign-off) plus
+repair of the drifted feature harnesses. Product changes are in three files in `code/ui/public/`;
+assessment, guidance, provider, storage, history and export semantics are unchanged:
+
+1. **Verdict card de-duplicated.** The AI risk meter keeps only the qualitative bands (and the
+   "Undetermined" line); the redundant "Analysis source" paragraph was removed (the factual status line
+   already states what ran), and the distinct local-pattern count moved into the evidence card title —
+   **"Patterns in your message · N"** — beside the evidence it counts.
+2. **Risk accent + verdict icon.** The assessment card gains a risk-coloured top edge and a decorative
+   Lucide icon (alert/shield/info) beside the heading, using only existing palette tokens. The icon is
+   `aria-hidden`; the heading text still carries the risk wording, so nothing relies on colour alone.
+3. **Compact "What happened?" refinement.** The four exposure options are wrapping toggle chips — still
+   native labelled checkboxes with unchanged keyboard/screen-reader behaviour. "Clear answers and ticks"
+   appears only once something is selected, and the unanswered status line is shortened.
+4. **Feedback control demoted.** "Report a wrong result" is now the fifth collapsed disclosure
+   ("Something wrong with this result?") instead of a full-width card; the card itself is unchanged.
+5. **Optional polish.** On completed checks the redundant `Mode:` item is dropped from the status line;
+   the AI reason is capped at a `68ch` reading measure on wide viewports; the undetermined risk scale is
+   rendered visually inactive (CSS-only, no markup change).
+
+**Feature-harness repair (QA tooling only):** the older feature matrices had drifted from the 17 November
+disclosure restructure and the 18 November always-on `feedback` field — they read/clicked export and
+organization/sender content without opening the disclosures it now lives in, and the legacy assertion used
+a stale key whitelist. Before any repair, `evidence_capture.py` was run against the original and changed
+public files and produced the **identical 105-failure set**, proving the presentation round added zero
+regressions. The harnesses now open the relevant disclosure before reading/capturing, and the legacy
+assertion checks that optional *evidence* keys are absent (accepting `feedback`). No frozen fixture or
+testing input was modified.
+
+Verified offline today (final state): workspace Node suite **538/538**, strict sweep **103/103**
+(0 mismatches, one review-required), general browser matrix **479/479**, feature matrix **1023/1023**,
+organization matrix **356/356**, sender/research matrix **196/196** — **2,054 browser assertions, zero
+browser errors**. Measured full-page heights after the change: desktop completed **2,029 px**, mobile
+completed **2,451 px** (from 2,354 / 2,786 px at the start of the round); demoting the feedback control
+alone saved ~325 px desktop and ~335 px mobile. A fresh independent visual review remains open.
+**Deployed to Netlify on 20 November 2026** (production deploy `6b000a82…`), with server-side AI
+re-enabled against the OpenCode Go gateway (`gpt-5.6-luna`, `responses`, 8 s deadline for Netlify's
+function limit) and verified live: `/api/config` reports `liveConfigured:true` and a synthetic hosted
+check completed with `providerMode:live`.
+[Change and verification record](../../evidence/M4-result-refinement-20261120.md) ·
+[Deployment and AI re-enable](../../evidence/M4-netlify-refinement-and-ai-20261120.md).
+
 ## Result-page layout — minimal hierarchy, 17 November 2026
 
 Owner-reported problem: the result page felt like a long stack of unrelated cards ("I feel lost in the
