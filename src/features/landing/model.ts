@@ -174,3 +174,11 @@ export function safeSignupPath(v: string | undefined): string {
     ? v
     : "/signup-preview/";
 }
+
+export function exitPromptEligible(progress: Progress, clientY: number) {
+  return (
+    clientY <= 0 &&
+    !progress.completed &&
+    questions.some((q) => progress.answers[q.id] !== undefined)
+  );
+}

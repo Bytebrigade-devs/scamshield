@@ -42,7 +42,7 @@ Every module's UI must follow the shared team spec: see [docs/THEME-AND-TYPOGRAP
 
 ## Run the Module 3 frontend
 
-The original M3 validation used Node.js 24.19.0 and pnpm 11.25.0. The current shared target is Node.js 24.22.1, pinned in `.nvmrc`, with pnpm 11.25.0; see the M1 verification record for checks on that target.
+The shared `.nvmrc` remains Node.js 24.19.0 with pnpm 11.25.0. M3 originally validated that runtime. Shared CI and the M1 follow-up use Node.js 24.22.1 explicitly; this module does not change the shared pin or engine range. See the M1 verification record for the scope and limits of that rerun.
 
 ```bash
 pnpm install
@@ -68,7 +68,7 @@ The existing M4 source and tests are retained. The new app scaffold is Next.js 1
 
 ## Run the Module 1 frontend
 
-From the repository root, use Node.js 24.22.1 and pnpm 11.25.0 on Windows, macOS or Linux:
+From the repository root, use the shared Node/pnpm versions on Windows, macOS or Linux. The follow-up validation runtime is Node.js 24.22.1, matching shared CI; `.nvmrc` remains 24.19.0:
 
 ```bash
 pnpm install --frozen-lockfile

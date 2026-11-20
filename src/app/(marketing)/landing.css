@@ -1128,3 +1128,22 @@
 .m1-app {
   min-height: 100vh;
 }
+.m1-app .exit-reminder {
+  max-width: min(32rem, calc(100vw - 2rem));
+  margin: auto;
+  padding: 2rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.m1-app .exit-reminder p {
+  margin: 1rem 0;
+}
+.m1-app .exit-reminder::backdrop {
+  background: var(--color-overlay);
+}
+.m1-app .project-evidence a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

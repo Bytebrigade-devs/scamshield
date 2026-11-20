@@ -1,54 +1,47 @@
-# Module 1 review follow-up verification
+# Module 1 verification — 20 November 2026
 
-Review: [PR #24, review 5697756651](https://github.com/Bytebrigade-devs/scamshield/pull/24#pullrequestreview-5697756651).
+Follow-up to [PR #24 round 2](https://github.com/Bytebrigade-devs/scamshield/pull/24#issuecomment-6893765557). Shared baseline merged: `fa19c3d954a4a73d563d4119088440d2484b4284`.
 
-## Environment
+## Environment and reproducibility limit
 
-Checks below used Node.js **24.22.1** on Windows, Next.js 16.4.3, React 19.3.1, TypeScript 5.9.3, ESLint 9.39.5 and Tailwind 4.3.3. The Node executable was downloaded from the official Node.js release and verified against its published SHA-256 checksum. `.nvmrc` and the root Node engine now select the requested shared Node 24 baseline. The repository continues to declare pnpm 11.25.0 and retains main's single `pnpm-lock.yaml` unchanged.
+Node **24.22.1** on Windows was selected explicitly, matching shared CI. The inherited `.nvmrc` stays **24.19.0**, the root engine range stays `>=22.13.0`, and pnpm stays 11.25.0. Neither module changes shared dependency declarations or `pnpm-lock.yaml` relative to main. No PR #24 pin-upgrade dependency remains. `@types/node` stays on the shared 22 baseline deliberately: these frontend changes require no Node-24-only APIs. A Node-types/pin upgrade belongs to a separate owner-reviewed setup change with a full shared rerun, not this frontend PR.
 
-`pnpm install --frozen-lockfile --ignore-scripts` with a local store, hoisted linking and copy imports could not complete: Windows denied pnpm's project-registration symlink (`EPERM`). The existing local dependency tree used for M6 verification was copied for these checks. Its top-level packages match the root lockfile versions, but it was originally installed via npm without saving a manifest or lockfile. **This is not a successful frozen pnpm installation or proof of an identical transitive tree.** No npm lockfile or machine-specific install configuration is committed. Re-run `pnpm install --frozen-lockfile` in the team's normal environment before merge.
+**The current lockfile environment has not been reproduced locally.** The managed Windows pnpm store-registration symlink remains denied (`EPERM`), as in the previous records. In addition, shared main now declares/locks Next **16.4.6**; an attempted local installation returned npm `ETARGET`, “No matching version found for next@16.4.6”. The existing fallback dependency tree uses Next **16.4.3**, React 19.3.1, TypeScript 5.9.3, ESLint 9.39.5 and Tailwind 4.3.3. The results below are observations against that cached tree, not proof of the current frozen lockfile or identical transitive dependencies. No npm lockfile, machine-specific workaround, dependency downgrade or disabled build check is committed.
 
-## Results on Node 24.22.1
+The shared CI remains responsible for `pnpm install --frozen-lockfile` plus lint, typecheck, build and model tests against the committed lockfile on Linux and Windows. A new workflow step is not an observed remote pass. If the normal team environment also cannot resolve main's Next version, the shared setup owner must resolve that dependency declaration/lockfile; these module PRs do not silently replace it.
+
+The cached Next 16.4.3 also reported a known-security-vulnerability alert during the M6 build in the same environment. It should be upgraded rather than used for deployment. A successful local compilation does not clear that advisory or validate the unresolved current-main dependency installation.
+
+## Observed results
 
 | Check | Result |
 | --- | --- |
-| M1 model and event tests | **11 passed** |
+| M1 model/event tests | **12 passed** (including exit-reminder eligibility) |
 | Existing M3 vault model tests | **6 passed** |
-| Full repository ESLint | **Passed**, 42 source/config/test files, no errors or warnings |
-| M1 routes, features and tests TypeScript check | **Passed**, using the root compiler options |
-| Full root TypeScript check | **Blocked by 3 existing M4 errors**, below |
-| Production Webpack compilation | **Passed**, including all six M1 routes and the vault route |
-| Full production build | **Blocked during TypeScript**, same existing M4 errors |
-| CSS scope check | All M1 selectors scoped to `.m1-app`; no font, theme or Tailwind import duplicated |
-| Route manifest | Landing, onboarding, benefits, share, privacy, signup-preview and vault compiled |
-| Whitespace check against main | Passed |
-| Browser interaction / visual acceptance | **Not completed** |
+| Full repository ESLint | **Passed**, no warnings/errors |
+| Full shared TypeScript | **Passed** |
+| Full Webpack production build | **Passed on cached Next 16.4.3**, including all six M1 pages, `/vault`, `/checker` and inherited API routes |
+| Manifest/engine/pin/lockfile compared with main | Only the `test:m1` script differs in the manifest; pin, engines, dependencies and lockfile match main |
+| Git whitespace check | Passed |
+| Browser, visual, keyboard and screen-reader acceptance | **Not run; deferred**, see below |
 
-The local development server started successfully. A read-only HTTP route smoke check timed out connecting to loopback in this managed session, so route responses, navigation, keyboard interactions, responsive layout and rendered dark mode are not claimed as verified. No browser-access workaround was used. The compiled manifest check does not substitute for browser testing.
-
-Commands used after the dependency setup (each `node` invocation used the verified 24.22.1 executable):
+Commands used, each `node` invocation explicitly using 24.22.1:
 
 ```sh
 node --experimental-strip-types --test tests/landing-model.test.ts tests/landing-events.test.ts tests/vault-model.test.ts
 node node_modules/eslint/bin/eslint.js .
 node node_modules/typescript/bin/tsc --noEmit
 node node_modules/next/dist/bin/next build --webpack
+git diff --check origin/main
 ```
 
-The M1-only TypeScript check used a temporary config outside the repository, extending the root `tsconfig.json` and selecting the M1 routes, feature files, tests and Next declarations. A second temporary config selected only unchanged tracked main files, reproducing exactly the same three errors as the full check. Neither temporary config is an application build override; build type checking remains enabled.
+The old 29 October TS18047 blocker at `check-boundary.ts` 404/435/441 is **resolved by the M4 owner's changes on main**. It is not a current failure. The prior record is available in commit `873f669`; no M4 source is edited by M1.
 
-## Existing shared-build blocker
+## Scope and acceptance still owed
 
-Baseline main: `1f776562a8319479424cabaec0b9d8caf2beca31`.
+- The shared Node pin/engine changes from the first M1 correction are withdrawn. M3's historical records remain historical; M1 reran its six model tests and the shared static/build checks only. No full M3 Edge/browser rerun or setup-owner approval is claimed.
+- Partial onboarding now has a native desktop exit reminder, shown at most once per mounted marketing-provider visit; storage-error/completed/empty journeys do not trigger it. An eligibility model regression passes. `tests/browser/landing-exit.spec.ts` adds the partial/empty/dismiss-once browser regression, **but it has not been executed**.
+- Landing project provenance and source/privacy links replace any need for invented testimonial claims. M1-06 analytics delivery is **blocked on X-02**; local events, referral and experiment prototypes do not count as backend delivery.
+- Browser acceptance is explicitly deferred because the managed session's browser/current-URL and loopback restrictions remain unresolved. No alternate browser-control path was used. Proposed owner-run slot: **21 November 2026, before merge**; confirmation and results are still owed. Run the new exit-reminder test plus the M1 journey in a normal desktop browser; check Escape/focus restoration, touch exclusion, saved-progress behavior, 200% zoom, mobile/dark rendering and CSS isolation with `/vault` and `/checker`. This is an acceptance plan, not a completed review or booking.
 
-`src/lib/scam-checker/check-boundary.ts` has TS18047, “snapshot is possibly null”, at lines **404**, **435** and **441**. That file is byte-for-byte unchanged from main in this contribution. The unchanged-main-only check reproduced all three errors. No error suppression, type-safety relaxation or M4 behavior edit was added. The M4 owner must resolve the blocker before the shared production build can pass.
-
-## Review findings addressed
-
-- M1 now uses the shared `src/` application; the separate app, manifest, npm lockfile, config, font copy, generated-export tools and Windows launchers were removed. No standalone exception is needed.
-- Main was merged into the feature branch, retaining the full M3 README section and adding M1 instructions alongside it. The M3 entry remains `/vault`; its historical validation record is unchanged.
-- Validation was repeated on the requested Node 24.22.1, with failures and environment limits recorded here.
-- Cross-platform pnpm instructions replace Windows-only launchers.
-- Draft events, experiments and M2 handoff remain disabled/unconnected pending the owning modules' X-02 agreement. No M5 delivery was implemented.
-
-PR #24's description accompanies this correction with scope, validation and remaining integration limits. No review approval or merge readiness is implied by a successful push.
+CI now conditionally runs M1 and M6 model suites when their files are present. Remote CI results and a successful frozen installation must be reviewed before describing this as fully verified on the current shared lockfile.

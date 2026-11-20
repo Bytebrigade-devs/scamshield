@@ -13,7 +13,13 @@ import {
   CompleteGuard,
 } from "./ui";
 import { useJourney } from "./journey-provider";
-import { questions, preferredTool, safeReferral, HANDOFF_KEY } from "./model";
+import {
+  questions,
+  preferredTool,
+  safeReferral,
+  HANDOFF_KEY,
+  exitPromptEligible,
+} from "./model";
 import { emitEvent } from "./events";
 export function Landing() {
   const { variant } = useJourney();
@@ -100,8 +106,8 @@ export function Landing() {
                 </div>
                 <h3>Understand suspicious messages</h3>
                 <p>
-                  See explained red flags and practical next steps with the AI
-                  scam checker.
+                  See explained red flags and practical next steps with the scam
+                  checker. Its current shared preview uses rules only.
                 </p>
                 <span className="feature-tag">Pause before you act</span>
               </article>
@@ -117,6 +123,30 @@ export function Landing() {
                 <span className="feature-tag">Build confidence over time</span>
               </article>
             </div>
+          </div>
+        </section>
+        <section
+          className="section project-evidence"
+          aria-labelledby="project-evidence"
+        >
+          <div className="container">
+            <p className="eyebrow">Behind this project</p>
+            <h2 id="project-evidence">
+              Built by ByteBrigade. Open to inspection.
+            </h2>
+            <p>
+              ScamShield is a University of Moratuwa student software project.
+              You can inspect its source, review the feature explanations and
+              read the storage notice before starting. Demonstrations are
+              labelled; they do not guarantee your safety.
+            </p>
+            <p>
+              <a href="https://github.com/Bytebrigade-devs/scamshield">
+                View the project source
+              </a>
+              {" · "}
+              <Link href="/privacy/">Read the privacy and storage notice</Link>
+            </p>
           </div>
         </section>
         <section className="section" id="how-it-works">
@@ -203,6 +233,56 @@ export function Landing() {
     </Shell>
   );
 }
+function ExitReminder({ enabled }: { enabled: boolean }) {
+  const { progress, claimExitPrompt } = useJourney();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (
+      !enabled ||
+      !window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    )
+      return;
+    const onLeave = (event: PointerEvent) => {
+      if (
+        event.relatedTarget !== null ||
+        !exitPromptEligible(progress, event.clientY)
+      )
+        return;
+      if (!dialog.current || dialog.current.open || !claimExitPrompt()) return;
+      previousFocus.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      dialog.current.showModal();
+    };
+    document.documentElement.addEventListener("pointerleave", onLeave);
+    return () =>
+      document.documentElement.removeEventListener("pointerleave", onLeave);
+  }, [enabled, progress, claimExitPrompt]);
+  return (
+    <dialog
+      ref={dialog}
+      className="exit-reminder"
+      aria-labelledby="exit-reminder-title"
+      onClose={() => previousFocus.current?.focus()}
+    >
+      <h2 id="exit-reminder-title">You can return to these questions.</h2>
+      <p>
+        Your saved preferences stay in this browser for up to seven days after
+        the last saved change. You can also clear them on the privacy page.
+      </p>
+      <button
+        type="button"
+        className="button"
+        onClick={() => dialog.current?.close()}
+      >
+        Continue answering
+      </button>
+      <p>Close this reminder with Escape whenever you want to leave.</p>
+    </dialog>
+  );
+}
 export function Onboarding() {
   const router = useRouter();
   const { progress, ready, invalid, save, restart, storageError } =
@@ -256,6 +336,7 @@ export function Onboarding() {
       }
       step={active ? progress.step : -1}
     >
+      <ExitReminder enabled={ready && active && !invalid && !storageError} />
       {!ready ? (
         <Loading />
       ) : invalid ? (

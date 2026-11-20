@@ -4,14 +4,14 @@ Module 1 is integrated into the shared Next.js application, using its single roo
 
 ## Run on Windows, macOS or Linux
 
-Use Node.js 24.22.1 (the `.nvmrc` target) and pnpm 11.25.0 from the repository root:
+The inherited `.nvmrc` remains Node.js 24.19.0 and pnpm remains 11.25.0. This follow-up validates explicitly on Node 24.22.1, matching shared CI, without changing the shared pin or engine range. Run from the repository root:
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-On macOS/Linux with nvm installed, `nvm install` and `nvm use` select `.nvmrc`. On Windows, install/select Node 24.22.1 using your normal Node installation or version manager. The pnpm commands above are the same in PowerShell, Command Prompt and POSIX shells; no `.cmd` launcher is needed.
+On macOS/Linux with nvm installed, `nvm install` and `nvm use` select `.nvmrc`. On Windows, use your normal Node installation or version manager. To reproduce the CI runtime, select Node 24.22.1 explicitly rather than assuming `.nvmrc` selects it. The pnpm commands above are the same in PowerShell, Command Prompt and POSIX shells; no `.cmd` launcher is needed.
 
 | Route | Purpose |
 | --- | --- |
@@ -25,7 +25,7 @@ On macOS/Linux with nvm installed, `nvm install` and `nvm use` select `.nvmrc`. 
 
 The `(marketing)` route group adds no URL prefix. Its nested layout mounts `JourneyProvider` only for M1. Styles are scoped to `.m1-app`, and the existing root skip link targets each screen's `main` landmark. Browser storage is restored after hydration with cancellation on unmount. M1 does not mount providers or apply styles to the vault.
 
-The home route now shows the landing page. M3's direct `/vault` routes and instructions are retained. `/signup-preview` deliberately leaves `/signup` available for M2; switch the public signup-path setting only after that route and the X-02 contract are agreed. Events and experiments remain disabled by default; no event delivery is implemented. No Supabase, AI or payment credentials are needed.
+The home route now shows the landing page. M3's direct `/vault` routes and instructions are retained. `/signup-preview` deliberately leaves `/signup` available for M2; switch the public signup-path setting only after that route and the X-02 contract are agreed. M1-06 analytics delivery is **blocked on X-02**, not implemented. The default-off DOM event hook is a local prototype only. Experiments and referral sharing are local prototypes pending owner agreement. No Supabase, AI or payment credentials are needed.
 
 ```sh
 pnpm test:m1

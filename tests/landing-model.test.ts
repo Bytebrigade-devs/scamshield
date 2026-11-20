@@ -9,9 +9,18 @@ import {
   safeSignupPath,
   preferredTool,
   TTL,
+  exitPromptEligible,
 } from "../src/features/landing/model.ts";
 const now = 1792972800000;
 const answers = { interest: "messages", tool: "checker", experience: "new" };
+test("exit reminder requires partial answers and a top-edge exit; completed journeys never prompt", () => {
+  const empty = newProgress(now);
+  assert.equal(exitPromptEligible(empty, -1), false);
+  const partial = { ...empty, answers: { interest: "messages" } };
+  assert.equal(exitPromptEligible(partial, 0), true);
+  assert.equal(exitPromptEligible(partial, 400), false);
+  assert.equal(exitPromptEligible({ ...partial, completed: true }, -1), false);
+});
 test("new progress is valid and restores current step and answers", () => {
   const p = { ...newProgress(now), step: 1, answers: { interest: "messages" } };
   assert.deepEqual(decodeProgress(JSON.stringify(p), now), {

@@ -5,6 +5,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -35,9 +36,16 @@ type State = {
   retry: () => void;
   handoff: () => void;
   clear: () => void;
+  claimExitPrompt: () => boolean;
 };
 const Context = createContext<State | null>(null);
 export function JourneyProvider({ children }: { children: ReactNode }) {
+  const exitPromptSeen = useRef(false);
+  const claimExitPrompt = useCallback(() => {
+    if (exitPromptSeen.current) return false;
+    exitPromptSeen.current = true;
+    return true;
+  }, []);
   const router = useRouter();
   const [progress, setProgress] = useState<Progress>(newProgress);
   const [ready, setReady] = useState(false);
@@ -192,6 +200,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         retry: () => save(progress),
         handoff,
         clear,
+        claimExitPrompt,
       }}
     >
       {children}
