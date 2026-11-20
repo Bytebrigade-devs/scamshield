@@ -8,3 +8,6 @@ src/lib/testing/** -text
 # by the mirror test — so it must check out verbatim too.
 public/checker/** -text
 src/app/checker/shell.generated.ts -text
+
+# Draft SQL for the steward's review: byte-identical to the owner workspace drafts.
+supabase/drafts/** -text
