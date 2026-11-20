@@ -7,31 +7,14 @@ import { subscriptionRequest } from "@/lib/subscription-client";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Alert, Card } from "@/components/ui/Card";
-import { PaymentCardIcon } from "@/components/ui/icons";
-import { DemoCardForm } from "@/components/DemoCardForm";
 import { DEMO_MODE } from "@/lib/m2-mode";
-import { readDemo } from "@/lib/demo-store";
 import { authPath, checkoutPath } from "@/lib/checkout-path";
 import { getSupabase } from "@/lib/supabase";
-import { TEST_CARDS, TEST_CARD_STARTING_BALANCES, type TestCardId } from "@/lib/test-cards";
 
 function Checkout() {
   const router = useRouter();
   const params = useSearchParams();
   const plan = params.get("plan"); const cycle = params.get("cycle");
-  const [cardId, setCardId] = useState<TestCardId | null>(null);
-  const [saved, setSaved] = useState(false);
-  useEffect(() => {
-    if (!DEMO_MODE) return;
-    const demo = readDemo();
-    if (demo.card) {
-      // The demo store lives in localStorage, so it can only be read after mount;
-      // reading it during render would cause a hydration mismatch.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSaved(true);
-      setCardId(demo.card.last4);
-    }
-  }, []);
   // Backend checkout needs a signed-in session: send the visitor to login and return to this plan.
   useEffect(() => {
     if (DEMO_MODE) return;
@@ -47,16 +30,10 @@ function Checkout() {
   const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   async function pay(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || !cardId) return;
+    if (busy) return;
     setError(""); setBusy(true);
     try {
-      if (!DEMO_MODE && TEST_CARD_STARTING_BALANCES[cardId] < total) {
-        throw new Error("Payment declined. This test card has insufficient balance.");
-      }
-      const payment = { plan, billingCycle: cycle, scenario: "success", promoCode: promo.trim().toUpperCase() };
-      await subscriptionRequest("POST", DEMO_MODE
-        ? { ...payment, testCardId: cardId }
-        : { ...payment, paymentMethod: TEST_CARDS[cardId].method });
+      await subscriptionRequest("POST", { plan, billingCycle: cycle, scenario: "success", promoCode: promo.trim().toUpperCase() });
       router.push("/account/subscription?checkout=success");
     }
     catch (e) { setError(e instanceof Error ? e.message : "Payment unavailable. Please retry."); }
@@ -81,32 +58,20 @@ function Checkout() {
           </p>
           <p className="mt-5 border-t border-border-subtle pt-4 text-sm text-muted">One simulated payment. No automatic renewal.</p>
         </Card>
-        <Alert tone="warning">Test checkout. Use dummy card details only. Payments are simulated; no money is charged.</Alert>
+        <Alert tone="warning">Test checkout. No card details are collected; payments are simulated and no money is charged.</Alert>
         <Link href={authPath("login", checkoutPath(plan, cycle))} className="link inline-block text-sm">Log in to your account</Link>
       </section>
       <Card className="p-6 sm:p-8">
-        {!cardId ? <DemoCardForm onAdded={id => {
-          setCardId(id);
-          setSaved(DEMO_MODE && readDemo().card?.last4 === id);
-          setError("");
-        }}/> : <div>
-          <h2 className="text-center text-xl font-semibold">Card verified</h2>
-          <div role="status" className="mt-6 flex items-center gap-3 rounded-control bg-primary-subtle p-4">
-            <PaymentCardIcon className="shrink-0 text-primary"/>
-            <div><p className="font-medium">{TEST_CARDS[cardId].name} · Test card ending in {cardId}</p>
-              {saved && <p className="text-sm text-muted">Saved dummy card</p>}
-            </div>
-          </div>
-          <Button variant="text" disabled={busy} className="mt-2" onClick={() => setCardId(null)}>Change card</Button>
-          <form onSubmit={pay} className="mt-4 space-y-5">
-            <Field disabled={busy} label="Promo code (optional)" value={promo} onChange={e => setPromo(e.target.value)} maxLength={40} hint={DEMO_MODE ? "Try DEMO10 for a dummy 10% discount." : "No promo codes are available for test subscriptions."}/>
-            {discount > 0 && <p role="status" className="text-sm text-success">DEMO10 applied: {money(discount)} off.</p>}
-            <div className="flex flex-wrap justify-between gap-2 border-t border-border-subtle pt-4"><span className="font-medium">Demo total</span><span className="tabular font-semibold">{money(total)}</span></div>
-            {error && <Alert tone="danger">{error}</Alert>}
-            <Button type="submit" block size="lg" className="rounded-full" loading={busy} loadingLabel="Verifying payment…">Verify payment</Button>
-            <p className="text-center text-sm text-muted">No real payment will be taken.</p>
-          </form>
-        </div>}
+        <h2 className="text-center text-xl font-semibold">Simulated payment</h2>
+        <p className="mt-2 text-center text-sm text-muted">No card details are collected in this mock checkout.</p>
+        <form onSubmit={pay} className="mt-6 space-y-5">
+          <Field disabled={busy} label="Promo code (optional)" value={promo} onChange={e => setPromo(e.target.value)} maxLength={40} hint={DEMO_MODE ? "Try DEMO10 for a dummy 10% discount." : "No promo codes are available for test subscriptions."}/>
+          {discount > 0 && <p role="status" className="text-sm text-success">DEMO10 applied: {money(discount)} off.</p>}
+          <div className="flex flex-wrap justify-between gap-2 border-t border-border-subtle pt-4"><span className="font-medium">Demo total</span><span className="tabular font-semibold">{money(total)}</span></div>
+          {error && <Alert tone="danger">{error}</Alert>}
+          <Button type="submit" block size="lg" className="rounded-full" loading={busy} loadingLabel="Verifying payment…">Verify simulated payment</Button>
+          <p className="text-center text-sm text-muted">No real payment will be taken.</p>
+        </form>
       </Card>
     </div>
   </main>;

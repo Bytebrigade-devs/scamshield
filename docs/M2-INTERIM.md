@@ -23,7 +23,7 @@ The service role key is required because authenticated browsers can only **read 
 | Password recovery | Reset email and password update screens; invalid/unavailable link states |
 | Plans | Sentinel / Guardian / Aegis; LKR monthly 490/990/1,990; quarterly 1,320/2,670/5,370; annual 4,900/9,900/19,900 |
 | Trial | Seven days anchored at account creation; 15 checks total; Sentinel daily limit; one allocation per registered account |
-| Checkout | Monthly/quarterly/annual; Add Your Card form using synthetic test details, followed by payment review; mock success and decline; request validation; failure leaves entitlement unchanged |
+| Checkout | Monthly/quarterly/annual; plan and cycle only, with no card fields, followed by payment review; mock success and decline; request validation; failure leaves entitlement unchanged |
 | Promo input | Nonempty codes rejected with an explanation; no approved promo values were supplied |
 | Account | Plan/status/expiry; trial upgrade; expired-plan repurchase; cancellation confirmation |
 | Cancellation | Keeps plan and expiry; cancelled access allowed strictly before expiry; no renewal worker or real recurring billing |
@@ -47,7 +47,7 @@ The M2 implementation is on `feat/m2-sync-main`, synced with `main` at `fa19c3d`
 
 ### Card-method selection (26 October 2026)
 
-The user's screenshot correction replaces card-type selection with a rounded Add Your Card form. It accepts a demo name, number `4242 4242 4242 4242`, future MM/YY expiry and security code `123`. Values stay in component memory and are cleared on Add Card; only a fixed demo-card label remains for checkout review. No field values are sent to the subscription API or browser storage. Save my card is visibly disabled. The API retains optional `paymentMethod` validation for older demo clients; omitted methods default to debit card, with no database persistence. There is no physical POS or live gateway. Connecting a real provider requires merchant configuration and server-verified payment results before granting access.
+The user's screenshot correction replaces card-type selection with a rounded Add Your Card form. It accepts a demo name, number `4242 4242 4242 4242`, future MM/YY expiry and security code `123`. Values stay in component memory and are cleared on Add Card; only a fixed demo-card label remains for checkout review. No field values are sent to the subscription API or browser storage. Save my card is visibly disabled. The API retains optional `paymentMethod` validation for older demo clients; omitted methods default to debit card, with no database persistence. There is no physical POS or live gateway. Connecting a real provider requires merchant configuration and server-verified payment results before granting access. **Update, 20 November 2026:** review round 1 removed the Add Your Card form and its fields; checkout now collects only the plan, the billing cycle and an optional promo code, and no saved card is displayed.
 
 - Create a synthetic test account; confirm the email; log in and log out.
 - Request a password reset, follow the email link and set a new password; verify login.

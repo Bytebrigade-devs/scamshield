@@ -7,18 +7,12 @@ Run `pnpm dev` and open `/pricing`, `/login`, or `/account/subscription`.
 - First visit seeds a signed-in sample account (`demo@scamshield.test`) with a Guardian monthly subscription.
 - Signup accepts any valid dummy email and a password of at least 8 characters, creates a fresh demo account, and opens pricing. Login accepts a dummy email/password or the Use demo account button. Passwords are never stored or verified.
 - Trial activation creates a seven-day, 15-check dummy trial. The same demo account cannot allocate it twice. Demo controls > New account lets you repeat the flow.
-- Enter the test cardholder and number manually. Use any future expiry and security code `123`. **Verify card** clears the inputs and opens payment review.
-
-  | Test cardholder | Test number | Starting balance |
-  | --- | --- | ---: |
-  | Lahiru | `4242 4242 4242 4242` | LKR 20,000,000 |
-  | Sahan | `5555 5555 5555 4444` | LKR 20,000,000 |
-  | Achintha | `4000 0000 0000 0002` | LKR 400 |
-- Save my card remembers the selected card’s last four digits and expiry. A saved dummy card is available at later checkout and can be removed from the subscription screen. Full numbers and security codes are never saved.
-- `DEMO10` previews 10% off. **Verify payment** approves the payment when the simulated balance covers the total. A successful checkout saves the plan and deducts the total from that card. An insufficient balance declines the payment.
-- Subscription management shows the selected plan, expiry, sample usage counters, saved dummy card, plan changes and cancellation. Cancellation retains the same expiry.
+- Checkout asks only for a plan and billing cycle. No card number, expiry or security code is requested; the button reads **Verify simulated payment**.
+- The saved-card UI is removed with the form: no card details are collected, so nothing is stored or displayed.
+- `DEMO10` previews 10% off. **Verify simulated payment** saves the plan. The demo model keeps internal dummy card balances (default 4242) so its decline test still works, but no card input exists in the UI.
+- Subscription management shows the selected plan, expiry, sample usage counters, plan changes and cancellation. Cancellation retains the same expiry.
 - Forgot password shows an Open demo reset link action. The reset screen validates matching passwords and displays success. No email is sent and no password is changed on a server.
-- Demo controls on the subscription page load New account, Active plan, Trial account and Expired plan scenarios. These reset the sample data and saved card.
+- Demo controls on the subscription page load New account, Active plan, Trial account and Expired plan scenarios. These reset the sample data.
 
 State persists in localStorage under `scamshield-interim-demo-v1` for this browser/origin. Demo identities share one presentation state; this is not an account database or authentication. Use dummy information only. `src/lib/demo-store.ts` is the frontend state adapter, and `subscription-client.ts` invokes it without fetch. Backend mode is the default (`NEXT_PUBLIC_M2_MODE=backend`), so the shipped UI calls `/api/subscription`; this adapter is used only in demo mode. Never use this client state to grant real access.
 

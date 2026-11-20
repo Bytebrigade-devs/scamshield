@@ -28,7 +28,7 @@ When a trial is allocated, the backend sends a transactional email to the verifi
 
 ## Payment and usage boundaries
 
-Payments remain simulated by project requirement. A successful test checkout grants a persisted mock entitlement. This is a development/demo backend, not verified commercial billing. No live gateway or webhook is present. Card fields accept synthetic details only; full number and security code never enter API requests or storage. Saved-card UI, DEMO10 discount, demo reset controls and invented usage counters are disabled in backend mode. Backend promo codes are unavailable.
+Payments remain simulated by project requirement. A successful test checkout grants a persisted mock entitlement. This is a development/demo backend, not verified commercial billing. No live gateway or webhook is present. Checkout collects no card details at all: there is no number, expiry or security-code field, and the request carries only the plan, billing cycle, scenario and an optional promo code. Saved-card UI, DEMO10 discount, demo reset controls and invented usage counters are disabled in backend mode. Backend promo codes are unavailable.
 
 M4 must enforce usage limits atomically and call the server entitlement helper for each protected action. M2 exposes plan limits but has no usage ledger; billing is unrelated to the safety score. No shared schema or remote database was changed during this connection work.
 
