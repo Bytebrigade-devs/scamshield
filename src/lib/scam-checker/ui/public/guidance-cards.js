@@ -84,11 +84,15 @@ export function guidanceCards(data, el, onChange) {
   const answerStatus = el('p', { class: 'card__helper', role: 'status', id: 'exposure-status' });
   function publish() { onChange([...exposures], [...completed]); }
   function refresh() {
-    inputs.forEach((input, value) => { input.checked = exposures.includes(value); });
+    inputs.forEach((input, value) => {
+      input.checked = exposures.includes(value);
+      input.closest('label')?.classList.toggle('is-selected', input.checked);
+    });
     const resources = relevantResources(evidence.resources, exposures);
     const actions = selectedActions(exposures, resources, evidence.actions);
     completed = completed.filter(id => actions.some(action => action.id === id));
-    answerStatus.textContent = exposures.length ? `Selected: ${exposures.map(value => EXPOSURE_LABELS[value]).join('; ')}` : 'Not answered — showing general guidance, not assuming you only received it.';
+    answerStatus.textContent = exposures.length ? `Selected: ${exposures.map(value => EXPOSURE_LABELS[value]).join('; ')}` : 'Not answered — showing general guidance.';
+    clear.hidden = !(exposures.length || completed.length);
     actionsArea.replaceChildren(el('p', { class: 'card__helper' }, actions.length
       ? 'Tick steps for your own record. Ticks do not verify that an action is complete.'
       : 'No current, validated action guidance is available. Use the trusted-channel fallback below.'));
@@ -112,12 +116,16 @@ export function guidanceCards(data, el, onChange) {
     resourcesArea.replaceChildren(officialResourcesCard(evidence, exposures, el));
     publish();
   }
+  // Compact toggle chips: still native labelled checkboxes (keyboard/Space/screen-reader unchanged),
+  // wrapping into rows instead of four full-height stacked rows.
+  const chips = el('div', { class: 'exposure-chips' });
   Object.entries(EXPOSURE_LABELS).forEach(([value, name]) => {
     const input = el('input', { type: 'checkbox', id: `exposure-${value}`, 'data-exposure': value });
     inputs.set(value, input);
     input.addEventListener('change', () => { exposures = toggleExposure(exposures, value, input.checked); refresh(); });
-    fieldset.append(el('label', { class: 'check-option', for: `exposure-${value}` }, [input, el('span', {}, name)]));
+    chips.append(el('label', { class: 'check-option check-option--chip', for: `exposure-${value}` }, [input, el('span', {}, name)]));
   });
+  fieldset.append(chips);
   const clear = el('button', { class: 'btn btn--ghost btn--small', type: 'button', id: 'exposure-clear' }, 'Clear answers and ticks');
   clear.addEventListener('click', () => { exposures = []; completed = []; refresh(); });
   // Steps first so the answer is the first thing read; the optional "what happened" refinement follows.

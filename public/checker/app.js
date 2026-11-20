@@ -275,7 +275,9 @@ function messageCard(outcome, highlights = true) {
 }
 
 function evidenceCard(matches) {
-  const card = el('section', { class: 'card' }, [el('h2', { class: 'card__title' }, 'Patterns in your message')]);
+  // The distinct local-pattern count lives here, beside the evidence it counts — not in the AI risk meter.
+  const count = localPatterns(state.check.text, matches).count;
+  const card = el('section', { class: 'card' }, [el('h2', { class: 'card__title' }, count ? `Patterns in your message · ${count}` : 'Patterns in your message')]);
   const groups = [];
   for (const match of validMatches(state.check.text, matches)) {
     const reason = ruleExplanation(match.ruleId);
@@ -320,7 +322,10 @@ function resultMetaLine(payload) {
   const { outcome } = payload;
   const items = ['Local pattern scan: Completed', `AI analysis: ${aiScanState(payload).text}`];
   if (outcome.analysisStatus !== 'unavailable') {
-    items.push(`Mode: ${MODE_LABELS[outcome.analysisMode]}`, `Category: ${categoryLabel(outcome.category)}`);
+    // On a completed check "AI analysis: Completed" already names the mode; the explicit Mode
+    // label only earns its place in the limited (rules-only) state.
+    if (outcome.analysisStatus !== 'completed') items.push(`Mode: ${MODE_LABELS[outcome.analysisMode]}`);
+    items.push(`Category: ${categoryLabel(outcome.category)}`);
   }
   const line = el('p', { class: 'result-meta' });
   // Whitespace between flex items is not rendered but keeps the text readable to assistive technology.
@@ -328,14 +333,9 @@ function resultMetaLine(payload) {
   return line;
 }
 
-/** Qualitative AI risk and local evidence counts have separate meanings. */
+/** Qualitative AI risk bands. The local-pattern count is shown beside the evidence itself, not here. */
 function riskMeter(payload) {
-  const { outcome } = payload;
-  const risk = riskAssessment(outcome);
-  const count = localPatterns(state.check.text, outcome.rules?.matches).count;
-  const basis = outcome.analysisStatus === 'completed'
-    ? 'Analysis source: AI assessment with local pattern findings.'
-    : 'Analysis source: local pattern scan only. No AI risk assessment is available.';
+  const risk = riskAssessment(payload.outcome);
   const bands = el('ol', { class: 'risk-meter__bands' }, ['low', 'suspicious', 'high'].map((level) =>
     el('li', { class: `risk-meter__band${risk.level === level ? ' risk-meter__band--current' : ''}` }, [
       el('span', { class: 'risk-meter__name' }, RISK_BANDS[level].label),
@@ -345,9 +345,34 @@ function riskMeter(payload) {
     el('p', { class: 'risk-meter__title' }, 'AI risk assessment'),
     bands,
     risk.level === 'undetermined' ? el('p', { class: 'risk-meter__unknown' }, 'Undetermined — no risk band selected.') : null,
-    el('p', { class: 'risk-meter__count' }, `Local patterns found: ${count}`),
-    el('p', { class: 'risk-meter__basis' }, basis),
   ]);
+}
+
+/**
+ * Verdict icon (Lucide outline shapes, ISC — notice retained in design/M4-result-layouts.md).
+ * Built as static SVG DOM nodes; no untrusted content ever enters it. Decorative: the heading
+ * text already carries the risk wording, so the icon is hidden from assistive technology.
+ */
+const ICON_PATHS = {
+  alert: ['m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3', 'M12 9v4', 'M12 17h.01'],
+  shield: ['M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z', 'm9 12 2 2 4-4'],
+  info: ['M12 16v-4', 'M12 8h.01'],
+};
+function verdictIcon(status, level) {
+  const shape = status !== 'completed' || level === 'high' || level === 'suspicious' ? 'alert' : level === 'low' ? 'shield' : 'info';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  for (const [key, value] of Object.entries({ class: 'assessment__icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', focusable: 'false' })) svg.setAttribute(key, value);
+  if (shape === 'info') {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    for (const [key, value] of Object.entries({ cx: '12', cy: '12', r: '10' })) circle.setAttribute(key, value);
+    svg.append(circle);
+  }
+  for (const d of ICON_PATHS[shape]) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    svg.append(path);
+  }
+  return svg;
 }
 
 function renderResult(payload) {
@@ -363,8 +388,11 @@ function renderResult(payload) {
   status === 'completed' ? 'Your message assessment'
     : status === 'limited' ? 'Limited message assessment' : 'Local scan completed'));
   const assessment = el('section', { class: `assessment${status === 'limited' ? ' assessment--limited' : status === 'unavailable' ? ' assessment--failed' : ''}`, 'data-risk': risk.level });
-  assessment.append(el('h2', { class: 'assessment__title' }, status === 'completed'
-    ? risk.heading : status === 'limited' ? 'Rules-only analysis' : 'AI analysis failed'));
+  assessment.append(el('div', { class: 'assessment__head' }, [
+    verdictIcon(status, risk.level),
+    el('h2', { class: 'assessment__title' }, status === 'completed'
+      ? risk.heading : status === 'limited' ? 'Rules-only analysis' : 'AI analysis failed'),
+  ]));
   const reason = status === 'completed'
     ? outcome.reply?.reason || 'Review the message and any local patterns below.'
     : status === 'limited' ? 'Local patterns can miss scams and can also flag legitimate messages.'
@@ -394,11 +422,11 @@ function renderResult(payload) {
   // Local rule evidence is shown in every analysed state, including unavailable: stages 1–2
   // always ran, so hiding real evidence would leave the user with less than the server knows.
   view.append(evidenceCard(outcome.rules?.matches));
-  // "Report a wrong result" (owner decision, 17/18 November 2026): the server supplies the
-  // check id and the allowed reason codes; this only echoes them back. No message text.
+  // "Report a wrong result" (owner decision, 17/18 November 2026; demoted into the reference
+  // disclosures on 20 November 2026): the server supplies the check id and the allowed reason
+  // codes; this only echoes them back. No message text.
   const feedback = feedbackControl(payload.feedback, el);
   if (feedback) {
-    view.append(feedback);
     const submit = feedback.querySelector('#feedback-submit');
     const statusLine = feedback.querySelector('#feedback-status');
     submit.addEventListener('click', () => {
@@ -436,7 +464,9 @@ function renderResult(payload) {
       [organizationCard, senderCard, linkInspectionCard(payload.linkInspection, el)]),
     disclosure('Official support and reporting', resourceCount ? `${resourceCount} reviewed` : null, [guidance.resources]),
     disclosure('Export this check', null, [summary.card]),
-  ]));
+    // Optional, low-frequency correction control: reference-level weight, not a primary card.
+    feedback ? disclosure('Something wrong with this result?', null, [feedback]) : null,
+  ].filter(Boolean)));
   view.append(footerActions(status === 'unavailable' ? 'Return to message' : 'Check another message',
     status === 'unavailable' ? () => renderInput({ focus: 'textarea' }) : () => { state.text = ''; state.sender = ''; renderInput({ focus: 'textarea' }); }));
   focusHeading();

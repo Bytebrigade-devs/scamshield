@@ -559,9 +559,17 @@ textarea.message-input[aria-invalid="true"] {
   padding: var(--space-8);
   background: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
+  /* Risk-coloured top edge: the verdict state is scannable before any text is read. */
+  border-top: 3px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-surface);
 }
+
+.assessment[data-risk="high"] { border-top-color: var(--color-danger); }
+.assessment[data-risk="suspicious"] { border-top-color: var(--color-warning); }
+.assessment[data-risk="low"] { border-top-color: var(--color-success); }
+.assessment--limited,
+.assessment--failed { border-top-color: var(--color-warning); }
 
 .assessment__head {
   display: flex;
@@ -576,6 +584,19 @@ textarea.message-input[aria-invalid="true"] {
   color: var(--color-warning);
 }
 
+.assessment[data-risk="high"] .assessment__icon {
+  color: var(--color-danger);
+}
+
+.assessment[data-risk="low"] .assessment__icon {
+  color: var(--color-success);
+}
+
+.assessment[data-risk="undetermined"] .assessment__icon {
+  color: var(--color-text-muted);
+}
+
+.assessment--limited .assessment__icon,
 .assessment--failed .assessment__icon {
   color: var(--color-warning);
 }
@@ -597,6 +618,7 @@ textarea.message-input[aria-invalid="true"] {
 
 .assessment__explanation {
   margin-top: var(--space-3);
+  max-width: 68ch;
   color: var(--color-slate-700);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -730,6 +752,11 @@ textarea.message-input[aria-invalid="true"] {
   border-color: var(--color-danger);
 }
 
+/* With no band selected the scale reads as deliberately inactive context, not an empty control. */
+.risk-meter[data-risk="undetermined"] .risk-meter__band {
+  opacity: 0.65;
+}
+
 .risk-meter__current {
   display: inline-block;
   margin-left: var(--space-1);
@@ -737,17 +764,10 @@ textarea.message-input[aria-invalid="true"] {
   font-size: 11px;
 }
 
-.risk-meter__unknown,
-.risk-meter__count {
+.risk-meter__unknown {
   margin-top: var(--space-2);
   font-size: 14px;
   font-weight: 600;
-}
-
-.risk-meter__basis {
-  margin-top: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: 13px;
 }
 
 /* Directory evidence is independent of the AI verdict and remains readable in every state. */
@@ -1166,13 +1186,9 @@ textarea.message-input[aria-invalid="true"] {
     margin-left: 0;
     font-size: 10px;
   }
-  .risk-meter__count {
+  .risk-meter__unknown {
     margin-top: var(--space-2);
     font-size: 13px;
-  }
-  .risk-meter__basis {
-    margin-top: 0;
-    font-size: 12px;
   }
   .result-meta {
     margin-top: var(--space-2);
@@ -1224,6 +1240,7 @@ textarea.message-input[aria-invalid="true"] {
 @media (prefers-reduced-motion: reduce) {
   .btn,
   .nav-link,
+  .check-option--chip,
   .disclosure__chevron {
     transition: none;
   }
@@ -1252,6 +1269,40 @@ textarea.message-input[aria-invalid="true"] {
   height: 20px;
   margin: 2px 0 0;
   accent-color: var(--color-primary);
+}
+
+/* Exposure refinements render as wrapping toggle chips: native checkboxes stay visible and
+   operable, but four stacked full-height rows become one or two compact rows. */
+.exposure-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.check-option--chip {
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-slate-300);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-slate-700);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 170ms ease-out, border-color 170ms ease-out, color 170ms ease-out;
+}
+.check-option--chip input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+.check-option--chip:hover {
+  border-color: var(--color-primary);
+}
+.check-option--chip.is-selected {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+  color: var(--color-primary-active);
 }
 .guidance-actions { margin-top: var(--space-5); }
 .guidance-action { border-top: 1px solid var(--color-border-subtle); margin-top: var(--space-3); }
