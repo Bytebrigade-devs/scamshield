@@ -96,8 +96,13 @@ function routeHarness(options = {}) {
   const { env = {}, otp = '246810', otpShape = 'properties', userFound = true, resendOk = true } = options;
   const sent = [];
   const generated = [];
+  const files = [];
   const routes = load('src/app/api/auth/recovery-code/route.ts', {
     'next/server': { NextResponse: { json: (body, init) => ({ body, ...init }) } },
+    'node:fs': {
+      mkdirSync: () => undefined,
+      writeFileSync: (file, contents) => { files.push({ file, contents }); },
+    },
     '@supabase/supabase-js': {
       createClient: () => ({
         auth: {
@@ -128,12 +133,13 @@ function routeHarness(options = {}) {
     },
     fetch: async (url, init) => { sent.push({ url, body: JSON.parse(init.body) }); return { ok: resendOk }; },
     AbortSignal: { timeout: () => undefined },
+    console: { warn: () => undefined, log: () => undefined, error: () => undefined },
   });
   const request = (body, headers = {}) => routes.POST({
     json: async () => body,
     headers: { get: name => headers[name.toLowerCase()] ?? null },
   });
-  return { routes, sent, generated, request };
+  return { routes, sent, generated, files, request };
 }
 
 test('route: a valid request emails the code and returns no code to the browser', async () => {
@@ -217,4 +223,42 @@ test('route: a malformed code from the admin API is an error, never a silent suc
     assert.equal(result.status, 502, `rejected malformed code ${JSON.stringify(otp)}`);
     assert.equal(api.sent.length, 0, 'nothing is emailed when the code is not trustworthy');
   }
+});
+
+test('route: the development outbox delivers with no mail provider and says so', async () => {
+  const api = routeHarness({
+    env: {
+      RESEND_API_KEY: '', AUTH_EMAIL_FROM: '', TRIAL_EMAIL_FROM: '',
+      NODE_ENV: 'development', AUTH_MAIL_DRIVER: 'outbox', AUTH_MAIL_OUTBOX: '.dev-outbox',
+    },
+  });
+  const result = await api.request({ email: 'user@example.test' });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.devChannel, 'outbox');
+  assert.equal(api.sent.length, 0, 'nothing is emailed');
+  assert.equal(api.files.length, 1);
+  assert.match(api.files[0].file, /^\.dev-outbox[\\/]recovery-/);
+  const written = JSON.parse(api.files[0].contents);
+  assert.equal(written.code, '246810');
+  assert.equal(written.to, 'user@example.test');
+  assert.equal(JSON.stringify(result.body).includes('246810'), false, 'the code still never reaches the browser');
+});
+
+test('route: a production build refuses the outbox driver and writes nothing', async () => {
+  const api = routeHarness({
+    env: { RESEND_API_KEY: '', AUTH_EMAIL_FROM: '', TRIAL_EMAIL_FROM: '', NODE_ENV: 'production', AUTH_MAIL_DRIVER: 'outbox' },
+  });
+  const result = await api.request({ email: 'user@example.test' });
+  assert.equal(result.status, 503);
+  assert.equal(api.files.length, 0, 'no reset code is ever written to disk in production');
+  assert.equal(api.generated.length, 0);
+});
+
+test('route: a configured Resend sender takes precedence over the outbox', async () => {
+  const api = routeHarness({ env: { NODE_ENV: 'development', AUTH_MAIL_DRIVER: 'outbox' } });
+  const result = await api.request({ email: 'user@example.test' });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.devChannel, undefined);
+  assert.equal(api.sent.length, 1);
+  assert.equal(api.files.length, 0);
 });

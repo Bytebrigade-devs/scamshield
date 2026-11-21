@@ -20,10 +20,13 @@ import { Alert } from "@/components/ui/Card";
  */
 export function OtpCodeStep({
   email,
+  notice,
   onVerified,
   onBack,
 }: {
   email: string;
+  /** Extra context about how the code was delivered (for example a development outbox). */
+  notice?: string | null;
   onVerified: () => void;
   onBack: () => void;
 }) {
@@ -91,6 +94,7 @@ export function OtpCodeStep({
       <h1 className="text-[28px] font-bold leading-tight">Enter your reset code</h1>
       <p className="mt-1 text-muted">Enter the code we emailed to choose a new password.</p>
       <p className="mt-2 text-sm text-muted">Sent to {email}. Codes are single use; request a new one if it expires.</p>
+      {notice && <p className="mt-2 text-sm text-muted">{notice}</p>}
       <form onSubmit={verify} className="mt-6 space-y-4">
         <Field
           label="Code"

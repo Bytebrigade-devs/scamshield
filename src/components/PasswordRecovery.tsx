@@ -25,6 +25,7 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
   const [error, setError] = useState("");
   const [step, setStep] = useState<"request" | "code">("request");
   const [requestedEmail, setRequestedEmail] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
   const [ready, setReady] = useState(DEMO_MODE || !reset);
   useEffect(() => {
     if (DEMO_MODE || !reset) return;
@@ -72,8 +73,12 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: value.trim() }),
         });
-        const payload = (await sendResponse.json().catch(() => null)) as { error?: string } | null;
+        const payload = (await sendResponse.json().catch(() => null)) as { error?: string; devChannel?: string } | null;
         if (!sendResponse.ok) throw new Error(payload?.error || "The reset code could not be sent.");
+        // A development outbox means nothing was emailed; say so instead of implying an inbox.
+        setNotice(payload?.devChannel === "outbox"
+          ? "Development mode: nothing was emailed. The code is printed in the server terminal and saved in the .dev-outbox folder."
+          : null);
         setRequestedEmail(value.trim());
         setStep("code");
       }
@@ -86,6 +91,7 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
       <Card className="p-8">
         <OtpCodeStep
           email={requestedEmail}
+          notice={notice}
           onVerified={() => router.push("/reset-password")}
           onBack={() => { setStep("request"); setError(""); }}
         />

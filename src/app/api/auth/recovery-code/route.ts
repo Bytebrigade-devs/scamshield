@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { createInMemoryLimiter, issueRecoveryCode } from "@/lib/recovery-code";
 import { OTP_MAX_LENGTH, OTP_MIN_LENGTH } from "@/lib/otp";
 
@@ -29,6 +30,20 @@ function mailConfig(): { apiKey: string; from: string } | null {
   return apiKey.length > 0 && from.length > 0 ? { apiKey, from } : null;
 }
 
+/** Resend when it is configured; otherwise a development-only local outbox. */
+type MailChannel = { kind: "resend"; apiKey: string; from: string } | { kind: "outbox"; dir: string };
+
+function mailChannel(): MailChannel | null {
+  const resend = mailConfig();
+  if (resend) return { kind: "resend", ...resend };
+  // Development escape hatch. Writing a reset code to disk is allowed only outside a production
+  // build AND only when explicitly requested; in production a missing sender stays a hard 503.
+  if (process.env.NODE_ENV !== "production" && (process.env.AUTH_MAIL_DRIVER ?? "").trim() === "outbox") {
+    return { kind: "outbox", dir: (process.env.AUTH_MAIL_OUTBOX ?? "").trim() || ".dev-outbox" };
+  }
+  return null;
+}
+
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -36,19 +51,34 @@ function adminClient() {
   return createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-async function sendCode(mail: { apiKey: string; from: string }, to: string, code: string): Promise<boolean> {
-  const result = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${mail.apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: mail.from,
-      to: [to],
-      subject: "Your ScamShield password reset code",
-      text: `Your ScamShield password reset code is ${code}.\n\nIt can be used once and expires soon. If you did not ask to reset your password, ignore this email - your password stays unchanged.`,
-    }),
-    signal: AbortSignal.timeout(8000),
-  });
-  return result.ok;
+const SUBJECT = "Your ScamShield password reset code";
+
+async function deliver(channel: MailChannel, to: string, code: string): Promise<boolean> {
+  if (channel.kind === "resend") {
+    const result = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${channel.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: channel.from,
+        to: [to],
+        subject: SUBJECT,
+        text: `Your ScamShield password reset code is ${code}.\n\nIt can be used once and expires soon. If you did not ask to reset your password, ignore this email - your password stays unchanged.`,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    return result.ok;
+  }
+  // Development outbox: the code goes to a gitignored folder and the server terminal instead of an
+  // inbox, so the flow can be exercised with no mail provider. Unreachable in a production build.
+  const file = `${channel.dir}/recovery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;
+  mkdirSync(channel.dir, { recursive: true });
+  writeFileSync(
+    file,
+    `${JSON.stringify({ to, subject: SUBJECT, code, createdAt: new Date().toISOString(), note: "Development outbox: this code was NOT emailed." }, null, 2)}\n`,
+    "utf8",
+  );
+  console.warn(`[recovery-code] DEV OUTBOX (never in production) - code ${code} for ${to} written to ${file}`);
+  return true;
 }
 
 export async function POST(req: NextRequest) {
@@ -64,7 +94,7 @@ export async function POST(req: NextRequest) {
     return response({ error: "Enter the email address of your account." }, 400);
   }
 
-  const mail = mailConfig();
+  const channel = mailChannel();
   const admin = adminClient();
   // Caller identity comes from the connection, never from the request body.
   const caller = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "direct";
@@ -72,7 +102,7 @@ export async function POST(req: NextRequest) {
   const outcome = await issueRecoveryCode(
     email,
     {
-      mailConfigured: mail !== null && admin !== null,
+      mailConfigured: channel !== null && admin !== null,
       generateCode: async (address) => {
         const { data, error } = await admin!.auth.admin.generateLink({ type: "recovery", email: address });
         // An unknown address and an admin failure are deliberately indistinguishable here.
@@ -85,7 +115,7 @@ export async function POST(req: NextRequest) {
         if (typeof otp !== "string" || !shape.test(otp)) throw new Error("recovery-code-unavailable");
         return otp;
       },
-      sendCode: (address, code) => sendCode(mail!, address, code),
+      sendCode: (address, code) => deliver(channel!, address, code),
     },
     limiter,
     { email, caller },
@@ -93,7 +123,8 @@ export async function POST(req: NextRequest) {
 
   switch (outcome.kind) {
     case "sent":
-      return response({ ok: true });
+      // `devChannel` can only appear outside a production build; it tells the UI where to look.
+      return response(channel?.kind === "outbox" ? { ok: true, devChannel: "outbox" } : { ok: true });
     case "rate-limited":
       return response(
         { error: "Too many reset requests. Wait a few minutes, then try again.", retryAfterSeconds: outcome.retryAfterSeconds },
@@ -101,7 +132,9 @@ export async function POST(req: NextRequest) {
       );
     case "mail-not-configured":
       return response(
-        { error: "Email delivery is not configured on this server. Set RESEND_API_KEY and AUTH_EMAIL_FROM, then restart the server." },
+        {
+          error: "Email delivery is not configured on this server. Set RESEND_API_KEY and AUTH_EMAIL_FROM - or, for local development only, AUTH_MAIL_DRIVER=outbox - then restart the server.",
+        },
         503,
       );
     default:

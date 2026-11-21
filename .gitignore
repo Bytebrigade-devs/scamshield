@@ -18,6 +18,9 @@ build/
 .env*.local
 .env.production
 
+# development mail outbox (reset codes written instead of emailed; never commit)
+.dev-outbox/
+
 # supabase local dev
 supabase/.branches
 supabase/.temp
