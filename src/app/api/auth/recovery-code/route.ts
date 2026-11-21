@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createInMemoryLimiter, issueRecoveryCode } from "@/lib/recovery-code";
+import { createBudgetedLimiter, issueRecoveryCode } from "@/lib/recovery-code";
 import { OTP_MAX_LENGTH, OTP_MIN_LENGTH } from "@/lib/otp";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ const response = (body: unknown, status = 200) =>
  * Unauthenticated by necessity (this is account recovery); abuse is bounded by the per-address and
  * per-caller limiter below, which is in memory per process.
  */
-const limiter = createInMemoryLimiter({ windowMs: 10 * 60_000, max: 3 });
+const limiter = createBudgetedLimiter({ windowMs: 10 * 60_000, addressMax: 3, callerMax: 20 });
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -125,11 +125,16 @@ export async function POST(req: NextRequest) {
     case "sent":
       // `devChannel` can only appear outside a production build; it tells the UI where to look.
       return response(channel?.kind === "outbox" ? { ok: true, devChannel: "outbox" } : { ok: true });
-    case "rate-limited":
+    case "rate-limited": {
+      const minutes = Math.max(1, Math.round(outcome.retryAfterSeconds / 60));
       return response(
-        { error: "Too many reset requests. Wait a few minutes, then try again.", retryAfterSeconds: outcome.retryAfterSeconds },
+        {
+          error: `Too many reset requests. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+          retryAfterSeconds: outcome.retryAfterSeconds,
+        },
         429,
       );
+    }
     case "mail-not-configured":
       return response(
         {

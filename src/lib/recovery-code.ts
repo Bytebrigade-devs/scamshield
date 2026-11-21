@@ -62,6 +62,25 @@ export function createInMemoryLimiter(options: { windowMs: number; max: number }
 }
 
 /**
+ * Two independent budgets behind one limiter interface.
+ *
+ * The per-address budget is the anti-abuse bound that matters (one mailbox cannot be flooded).
+ * The per-caller budget is only a backstop: on a local server every request shares the same
+ * caller identity, so a tight caller budget lets a single developer lock themselves out — which is
+ * exactly what happened on 21 November 2026, when probes and browser clicks together produced a
+ * 429 for everyone on the machine.
+ */
+export function createBudgetedLimiter(options: { windowMs: number; addressMax: number; callerMax: number }): RecoveryLimiter {
+  const address = createInMemoryLimiter({ windowMs: options.windowMs, max: options.addressMax });
+  const caller = createInMemoryLimiter({ windowMs: options.windowMs, max: options.callerMax });
+  return {
+    take(key: string, now: number): number {
+      return key.startsWith("address:") ? address.take(key, now) : caller.take(key, now);
+    },
+  };
+}
+
+/**
  * Issue one recovery code. `keys.email` and `keys.caller` are the two rate-limit budgets; the
  * caller identity is derived server-side (never from the request body).
  */

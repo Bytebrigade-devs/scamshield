@@ -90,6 +90,21 @@ test('the limiter allows three per window, then blocks with a retry hint, then s
   assert.equal((await attempt(61000)).kind, 'sent', 'the window slides, it is not a permanent lock');
 });
 
+test('the address and caller budgets are independent', async () => {
+  const lim = lib.createBudgetedLimiter({ windowMs: 60000, addressMax: 2, callerMax: 2 });
+  const issue = (email, caller, now) => lib.issueRecoveryCode(email, {
+    mailConfigured: true, generateCode: async () => '123456', sendCode: async () => true, now: () => now,
+  }, lim, { email, caller });
+  // One mailbox is capped no matter who asks for it.
+  assert.equal((await issue('a@example.test', 'ip-1', 0)).kind, 'sent');
+  assert.equal((await issue('a@example.test', 'ip-2', 1)).kind, 'sent');
+  assert.equal((await issue('a@example.test', 'ip-3', 2)).kind, 'rate-limited');
+  // One caller is capped across mailboxes, separately from the address budget.
+  assert.equal((await issue('b@example.test', 'ip-9', 3)).kind, 'sent');
+  assert.equal((await issue('c@example.test', 'ip-9', 4)).kind, 'sent');
+  assert.equal((await issue('d@example.test', 'ip-9', 5)).kind, 'rate-limited', 'the caller backstop is separate');
+});
+
 // ---- route level: what the browser actually sees ----
 
 function routeHarness(options = {}) {
