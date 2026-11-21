@@ -2,14 +2,16 @@
 
 ## Confirmation link for signup, emailed code for password reset — 21 November 2026
 
-Scope: registration verification uses Supabase's emailed confirmation link (`signUp` with `emailRedirectTo`, plus a resend action for unconfirmed accounts); password reset uses a 6-digit emailed code (`resetPasswordForEmail` → `verifyOtp({ type: "recovery" })` → `/reset-password`). No schema, entitlement or billing behaviour changed.
+Scope: registration verification uses Supabase's emailed confirmation link (`signUp` with `emailRedirectTo`, plus a resend action for unconfirmed accounts). Password reset uses a 6-digit code that M2 issues itself: `POST /api/auth/recovery-code` calls the service-role admin API (`generateLink({ type: "recovery" })` → `email_otp`) and delivers it through Resend, then the browser exchanges it with `verifyOtp({ type: "recovery" })` and `/reset-password` sets the new password. This removes the reset flow's dependency on the Supabase project's SMTP settings. No schema, entitlement or billing behaviour changed.
 
-- `node --experimental-strip-types --test tests/otp.test.ts`: **5 passed, 0 failed** (input normalisation, short-code refusal, error-code wording, unconfirmed-email detection, demo code shape). Runs as `pnpm test:m2` and as a CI step in `.github/workflows/app-ci.yml`.
-- `tsc --noEmit`: passed. ESLint on every touched file: clean.
-- `next build --webpack` on Next.js 16.4.6: passed, 15 routes, clean stderr.
-- Not run: a live round-trip of either email. That needs the project's SMTP configured (Resend: `smtp.resend.com`, user `resend`, password = API key) plus the two templates — `{{ .ConfirmationURL }}` for **Confirm sign up**, `{{ .Token }}` for **Reset password**. Until then the app can request mail and Supabase can accept the request, but nothing is delivered. Demo mode exercises the reset screen with the fixed code `000000` and sends nothing.
+- `node scripts/test-recovery.cjs`: **11 passed, 0 failed** — code never returned to the browser, unknown address indistinguishable from known and sends nothing, missing sender reported rather than faked, failed delivery reported as a failure, malformed address refused before any admin call, `GET` refused, rate limit on the fourth request. Runs as `pnpm test:recovery` and as a CI step.
+- `node --experimental-strip-types --test tests/otp.test.ts`: **5 passed** (`pnpm test:m2`).
+- `node scripts/test-subscription.cjs`: **28 passed** on this branch (the three billing-ledger cases live on `feat/m2-billing-ledger`).
+- `tsc --noEmit`: passed. ESLint on every touched file: clean. `next build --webpack`: see below.
+- Live check against the dev server on 127.0.0.1:3000: `POST /api/auth/recovery-code` returned **503** `{"error":"Email delivery is not configured on this server. Set RESEND_API_KEY and AUTH_EMAIL_FROM, then restart the server."}` — the honest failure this change exists to produce. Before it, the same situation returned a success message with no email sent.
+- Not run: an actually delivered code. That needs `RESEND_API_KEY` and `AUTH_EMAIL_FROM` (or `TRIAL_EMAIL_FROM`) set on a Resend-verified sender, and the signup link additionally needs Supabase SMTP plus `{{ .ConfirmationURL }}` in the **Confirm sign up** template. Demo mode exercises the reset screen with the fixed code `000000` and sends nothing.
 
-Honest limits: a 200 from `resetPasswordForEmail` or `signUp` means "request accepted", not "email sent", so no screen claims delivery; Authentication → Logs is the place to confirm mailer activity.
+Honest limits: a 200 from `signUp` or from the recovery route means "accepted", and only the recovery route can now distinguish "not configured" (503) and "send failed" (502) from "sent". The rate limiter is in memory per process, so a restart clears it — stated in `src/lib/recovery-code.ts` rather than implied to be durable.
 
 ## Current head validation — 20 November 2026
 

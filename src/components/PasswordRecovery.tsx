@@ -64,10 +64,16 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
         await getSupabase().auth.signOut();
         setDone(true);
       } else {
-        const { error: sendError } = await getSupabase().auth.resetPasswordForEmail(value, {
-          redirectTo: window.location.origin + "/reset-password",
+        // The code is issued by M2's own route (service-role admin API + Resend), so delivery does
+        // not depend on the Supabase project's SMTP settings. A failure is reported, never hidden.
+        const sendResponse = await fetch("/api/auth/recovery-code", {
+          method: "POST",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: value.trim() }),
         });
-        if (sendError) throw sendError;
+        const payload = (await sendResponse.json().catch(() => null)) as { error?: string } | null;
+        if (!sendResponse.ok) throw new Error(payload?.error || "The reset code could not be sent.");
         setRequestedEmail(value.trim());
         setStep("code");
       }

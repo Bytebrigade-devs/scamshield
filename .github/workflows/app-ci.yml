@@ -58,6 +58,8 @@ jobs:
         run: pnpm typecheck
       - name: Subscription tests
         run: pnpm test:subscription
+      - name: Recovery code tests
+        run: pnpm test:recovery
       - name: Build
         run: pnpm build
       - name: Vault model test

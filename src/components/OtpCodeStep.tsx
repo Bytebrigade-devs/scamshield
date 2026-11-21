@@ -11,8 +11,9 @@ import { Alert } from "@/components/ui/Card";
  * Email OTP entry for password reset only. Registration is verified with an emailed link
  * (owner decision, 21 November 2026); only recovery uses a 6-digit code.
  *
- * Backend: `verifyOtp({ type: "recovery" })` exchanges the code for the session that
- * `/reset-password` uses to set the new password. Demo mode: no request leaves the browser and
+ * Backend: the code is issued by `POST /api/auth/recovery-code` (service-role admin API plus the
+ * project's own mail sender), and `verifyOtp({ type: "recovery" })` exchanges it for the session
+ * that `/reset-password` uses to set the new password. Demo mode: no request leaves the browser and
  * the fixed demo code is shown in the field hint.
  *
  * The copy never states an exact expiry: that is a project setting, not something this form knows.
@@ -69,10 +70,14 @@ export function OtpCodeStep({
         setInfo(`Demo mode: no email is sent. Use the code ${DEMO_OTP}.`);
         return;
       }
-      const { error: resendError } = await getSupabase().auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + "/reset-password",
+      const resendResponse = await fetch("/api/auth/recovery-code", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
-      if (resendError) throw resendError;
+      const payload = (await resendResponse.json().catch(() => null)) as { error?: string } | null;
+      if (!resendResponse.ok) throw new Error(payload?.error || "A new code could not be sent.");
       setInfo(`A new code was sent to ${email}.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "A new code could not be sent. Please retry.");

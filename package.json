@@ -11,7 +11,8 @@
     "test:browser": "playwright test",
     "test:subscription": "node --test scripts/test-subscription.cjs",
     "test:vault": "node --experimental-strip-types --test tests/vault-model.test.ts",
-    "test:m2": "node --experimental-strip-types --test tests/otp.test.ts"
+    "test:m2": "node --experimental-strip-types --test tests/otp.test.ts",
+    "test:recovery": "node scripts/test-recovery.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
