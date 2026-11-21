@@ -7,6 +7,7 @@ import { DEMO_MODE } from "@/lib/m2-mode";
 import { getSupabase } from "@/lib/supabase";
 import { demoSignIn } from "@/lib/demo-store";
 import { authPath } from "@/lib/checkout-path";
+import { isUnconfirmedEmailError } from "@/lib/otp";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Alert, Card } from "@/components/ui/Card";
@@ -20,6 +21,22 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Signup is verified by an emailed confirmation link; only password reset uses a code
+  // (owner decision, 21 November 2026). `confirmEmail` enables the resend action for an account
+  // that was created but not confirmed yet.
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+
+  async function resendConfirmation(address: string) {
+    setResending(true);
+    setError(null);
+    try {
+      const { error: resendError } = await getSupabase().auth.resend({ type: "signup", email: address });
+      if (resendError) throw resendError;
+      setInfo(`A new confirmation link was sent to ${address}.`);
+    } catch (e) { setError(e instanceof Error ? e.message : "The confirmation email could not be sent."); }
+    finally { setResending(false); }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,17 +49,42 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
     }
     setBusy(true);
     try {
-    if (DEMO_MODE) demoSignIn(email, mode === "signup");
-    else {
+      const destination = next ?? (mode === "signup" ? "/pricing" : "/account/subscription");
+      if (DEMO_MODE) {
+        demoSignIn(email, mode === "signup");
+        setPassword("");
+        router.push(destination);
+        return;
+      }
       const auth = getSupabase().auth;
-      const { data, error } = mode === "signup"
-        ? await auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + "/account/subscription" } })
-        : await auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      if (!data.session) { setPassword(""); setInfo("Check your email to confirm your account, then log in."); return; }
-    }
-    setPassword("");
-    router.push(next ?? (mode === "signup" ? "/pricing" : "/account/subscription"));
+      if (mode === "signup") {
+        const { data, error: signUpError } = await auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin + "/account/subscription" },
+        });
+        if (signUpError) throw signUpError;
+        if (!data.session) {
+          // Confirmation is required: the emailed link activates the account.
+          setPassword("");
+          setConfirmEmail(email.trim());
+          setInfo("Check your email for the confirmation link, then log in.");
+          return;
+        }
+      } else {
+        const { error: signInError } = await auth.signInWithPassword({ email, password });
+        if (signInError) {
+          if (isUnconfirmedEmailError(signInError)) {
+            setPassword("");
+            setConfirmEmail(email.trim());
+            setInfo("This account is not confirmed yet. Use the link we emailed you, or send it again below.");
+            return;
+          }
+          throw signInError;
+        }
+      }
+      setPassword("");
+      router.push(destination);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to connect. Please retry."); }
     finally { setBusy(false); }
   }
@@ -83,6 +125,14 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
           >
             {isSignup ? "Sign up" : "Log in"}
           </Button>
+          {confirmEmail && !DEMO_MODE && (
+            <Button
+              variant="secondary" block disabled={busy} loading={resending} loadingLabel="Sending…"
+              onClick={() => void resendConfirmation(confirmEmail)}
+            >
+              Resend confirmation email
+            </Button>
+          )}
         </form>
       </Card>
       <p className="mt-6 text-center text-sm text-muted">

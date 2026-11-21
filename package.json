@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:browser": "playwright test",
     "test:subscription": "node --test scripts/test-subscription.cjs",
-    "test:vault": "node --experimental-strip-types --test tests/vault-model.test.ts"
+    "test:vault": "node --experimental-strip-types --test tests/vault-model.test.ts",
+    "test:m2": "node --experimental-strip-types --test tests/otp.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

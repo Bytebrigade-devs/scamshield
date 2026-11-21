@@ -1,5 +1,16 @@
 # M2 local validation
 
+## Confirmation link for signup, emailed code for password reset — 21 November 2026
+
+Scope: registration verification uses Supabase's emailed confirmation link (`signUp` with `emailRedirectTo`, plus a resend action for unconfirmed accounts); password reset uses a 6-digit emailed code (`resetPasswordForEmail` → `verifyOtp({ type: "recovery" })` → `/reset-password`). No schema, entitlement or billing behaviour changed.
+
+- `node --experimental-strip-types --test tests/otp.test.ts`: **5 passed, 0 failed** (input normalisation, short-code refusal, error-code wording, unconfirmed-email detection, demo code shape). Runs as `pnpm test:m2` and as a CI step in `.github/workflows/app-ci.yml`.
+- `tsc --noEmit`: passed. ESLint on every touched file: clean.
+- `next build --webpack` on Next.js 16.4.6: passed, 15 routes, clean stderr.
+- Not run: a live round-trip of either email. That needs the project's SMTP configured (Resend: `smtp.resend.com`, user `resend`, password = API key) plus the two templates — `{{ .ConfirmationURL }}` for **Confirm sign up**, `{{ .Token }}` for **Reset password**. Until then the app can request mail and Supabase can accept the request, but nothing is delivered. Demo mode exercises the reset screen with the fixed code `000000` and sends nothing.
+
+Honest limits: a 200 from `resetPasswordForEmail` or `signUp` means "request accepted", not "email sent", so no screen claims delivery; Authentication → Logs is the place to confirm mailer activity.
+
 ## Current head validation — 20 November 2026
 
 - `pnpm test:subscription`: 28 passed, zero failed.

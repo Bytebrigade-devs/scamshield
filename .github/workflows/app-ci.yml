@@ -62,3 +62,5 @@ jobs:
         run: pnpm build
       - name: Vault model test
         run: pnpm test:vault
+      - name: M2 OTP helper test
+        run: pnpm test:m2
