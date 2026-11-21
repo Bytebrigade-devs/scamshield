@@ -21,12 +21,15 @@ import { Alert } from "@/components/ui/Card";
 export function OtpCodeStep({
   email,
   notice,
+  showLinkHint = false,
   onVerified,
   onBack,
 }: {
   email: string;
   /** Extra context about how the code was delivered (for example a development outbox). */
   notice?: string | null;
+  /** True when the recovery mail may carry a link instead of a code (template not switched yet). */
+  showLinkHint?: boolean;
   onVerified: () => void;
   onBack: () => void;
 }) {
@@ -104,6 +107,12 @@ export function OtpCodeStep({
         {notice ? `Written for ${email}.` : `Sent to ${email}.`} Codes are single use; request a new one if it expires.
       </p>
       {notice && <p className="mt-2 text-sm text-muted">{notice}</p>}
+      {showLinkHint && (
+        <p className="mt-2 text-sm text-muted">
+          If your email contains a link instead of a code, open the link — it takes you straight to the new-password
+          page. Switching the project&apos;s Reset password template to `{"{{ .Token }}"}` makes the email carry this code.
+        </p>
+      )}
       <form onSubmit={verify} className="mt-6 space-y-4">
         <Field
           label="Code"

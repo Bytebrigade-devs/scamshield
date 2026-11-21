@@ -26,6 +26,7 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
   const [step, setStep] = useState<"request" | "code">("request");
   const [requestedEmail, setRequestedEmail] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [channel, setChannel] = useState<"supabase" | "m2" | "outbox">("supabase");
   const [ready, setReady] = useState(DEMO_MODE || !reset);
   useEffect(() => {
     if (DEMO_MODE || !reset) return;
@@ -65,21 +66,33 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
         await getSupabase().auth.signOut();
         setDone(true);
       } else {
-        // The code is issued by M2's own route (service-role admin API + Resend), so delivery does
-        // not depend on the Supabase project's SMTP settings. A failure is reported, never hidden.
-        const sendResponse = await fetch("/api/auth/recovery-code", {
-          method: "POST",
-          cache: "no-store",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: value.trim() }),
+        // Prefer the project's own recovery mail: it is Supabase's configured sender and it is
+        // proven to deliver on this project (a reset email arrived on 21 November 2026). Today its
+        // template carries a link; once the template uses {{ .Token }} the same mail carries the
+        // code and this screen accepts it. If Supabase's call fails, M2's own route (Resend, or the
+        // development outbox) keeps the flow alive instead of dead-ending.
+        const address = value.trim();
+        let nextChannel: "supabase" | "m2" | "outbox" = "supabase";
+        const { error: supabaseError } = await getSupabase().auth.resetPasswordForEmail(address, {
+          redirectTo: window.location.origin + "/reset-password",
         });
-        const payload = (await sendResponse.json().catch(() => null)) as { error?: string; devChannel?: string } | null;
-        if (!sendResponse.ok) throw new Error(payload?.error || "The reset code could not be sent.");
+        if (supabaseError) {
+          const sendResponse = await fetch("/api/auth/recovery-code", {
+            method: "POST",
+            cache: "no-store",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: address }),
+          });
+          const payload = (await sendResponse.json().catch(() => null)) as { error?: string; devChannel?: string } | null;
+          if (!sendResponse.ok) throw new Error(payload?.error || supabaseError.message || "The reset email could not be sent.");
+          nextChannel = payload?.devChannel === "outbox" ? "outbox" : "m2";
+        }
+        setChannel(nextChannel);
         // A development outbox means nothing was emailed; say so instead of implying an inbox.
-        setNotice(payload?.devChannel === "outbox"
+        setNotice(nextChannel === "outbox"
           ? "Development mode: nothing was emailed. The code is printed in the server terminal and saved in the .dev-outbox folder."
           : null);
-        setRequestedEmail(value.trim());
+        setRequestedEmail(address);
         setStep("code");
       }
       setValue(""); setConfirm("");
@@ -92,6 +105,7 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
         <OtpCodeStep
           email={requestedEmail}
           notice={notice}
+          showLinkHint={channel === "supabase" && !DEMO_MODE}
           onVerified={() => router.push("/reset-password")}
           onBack={() => { setStep("request"); setError(""); }}
         />
