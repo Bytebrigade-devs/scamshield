@@ -105,3 +105,7 @@ One line each is enough:
 > **Owner / date:**
 
 A date is more useful than silence, and M2 will record whichever answer arrives.
+
+## 10. Separately in flight (not part of this ask)
+
+This note asks for scheduling only and does not propose M4 code. A separate M2 branch, `feat/m2-usage-readback`, does touch M4 files: a read-only `GET /api/usage` over the existing in-memory store, a shared route-service so `/api/check` and `/api/usage` use one store, and the M2 account-page card that renders it. It changes no enforcement logic, no quota semantics and no schema, it labels its own payload `scope: "shared-demo-session"`, and it is M4's and the steward's to accept or decline on review. Nothing from that branch is included here.
