@@ -79,9 +79,12 @@ export function OtpCodeStep({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const payload = (await resendResponse.json().catch(() => null)) as { error?: string } | null;
+      const payload = (await resendResponse.json().catch(() => null)) as { error?: string; devChannel?: string } | null;
       if (!resendResponse.ok) throw new Error(payload?.error || "A new code could not be sent.");
-      setInfo(`A new code was sent to ${email}.`);
+      // Never claim an email went out when the development outbox carried the code.
+      setInfo(payload?.devChannel === "outbox"
+        ? `A new code was written to the development outbox for ${email}. Nothing was emailed.`
+        : `A new code was sent to ${email}.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "A new code could not be sent. Please retry.");
     } finally {
@@ -92,8 +95,14 @@ export function OtpCodeStep({
   return (
     <div>
       <h1 className="text-[28px] font-bold leading-tight">Enter your reset code</h1>
-      <p className="mt-1 text-muted">Enter the code we emailed to choose a new password.</p>
-      <p className="mt-2 text-sm text-muted">Sent to {email}. Codes are single use; request a new one if it expires.</p>
+      <p className="mt-1 text-muted">
+        {notice
+          ? "Enter the code from the development outbox to choose a new password."
+          : "Enter the code we emailed to choose a new password."}
+      </p>
+      <p className="mt-2 text-sm text-muted">
+        {notice ? `Written for ${email}.` : `Sent to ${email}.`} Codes are single use; request a new one if it expires.
+      </p>
       {notice && <p className="mt-2 text-sm text-muted">{notice}</p>}
       <form onSubmit={verify} className="mt-6 space-y-4">
         <Field
@@ -105,7 +114,7 @@ export function OtpCodeStep({
           pattern="[0-9]*"
           maxLength={OTP_MAX_LENGTH}
           placeholder={"•".repeat(OTP_MAX_LENGTH)}
-          hint={DEMO_MODE ? `Demo code: ${DEMO_OTP}. No email is sent.` : "The code from the email, digits only."}
+          hint={DEMO_MODE ? `Demo code: ${DEMO_OTP}. No email is sent.` : notice ? "The code from the outbox file, digits only." : "The code from the email, digits only."}
           value={code}
           onChange={(e) => setCode(normaliseOtp(e.target.value))}
         />
