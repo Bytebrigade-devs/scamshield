@@ -132,15 +132,29 @@ test('checkout uses verified user and selected plan; forged identity/expiry igno
   assert.notEqual(api.writes[0].value.renews_at, '2099-01-01');
 });
 
-test('both card methods create mock entitlements without storing payment details', async () => {
+test('checkout records the price and a simulated charge without storing card details', async () => {
   for (const paymentMethod of ['debit_card', 'credit_card']) {
     const api = routeHarness();
     const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success', paymentMethod });
     assert.equal(response.status, 200);
     assert.equal(response.body.paymentMethod, paymentMethod);
+    assert.equal(response.body.priceLkr, 990);
     assert.equal(response.body.mocked, true);
-    assert.equal(api.writes.length, 1);
-    assert.equal('paymentMethod' in api.writes[0].value, false);
+    // 1) subscription row, 2) payment-history row
+    assert.equal(api.writes.length, 2);
+    const subscription = api.writes[0].value;
+    assert.equal('paymentMethod' in subscription, false);
+    assert.equal(subscription.payment_method, paymentMethod);
+    assert.equal(subscription.price_lkr, 990);
+    assert.equal(subscription.currency, 'LKR');
+    assert.equal(subscription.auto_renew, false);
+    const charge = api.writes[1].value;
+    assert.equal(charge.amount_lkr, 990);
+    assert.equal(charge.simulated, true);
+    assert.equal(charge.period_start, subscription.started_at);
+    assert.equal(charge.period_end, subscription.renews_at);
+    for (const key of ['card_number', 'cardNumber', 'expiry', 'cvv', 'security_code', 'securityCode'])
+      for (const write of api.writes) assert.equal(key in write.value, false);
   }
 });
 

@@ -59,7 +59,7 @@ M2 returns plan limits as entitlement metadata but does not maintain check count
 
 ## Current status
 
-The branch contains the M2 schema and server-side subscription routes. The schema is applied in the Supabase development project (seven columns, RLS enabled, one row; owner-verified 19 November 2026); Auth email delivery, account isolation and Module 4 quota enforcement still need verification there. Changes are on `feat/m2-sync-main`, synced with `main`, and submitted as PR #46.
+The branch contains the M2 schema and server-side subscription routes. The schema is applied in the Supabase development project (seven columns, RLS enabled, one row; owner-verified 19 November 2026); Auth email delivery, account isolation and Module 4 quota enforcement still need verification there. Changes are on `feat/m2-sync-main`, synced with `main`, and submitted as PR #46. A second migration draft, `supabase/drafts/M2-billing-migration-0001-draft.sql`, adds the billing columns and `public.subscription_payments`; it is not applied. Usage counters stay with M4, whose draft is `supabase/drafts/M4-checker-migration-0001-draft.sql` (`checker_quota_buckets`, `checker_usage_events`); M2 exposes limits only and stores no counters.
 
 ## Related files
 

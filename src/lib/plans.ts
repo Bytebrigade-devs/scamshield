@@ -22,4 +22,9 @@ export interface Subscription {
   started_at: string;
   renews_at: string | null;
   cancelled_at: string | null;
+  /** Billing metadata added by docs/m2-billing-schema.sql. Absent on rows created before it. */
+  price_lkr?: number | null;
+  currency?: string;
+  payment_method?: "debit_card" | "credit_card" | null;
+  auto_renew?: boolean;
 }

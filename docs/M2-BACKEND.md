@@ -5,7 +5,7 @@ The saved team design uses Next.js App Router, TypeScript and Supabase Auth/Post
 ## Setup
 
 1. Copy .env.example to .env.local and provide the Supabase URL, anon key and server-only service role key. Keep the latter out of browser code and source control.
-2. Review docs/m2-schema.sql with the team schema steward, then apply it to the development Supabase project. Existing legacy Free/Premium records require an agreed migration; the SQL intentionally aborts rather than converting them.
+2. Review docs/m2-schema.sql with the team schema steward, then apply it to the development Supabase project, then apply supabase/drafts/M2-billing-migration-0001-draft.sql (draft - steward review required) for the billing columns and the simulated payment history. Existing legacy Free/Premium records require an agreed migration; the SQL intentionally aborts rather than converting them.
 3. Enable email/password Auth. Set Site URL and allow the site's /account/subscription and /reset-password redirect URLs. Configure custom SMTP in Supabase Auth settings for delivery to ordinary user addresses; Supabase's default mailer is restricted to pre-authorized team addresses. The reset form uses `resetPasswordForEmail` and does not send email in demo mode.
    To send trial-start confirmations, optionally configure `RESEND_API_KEY` and `TRIAL_EMAIL_FROM` with a verified sender domain. If these are missing or delivery fails, the trial still starts and the account page reports that no confirmation email was sent.
 4. Run pnpm dev. Sign up, confirm email, log in, start a trial, inspect subscription, cancel, and test recovery email/password replacement.
@@ -28,7 +28,7 @@ When a trial is allocated, the backend sends a transactional email to the verifi
 
 ## Payment and usage boundaries
 
-Payments remain simulated by project requirement. A successful test checkout grants a persisted mock entitlement. This is a development/demo backend, not verified commercial billing. No live gateway or webhook is present. Checkout collects no card details at all: there is no number, expiry or security-code field, and the request carries only the plan, billing cycle, scenario and an optional promo code. Saved-card UI, DEMO10 discount, demo reset controls and invented usage counters are disabled in backend mode. Backend promo codes are unavailable.
+Payments remain simulated by project requirement. A successful test checkout grants a persisted mock entitlement. This is a development/demo backend, not verified commercial billing. No live gateway or webhook is present. Checkout collects no card details at all: there is no number, expiry or security-code field, and the request carries only the plan, billing cycle, scenario and an optional promo code. A successful charge is recorded as price_lkr, currency LKR, payment_method (debit_card or credit_card) and auto_renew = false on the subscription row, plus one row in public.subscription_payments with the amount and period (simulated = true). No card number, expiry or security code exists in any column. Saved-card UI, DEMO10 discount, demo reset controls and invented usage counters are disabled in backend mode. Backend promo codes are unavailable.
 
 M4 must enforce usage limits atomically and call the server entitlement helper for each protected action. M2 exposes plan limits but has no usage ledger; billing is unrelated to the safety score. No shared schema or remote database was changed during this connection work.
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSubscriptionContext, subscriptionWriter } from "@/lib/subscription-server";
-import { isPlan, isCycle, BillingCycle } from "@/lib/plans";
+import { isPlan, isCycle, BillingCycle, PLANS, type PlanId } from "@/lib/plans";
 import { billingEnd } from "@/lib/entitlement";
 import { isPaymentMethod } from "@/lib/payment-methods";
 
@@ -70,7 +70,14 @@ async function handle(req: NextRequest) {
     if (current?.billing_cycle && entitlement.canRunCheck) return response({ error: "An entitlement is already valid. Plan changes are planned for a later stage." }, 409);
     const start = new Date();
     const cycle: BillingCycle = body.billingCycle;
-    const values = { user_id: user.id, plan: body.plan, status: "active", billing_cycle: cycle, started_at: start.toISOString(), renews_at: billingEnd(start, { monthly: 1, quarterly: 3, yearly: 12 }[cycle]), cancelled_at: null };
+    // Price is resolved server-side from the plan table, never from the request body.
+    const plan = body.plan as PlanId;
+    const priceLkr = PLANS[plan].price[cycle];
+    const values = {
+      user_id: user.id, plan, status: "active", billing_cycle: cycle,
+      started_at: start.toISOString(), renews_at: billingEnd(start, { monthly: 1, quarterly: 3, yearly: 12 }[cycle]),
+      cancelled_at: null, price_lkr: priceLkr, currency: "LKR", payment_method: paymentMethod, auto_renew: false,
+    };
     // Compare previous state to prevent a concurrent request overwriting new access or suspension.
     let query;
     if (current) {
@@ -79,7 +86,16 @@ async function handle(req: NextRequest) {
     } else query = db.from("subscriptions").insert(values);
     const { data, error } = await query.select().single();
     if (error) return response({ error: "Subscription changed or could not be saved. Refresh before retrying." }, 409);
-    return response({ subscription: data, paymentMethod, mocked: true });
+    // Historise the simulated charge so the amount survives later price changes. A ledger failure
+    // must not grant or revoke access, so the subscription result still stands and the flag says so.
+    // Only the plan, cycle, amount, method enum and period are stored: no card number, expiry or
+    // security code exists anywhere in this payload.
+    const payment = await db.from("subscription_payments").insert({
+      user_id: user.id, plan, billing_cycle: cycle, amount_lkr: priceLkr, currency: "LKR",
+      payment_method: paymentMethod, status: "succeeded", simulated: true,
+      period_start: values.started_at, period_end: values.renews_at,
+    });
+    return response({ subscription: data, paymentMethod, priceLkr, paymentRecorded: !payment.error, mocked: true });
   } catch {
     return response({ error: "Subscription unavailable. Check the server configuration or retry." }, 503);
   }
