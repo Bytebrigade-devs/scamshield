@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createInMemoryLimiter, issueRecoveryCode } from "@/lib/recovery-code";
+import { OTP_MAX_LENGTH, OTP_MIN_LENGTH } from "@/lib/otp";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -76,8 +77,12 @@ export async function POST(req: NextRequest) {
         const { data, error } = await admin!.auth.admin.generateLink({ type: "recovery", email: address });
         // An unknown address and an admin failure are deliberately indistinguishable here.
         if (error) return null;
-        const otp = data?.properties?.email_otp;
-        if (typeof otp !== "string" || !/^\d{6}$/.test(otp)) throw new Error("recovery-code-unavailable");
+        // The SDK nests the code under `properties`; the flat REST shape is accepted too. The length
+        // is a project setting — this project issues 8 digits, the Supabase default is 6 — so it is
+        // never pinned to one value (verified against the live project, 21 November 2026).
+        const otp = data?.properties?.email_otp ?? (data as { email_otp?: unknown } | null)?.email_otp;
+        const shape = new RegExp(`^\\d{${OTP_MIN_LENGTH},${OTP_MAX_LENGTH}}$`);
+        if (typeof otp !== "string" || !shape.test(otp)) throw new Error("recovery-code-unavailable");
         return otp;
       },
       sendCode: (address, code) => sendCode(mail!, address, code),

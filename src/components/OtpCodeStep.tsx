@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { DEMO_MODE } from "@/lib/m2-mode";
 import { getSupabase } from "@/lib/supabase";
-import { DEMO_OTP, OTP_LENGTH, normaliseOtp, otpErrorCopy, otpProblem } from "@/lib/otp";
+import { DEMO_OTP, OTP_MAX_LENGTH, normaliseOtp, otpErrorCopy, otpProblem } from "@/lib/otp";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Alert } from "@/components/ui/Card";
@@ -89,7 +89,7 @@ export function OtpCodeStep({
   return (
     <div>
       <h1 className="text-[28px] font-bold leading-tight">Enter your reset code</h1>
-      <p className="mt-1 text-muted">Enter the {OTP_LENGTH}-digit code we emailed to choose a new password.</p>
+      <p className="mt-1 text-muted">Enter the code we emailed to choose a new password.</p>
       <p className="mt-2 text-sm text-muted">Sent to {email}. Codes are single use; request a new one if it expires.</p>
       <form onSubmit={verify} className="mt-6 space-y-4">
         <Field
@@ -99,9 +99,9 @@ export function OtpCodeStep({
           inputMode="numeric"
           autoComplete="one-time-code"
           pattern="[0-9]*"
-          maxLength={OTP_LENGTH}
-          placeholder={"0".repeat(OTP_LENGTH)}
-          hint={DEMO_MODE ? `Demo code: ${DEMO_OTP}. No email is sent.` : `${OTP_LENGTH} digits from the email.`}
+          maxLength={OTP_MAX_LENGTH}
+          placeholder={"•".repeat(OTP_MAX_LENGTH)}
+          hint={DEMO_MODE ? `Demo code: ${DEMO_OTP}. No email is sent.` : "The code from the email, digits only."}
           value={code}
           onChange={(e) => setCode(normaliseOtp(e.target.value))}
         />

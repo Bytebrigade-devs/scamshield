@@ -12,22 +12,30 @@
  * screens; these helpers only normalise input and turn error codes into usable copy.
  */
 
-/** Digits in a Supabase email OTP (the project default). */
-export const OTP_LENGTH = 6;
+/**
+ * Supabase's OTP length is a project setting (`mailer_otp_length`), not a constant: the default is
+ * 6, and this project issues 8 (verified against the live project on 21 November 2026 with
+ * `generateLink({ type: "recovery" })`). Nothing here may hardcode one length, or a project
+ * setting change silently breaks password reset.
+ */
+export const OTP_MIN_LENGTH = 6;
+export const OTP_MAX_LENGTH = 10;
 
 /** Code accepted only in the opt-in presentation mode; never used in backend mode. */
 export const DEMO_OTP = "000000";
 
-/** Keep digits only and cap at the expected length (paste-friendly). */
+/** Keep digits only and cap at the longest code the field accepts (paste-friendly). */
 export function normaliseOtp(raw: string): string {
-  return raw.replace(/\D/g, "").slice(0, OTP_LENGTH);
+  return raw.replace(/\D/g, "").slice(0, OTP_MAX_LENGTH);
 }
 
 /** Null when the input is a usable code; otherwise a message for the field. */
 export function otpProblem(raw: string): string | null {
   const code = normaliseOtp(raw);
   if (code.length === 0) return "Enter the code from the email.";
-  if (code.length !== OTP_LENGTH) return `The code is ${OTP_LENGTH} digits. Check the email and try again.`;
+  if (code.length < OTP_MIN_LENGTH || code.length > OTP_MAX_LENGTH) {
+    return `Enter the whole code from the email. It is at least ${OTP_MIN_LENGTH} digits.`;
+  }
   return null;
 }
 

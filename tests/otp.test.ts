@@ -11,27 +11,30 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   DEMO_OTP,
-  OTP_LENGTH,
+  OTP_MAX_LENGTH,
+  OTP_MIN_LENGTH,
   isUnconfirmedEmailError,
   normaliseOtp,
   otpErrorCopy,
   otpProblem,
 } from "../src/lib/otp.ts";
 
-test("normaliseOtp keeps digits only and caps the length", () => {
+test("normaliseOtp keeps digits only and caps at the maximum accepted length", () => {
   assert.equal(normaliseOtp(" 123 456 "), "123456");
   assert.equal(normaliseOtp("12-34-56"), "123456");
-  assert.equal(normaliseOtp("12345678"), "123456", "extra digits cannot create a longer code");
+  assert.equal(normaliseOtp("12345678901234"), "1234567890", "extra digits cannot create a longer code");
   assert.equal(normaliseOtp("abc"), "");
   assert.equal(normaliseOtp(""), "");
 });
 
-test("otpProblem refuses empty and short codes, accepts exactly six digits", () => {
+test("otpProblem refuses empty and short codes, and accepts both 6- and 8-digit codes", () => {
   assert.match(otpProblem("") ?? "", /Enter the code/);
-  assert.match(otpProblem("12345") ?? "", /6 digits/);
+  assert.match(otpProblem("12345") ?? "", /at least 6 digits/);
   assert.equal(otpProblem("123456"), null);
+  assert.equal(otpProblem("43984357"), null, "this project issues 8-digit codes; 6 must not be hardcoded");
   assert.equal(otpProblem("123 456"), null, "spacing is normalised before validation");
-  assert.equal(OTP_LENGTH, 6);
+  assert.equal(OTP_MIN_LENGTH, 6);
+  assert.ok(OTP_MAX_LENGTH >= 8, "the maximum must cover the 8-digit codes this project issues");
 });
 
 test("otpErrorCopy replaces known codes and otherwise keeps the server message", () => {
@@ -53,8 +56,8 @@ test("only an unconfirmed email offers the confirmation resend", () => {
   assert.equal(isUnconfirmedEmailError(undefined), false);
 });
 
-test("the demo code is a well-formed six-digit code", () => {
-  assert.equal(DEMO_OTP.length, OTP_LENGTH);
-  assert.match(DEMO_OTP, /^\d{6}$/);
+test("the demo code is a well-formed code within the accepted range", () => {
+  assert.ok(DEMO_OTP.length >= OTP_MIN_LENGTH && DEMO_OTP.length <= OTP_MAX_LENGTH);
+  assert.match(DEMO_OTP, /^\d+$/);
   assert.equal(otpProblem(DEMO_OTP), null);
 });

@@ -19,6 +19,7 @@ function load(file, dependencies = {}, environment = {}) {
 }
 
 const lib = load('src/lib/recovery-code.ts');
+const otpLib = load('src/lib/otp.ts');
 // Values created inside the VM carry a different prototype, so structural assertions are
 // normalised through JSON first; otherwise deepEqual rejects identical shapes.
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -92,7 +93,7 @@ test('the limiter allows three per window, then blocks with a retry hint, then s
 // ---- route level: what the browser actually sees ----
 
 function routeHarness(options = {}) {
-  const { env = {}, otp = '246810', userFound = true, resendOk = true } = options;
+  const { env = {}, otp = '246810', otpShape = 'properties', userFound = true, resendOk = true } = options;
   const sent = [];
   const generated = [];
   const routes = load('src/app/api/auth/recovery-code/route.ts', {
@@ -103,15 +104,18 @@ function routeHarness(options = {}) {
           admin: {
             generateLink: async ({ type, email }) => {
               generated.push([type, email]);
-              return userFound
-                ? { data: { properties: { email_otp: otp } }, error: null }
-                : { data: null, error: { message: 'User not found' } };
+              if (!userFound) return { data: null, error: { message: 'User not found' } };
+              // The SDK nests the code under `properties`; the flat REST shape must work too.
+              return otpShape === 'flat'
+                ? { data: { email_otp: otp }, error: null }
+                : { data: { properties: { email_otp: otp, verification_type: 'recovery' } }, error: null };
             },
           },
         },
       }),
     },
     '@/lib/recovery-code': lib,
+    '@/lib/otp': otpLib,
   }, {
     process: {
       env: {
@@ -189,4 +193,28 @@ test('route: the fourth request from one caller is rate limited with a retry hin
   assert.equal(blocked.status, 429);
   assert.ok(blocked.body.retryAfterSeconds > 0);
   assert.equal(api.sent.length, 3, 'a blocked request sends no email');
+});
+
+test('route: an 8-digit code, which is what this project issues, is emailed intact', async () => {
+  const api = routeHarness({ otp: '43984357' });
+  const result = await api.request({ email: 'user@example.test' });
+  assert.equal(result.status, 200);
+  assert.ok(api.sent[0].body.text.includes('43984357'), 'the code must not be truncated to six digits');
+});
+
+test('route: the flat REST shape is accepted as well as the SDK properties shape', async () => {
+  const api = routeHarness({ otp: '43984357', otpShape: 'flat' });
+  const result = await api.request({ email: 'user@example.test' });
+  assert.equal(result.status, 200);
+  assert.equal(api.sent.length, 1);
+  assert.ok(api.sent[0].body.text.includes('43984357'));
+});
+
+test('route: a malformed code from the admin API is an error, never a silent success', async () => {
+  for (const otp of ['12345', 'abcdefgh', '', '123456789012']) {
+    const api = routeHarness({ otp });
+    const result = await api.request({ email: 'user@example.test' });
+    assert.equal(result.status, 502, `rejected malformed code ${JSON.stringify(otp)}`);
+    assert.equal(api.sent.length, 0, 'nothing is emailed when the code is not trustworthy');
+  }
 });
