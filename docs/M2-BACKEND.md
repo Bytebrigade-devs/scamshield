@@ -22,13 +22,15 @@ All requests use Authorization: Bearer <Supabase access token>. The server verif
 | POST /api/subscription | Mock purchase: plan, billingCycle, scenario; optional paymentMethod/promoCode |
 | DELETE /api/subscription | Cancel while preserving access until expiry |
 
+M4 also exposes `GET /api/usage`, which M2's account page reads in backend mode. It needs no token: the payload is an aggregate counter, never message text, account identifiers or credentials, and it is served with `Cache-Control: no-store`. It reports the checker's real in-memory figures for the single shared demo subject — completed checks counted against the trial allowance, plus checks started in the same window — and labels itself `scope: "shared-demo-session"`. It is not per-account usage, it resets when the server restarts, and `/api/check` runs every browser check under that same demo subject. With no AI provider configured every check is rules-only, so counted usage stays 0 while the started count grows; the account page states both rather than showing a bare zero.
+
 The server role performs writes; authenticated clients can only read their own subscription through RLS. Errors fail closed. Responses are not cached. A valid paid entitlement cannot currently change plan; the UI hides that demo-only action in backend mode. Cancelled plans expire at the same timestamp; there is no automatic renewal.
 
 When a trial is allocated, the backend sends a transactional email to the verified account email through Resend, if configured. It includes the expiry in Sri Lanka time and the 15-total / 5-per-day check allowance. This message is informational; M4 still owns atomic usage enforcement.
 
 ## Payment and usage boundaries
 
-Payments remain simulated by project requirement. A successful test checkout grants a persisted mock entitlement. This is a development/demo backend, not verified commercial billing. No live gateway or webhook is present. Checkout collects no card details at all: there is no number, expiry or security-code field, and the request carries only the plan, billing cycle, scenario and an optional promo code. Saved-card UI, DEMO10 discount, demo reset controls and invented usage counters are disabled in backend mode. Backend promo codes are unavailable.
+Payments remain simulated by project requirement. A successful test checkout grants a persisted mock entitlement. This is a development/demo backend, not verified commercial billing. No live gateway or webhook is present. Checkout collects no card details at all: there is no number, expiry or security-code field, and the request carries only the plan, billing cycle, scenario and an optional promo code. Saved-card UI, DEMO10 discount, demo reset controls and invented usage counters are disabled in backend mode. The account page's usage card is not one of those: it renders M4's real counter, labelled as a shared session figure rather than a per-account one. Backend promo codes are unavailable.
 
 M4 must enforce usage limits atomically and call the server entitlement helper for each protected action. M2 exposes plan limits but has no usage ledger; billing is unrelated to the safety score. No shared schema or remote database was changed during this connection work.
 

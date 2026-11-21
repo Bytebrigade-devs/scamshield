@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCheckService, normalizeEndpoint, normalizeResponsesEndpoint } from './check-service.ts';
 import type { ProviderPort } from '../boundary/check-boundary.ts';
-import { RULES_ONLY_LIMITATION, UNAVAILABLE_LIMITATION, EMPTY_INPUT_MESSAGE } from '../boundary/check-boundary.ts';
+import { RULES_ONLY_LIMITATION, UNAVAILABLE_LIMITATION, EMPTY_INPUT_MESSAGE, PLAN_ALLOWANCES } from '../boundary/check-boundary.ts';
 import { readFileSync } from 'node:fs';
 import { sanitizeText } from './public/render-safe.js';
 import { createSummaryModel, summaryText } from './public/summary.js';
@@ -389,4 +389,30 @@ test('events: null disables emission without affecting the check', async () => {
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
   assert.equal(service.listEvents().length, 0);
+});
+test('readUsage reports the trial allowance before any check and counts only completed analyses', async () => {
+  const service = createCheckService();
+  const before = service.readUsage();
+  assert.equal(before.monthlyUsed, 0);
+  assert.equal(before.monthlyLimit, PLAN_ALLOWANCES.trial.monthly);
+  assert.equal(before.dailyLimit, PLAN_ALLOWANCES.trial.daily);
+  assert.equal(before.anchored, true, 'the shared demo subject runs under the first-use trial allowance');
+  assert.equal(before.windowStart, null, 'no window exists until the first accepted check');
+
+  // No provider configured: the check is rules-only, so it must not consume quota.
+  await service.check(FIXTURE);
+  const after = service.readUsage();
+  assert.equal(after.monthlyUsed, 0, 'a rules-only result never consumes the allowance (NFR-M4-10)');
+  assert.equal(after.monthlyAdmitted, 1, 'the attempt is still visible as a started check');
+  assert.equal(after.inFlight, 0, 'the reservation is released, never stranded');
+  assert.notEqual(after.windowStart, null, 'first use anchors the window');
+});
+
+test('readUsage counts a completed analysis exactly once', async () => {
+  const service = createCheckService({ live: LIVE, provider: completedProvider });
+  await service.check(FIXTURE);
+  const reading = service.readUsage();
+  assert.equal(reading.monthlyUsed, 1);
+  assert.equal(reading.monthlyAdmitted, 1);
+  assert.equal(reading.inFlight, 0);
 });

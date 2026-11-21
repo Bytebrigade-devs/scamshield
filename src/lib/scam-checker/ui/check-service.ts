@@ -11,14 +11,16 @@
  *  - `runCheck` receives ONLY `{ text }`. Provider selection is entirely server-side.
  *  - No key, endpoint credential or session token is returned to the browser.
  */
-import { DEFAULT_LIMITS, runCheck } from '../boundary/check-boundary.ts';
+import { DEFAULT_LIMITS, resolveAccess, runCheck } from '../boundary/check-boundary.ts';
 import type {
   CheckDeps,
   CheckOutcome,
   EntitlementPort,
+  EntitlementSnapshot,
   ProviderPort,
 } from '../boundary/check-boundary.ts';
 import { createInMemoryUsageStore } from '../boundary/usage-store.ts';
+import type { UsageReading } from '../boundary/usage-store.ts';
 import { createInMemoryPersistence, type StoredUsageEvent } from '../boundary/persistence-port.ts';
 import { emitCheckOutcome, type EventSink } from '../boundary/event-emitter.ts';
 import { createOpenAIProvider, DEFAULT_DEADLINE_MS, DEFAULT_MODEL, MAX_OUTPUT_TOKENS } from '../boundary/openai-adapter.ts';
@@ -160,6 +162,12 @@ export interface CheckService {
    * store; an injected test sink receives the emissions instead.
    */
   listEvents(): StoredUsageEvent[];
+  /**
+   * Read-only counter view for `GET /api/usage`: the shared demo subject's real numbers from the
+   * same store the boundary enforces. It cannot admit or settle checks, and it reports the trial
+   * allowance only while that snapshot is still valid.
+   */
+  readUsage(): UsageReading;
   check(text: unknown, sender?: unknown): Promise<CheckServiceResult>;
 }
 
@@ -194,15 +202,17 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
   const live = options.live && options.live.apiKey.trim().length > 0 ? options.live : null;
   const startedAt = now();
 
+  // The browser supplies no session identifier; this harness injects a single opaque
+  // server-side demo snapshot (trial). Expiry is verified by the real access mapping.
+  const demoSnapshot: EntitlementSnapshot = {
+    subjectKey: DEMO_SUBJECT_KEY,
+    planId: 'trial',
+    status: 'trial',
+    expiresAt: startedAt + TRIAL_WINDOW_MS,
+  };
+
   const entitlement: EntitlementPort = {
-    // The browser supplies no session identifier; this harness injects a single opaque
-    // server-side demo snapshot (trial). Expiry is verified by the real access mapping.
-    getEntitlement: () => ({
-      subjectKey: DEMO_SUBJECT_KEY,
-      planId: 'trial',
-      status: 'trial',
-      expiresAt: startedAt + TRIAL_WINDOW_MS,
-    }),
+    getEntitlement: () => demoSnapshot,
   };
 
   // X-09 is open in the product. This local harness is explicitly owner-authorized for
@@ -254,6 +264,28 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
     model: live?.model ?? null,
     api: live !== null ? (live.api ?? 'chat') : null,
     listEvents: () => persistence.events.listAll(),
+    readUsage(): UsageReading {
+      // The same store the boundary enforces: no separate tally, no invented numbers.
+      const nowMs = now();
+      const access = resolveAccess(demoSnapshot, nowMs);
+      const allowance = access.allowed ? access.allowance : null;
+      const reading = usage.readUsage({ key: DEMO_SUBJECT_KEY }, nowMs);
+      if (reading !== null) {
+        // An expired trial keeps its counts but no longer applies an allowance.
+        return allowance === null ? { ...reading, monthlyLimit: null, dailyLimit: null } : reading;
+      }
+      // No accepted check yet: report the allowance that WOULD apply, with zero usage.
+      return {
+        monthlyUsed: 0,
+        dailyUsed: 0,
+        inFlight: 0,
+        monthlyAdmitted: 0,
+        monthlyLimit: allowance?.monthly ?? null,
+        dailyLimit: allowance?.daily ?? null,
+        windowStart: null,
+        anchored: allowance?.monthlyAnchor === 'first-use',
+      };
+    },
     async check(text: unknown, sender?: unknown): Promise<CheckServiceResult> {
       if (sender !== undefined && (typeof sender !== 'string' || sender.length > 254)) {
         return { outcome: { kind: 'rejected', reason: 'invalid-input', message: 'Sender information must be text of at most 254 characters.' },

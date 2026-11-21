@@ -1,6 +1,6 @@
 import { DEFAULT_LIMITS } from '@/lib/scam-checker/boundary/check-boundary';
 import { TAXONOMY_VERSION } from '@/lib/scam-checker/boundary/taxonomy';
-import { createCheckService } from '@/lib/scam-checker/ui/check-service';
+import { routeCheckService } from '@/lib/scam-checker/ui/route-service';
 import { getSubscriptionContext } from '@/lib/subscription-server';
 import { gateRequestAccess } from '@/lib/scam-checker/boundary/request-entitlement';
 import { feedback } from '../feedback-support';
@@ -13,9 +13,10 @@ export const runtime = 'nodejs';
  *
  * The service is constructed with **no provider**: local pattern checks only. Provider
  * selection, usage authority and credentials stay server-side; the request may carry only the
- * message text and an optional sender string.
+ * message text and an optional sender string. The service (and therefore its usage store) is
+ * shared with `/api/usage` through `route-service.ts`.
  */
-const service = createCheckService({ live: null });
+const service = routeCheckService();
 
 const NO_STORE = { 'cache-control': 'no-store' };
 

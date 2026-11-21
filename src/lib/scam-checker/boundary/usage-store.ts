@@ -29,6 +29,9 @@
  *    its monthly window at the subject's first recorded use for 30 days, so crossing a
  *    calendar-month boundary cannot grant a fresh quota mid-window. The burst window is
  *    sliding and unaffected by anchors.
+ * 5. `readUsage` is the read-only view behind `GET /api/usage`. It reports only numbers the store
+ *    already enforces (the allowance latched at admission) and never admits, settles or releases.
+ *    Null means "no admission yet" — callers must not turn that into "0 used".
  *
  * Runner: Node built-in `node --test` (zero dependencies) — M4-19/X-06 PROPOSED convention.
  */
@@ -39,6 +42,36 @@ export interface InMemoryUsageOptions {
   /** Sliding burst window in ms (default from DEFAULT_LIMITS: ≈5 checks/minute). */
   burstWindowMs?: number;
   burstMax?: number;
+}
+
+/**
+ * Read-only counter view for user-facing surfaces (`GET /api/usage`). It reports the store's
+ * own numbers; it cannot admit, settle or release anything, and reading never changes what a
+ * later `admitCheck` decides beyond lazily rolling expired windows (the same roll an admission
+ * performs). `monthlyLimit`/`dailyLimit` are the allowance latched at the last admission, so a
+ * caller cannot read a quota the boundary did not apply.
+ */
+export interface UsageReading {
+  /** Completed checks counted in the current monthly window. */
+  monthlyUsed: number;
+  /** Completed checks counted in the current UTC day (or anchored day). */
+  dailyUsed: number;
+  /** Allowance latched at the last admission; null until the subject has been admitted. */
+  monthlyLimit: number | null;
+  dailyLimit: number | null;
+  /** Admitted-but-unsettled checks; they reserve headroom but are not counted usage. */
+  inFlight: number;
+  /** Diagnostic: admissions in the current monthly window, completed or not. */
+  monthlyAdmitted: number;
+  /** Start of the current monthly window, epoch ms; null for an unused first-use anchor. */
+  windowStart: number | null;
+  /** True when the monthly window is anchored at first use rather than the calendar month. */
+  anchored: boolean;
+}
+
+/** Optional read surface; a store that enforces quota does not have to expose one. */
+export interface UsageReadPort {
+  readUsage(subject: { key: string }, now: number): UsageReading | null;
 }
 
 const MONTHLY_MESSAGE = 'The monthly check limit for your plan has been reached.';
@@ -61,6 +94,14 @@ interface UsageRecord {
   monthAnchor: number | null;
   /** Latched window mode from the subject's most recent admission. */
   anchored: boolean;
+  /** Allowance applied at the most recent admission; null until the subject is admitted. */
+  monthlyLimit: number | null;
+  dailyLimit: number | null;
+  /**
+   * Diagnostic only: admissions (including released ones) inside the current monthly window.
+   * Never used for a denial — only completed checks consume quota (NFR-M4-10).
+   */
+  monthAdmitted: number;
 }
 
 function monthKeyOf(now: number): string {
@@ -87,18 +128,30 @@ function rollAndCount(r: UsageRecord, now: number): void {
     else if (now - r.monthAnchor >= ANCHORED_MONTH_MS) {
       r.monthAnchor = now;
       r.monthUsed = 0;
+      r.monthAdmitted = 0;
     }
   } else if (r.monthKey !== monthKeyOf(now)) {
     r.monthKey = monthKeyOf(now);
     r.monthUsed = 0;
+    r.monthAdmitted = 0;
   }
+}
+
+/** Epoch ms of the first instant of a `YYYY-M` month key; null when the key is malformed. */
+function calendarMonthStart(monthKey: string): number | null {
+  const parts = monthKey.split('-');
+  if (parts.length !== 2) return null;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 0 || month > 11) return null;
+  return Date.UTC(year, month, 1);
 }
 
 /**
  * Create an in-memory UsagePort. Suitable for tests and single-process drafts; swap for a
  * persistent implementation before any multi-instance or production claim.
  */
-export function createInMemoryUsageStore(options: InMemoryUsageOptions = {}): UsagePort {
+export function createInMemoryUsageStore(options: InMemoryUsageOptions = {}): UsagePort & UsageReadPort {
   const burstWindowMs = options.burstWindowMs ?? DEFAULT_LIMITS.burstWindowMs;
   const burstMax = options.burstMax ?? DEFAULT_LIMITS.burstMax;
   const records = new Map<string, UsageRecord>();
@@ -110,11 +163,15 @@ export function createInMemoryUsageStore(options: InMemoryUsageOptions = {}): Us
         monthKey: monthKeyOf(now), monthUsed: 0, dayKey: dayKeyOf(now), dayUsed: 0,
         burst: [], inFlight: 0, monthAnchor: null,
         anchored: allowance.monthlyAnchor === 'first-use',
+        monthlyLimit: allowance.monthly, dailyLimit: allowance.daily, monthAdmitted: 0,
       };
       records.set(key, r);
     }
     // The window mode is latched from the most recent admission's allowance.
     r.anchored = allowance.monthlyAnchor === 'first-use';
+    // The reported limits follow the allowance actually applied, never M2's untrusted copy.
+    r.monthlyLimit = allowance.monthly;
+    r.dailyLimit = allowance.daily;
     rollAndCount(r, now);
     return r;
   }
@@ -131,6 +188,7 @@ export function createInMemoryUsageStore(options: InMemoryUsageOptions = {}): Us
       if (r.burst.length >= burstMax) return { reason: 'rate-burst', message: BURST_MESSAGE };
       r.burst.push(now);
       r.inFlight += 1;
+      r.monthAdmitted += 1;
       return null;
     },
 
@@ -141,6 +199,7 @@ export function createInMemoryUsageStore(options: InMemoryUsageOptions = {}): Us
         r = {
           monthKey: monthKeyOf(now), monthUsed: 0, dayKey: dayKeyOf(now), dayUsed: 0,
           burst: [], inFlight: 0, monthAnchor: null, anchored: false,
+          monthlyLimit: null, dailyLimit: null, monthAdmitted: 0,
         };
         records.set(subject.key, r);
       }
@@ -157,6 +216,26 @@ export function createInMemoryUsageStore(options: InMemoryUsageOptions = {}): Us
       const r = records.get(subject.key);
       if (r === undefined) return;
       if (r.inFlight > 0) r.inFlight -= 1;
+    },
+
+    /**
+     * Read-only view for `GET /api/usage`. Null means "no accepted check has ever been
+     * admitted for this subject", which a caller must report as unknown rather than as zero.
+     */
+    readUsage(subject: { key: string }, now: number): UsageReading | null {
+      const r = records.get(subject.key);
+      if (r === undefined) return null;
+      rollAndCount(r, now);
+      return {
+        monthlyUsed: r.monthUsed,
+        dailyUsed: r.dayUsed,
+        monthlyLimit: r.monthlyLimit,
+        dailyLimit: r.dailyLimit,
+        inFlight: r.inFlight,
+        monthlyAdmitted: r.monthAdmitted,
+        windowStart: r.anchored ? r.monthAnchor : calendarMonthStart(r.monthKey),
+        anchored: r.anchored,
+      };
     },
   };
 }

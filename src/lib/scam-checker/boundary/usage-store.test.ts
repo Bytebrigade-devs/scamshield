@@ -9,6 +9,10 @@
  * Time arrives explicitly as epoch-ms `now` values (UTC calendar windows; sliding burst
  * window), so window boundaries are tested by arithmetic, never by waiting.
  *
+ * The read-only view behind `GET /api/usage` is pinned here too: reading never admits, settles
+ * or releases, it reports only the allowance actually applied, and it counts admissions
+ * separately from completed usage.
+ *
  * Runner: Node built-in `node --test` (zero dependencies) — M4-19/X-06 PROPOSED convention.
  */
 import { test } from 'node:test';
@@ -151,4 +155,64 @@ test('subjects are keyed independently — one user exhausting a quota never aff
   for (let i = 0; i < GUARDIAN.daily; i += 1) store.recordCompletion({ key: 'user-1' }, NOW + i * MIN_MS);
   assert.notEqual(denialOf(store, GUARDIAN, NOW + 20 * MIN_MS), null);
   assert.equal(store.admitCheck({ key: 'user-2', allowance: GUARDIAN }, NOW + 20 * MIN_MS), null);
+});
+test('readUsage reports nothing before any admission and never invents zero usage', () => {
+  const store = createInMemoryUsageStore();
+  assert.equal(store.readUsage({ key: 'user-1' }, NOW), null, 'unknown must not be reported as zero');
+});
+
+test('readUsage reports the applied allowance, completed usage and admissions separately', () => {
+  const store = createInMemoryUsageStore();
+  assert.equal(admitted(store, GUARDIAN, NOW), true);
+  assert.equal(admitted(store, GUARDIAN, NOW + 1), true);
+  // Admitted checks are visible as started + in flight, but consume nothing yet.
+  let reading = store.readUsage({ key: 'user-1' }, NOW + 2);
+  assert.equal(reading?.monthlyAdmitted, 2);
+  assert.equal(reading?.inFlight, 2);
+  assert.equal(reading?.monthlyUsed, 0);
+  assert.equal(reading?.monthlyLimit, GUARDIAN.monthly);
+  assert.equal(reading?.dailyLimit, GUARDIAN.daily);
+
+  store.recordCompletion({ key: 'user-1' }, NOW + 3);
+  store.releaseCheck({ key: 'user-1' });
+  reading = store.readUsage({ key: 'user-1' }, NOW + 4);
+  assert.equal(reading?.monthlyUsed, 1, 'a released check never becomes counted usage (NFR-M4-10)');
+  assert.equal(reading?.inFlight, 0);
+  assert.equal(reading?.monthlyAdmitted, 2, 'admissions stay a separate diagnostic count');
+});
+
+test('readUsage is read-only: repeated reads never consume or restore headroom', () => {
+  const store = createInMemoryUsageStore();
+  for (let i = 0; i < GUARDIAN.daily; i += 1) store.recordCompletion({ key: 'user-1' }, NOW + i * MIN_MS);
+  for (let i = 0; i < 5; i += 1) {
+    assert.equal(store.readUsage({ key: 'user-1' }, NOW + 20 * MIN_MS)?.monthlyUsed, GUARDIAN.daily);
+  }
+  assert.equal(denialOf(store, GUARDIAN, NOW + 20 * MIN_MS)?.reason, 'quota-daily', 'reads changed no state');
+});
+
+test('readUsage reports the UTC calendar month start for calendar allowances', () => {
+  const store = createInMemoryUsageStore();
+  store.recordCompletion({ key: 'user-1' }, NOW);
+  const reading = store.readUsage({ key: 'user-1' }, NOW);
+  assert.equal(reading?.anchored, false);
+  assert.equal(reading?.windowStart, Date.UTC(2026, 9, 1));
+  assert.equal(reading?.monthlyLimit, null, 'a seeded completion latched no allowance to report');
+});
+
+test('readUsage rolls the first-use anchored trial window and keeps the anchor', () => {
+  const store = createInMemoryUsageStore();
+  const TRIAL = PLAN_ALLOWANCES.trial;
+  assert.equal(store.admitCheck({ key: 'trial-1', allowance: TRIAL }, NOW), null);
+  store.recordCompletion({ key: 'trial-1' }, NOW);
+
+  let reading = store.readUsage({ key: 'trial-1' }, NOW + DAY_MS);
+  assert.equal(reading?.anchored, true);
+  assert.equal(reading?.windowStart, NOW, 'the window starts at first use, not at the calendar month');
+  assert.equal(reading?.monthlyUsed, 1);
+
+  // 30 days after first use the anchored window rolls even though the calendar month did not.
+  reading = store.readUsage({ key: 'trial-1' }, NOW + 30 * DAY_MS + 1);
+  assert.equal(reading?.monthlyUsed, 0);
+  assert.equal(reading?.monthlyAdmitted, 0, 'the diagnostic admission count rolls with the window');
+  assert.equal(reading?.windowStart, NOW + 30 * DAY_MS + 1);
 });

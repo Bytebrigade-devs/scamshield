@@ -9,6 +9,7 @@ import { evaluateEntitlement } from "@/lib/entitlement";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { Alert, Card } from "@/components/ui/Card";
 import { DEMO_MODE } from "@/lib/m2-mode";
+import { CheckUsage } from "@/components/CheckUsage";
 import { getSupabase } from "@/lib/supabase";
 
 type Entitlement = ReturnType<typeof evaluateEntitlement>;
@@ -103,6 +104,7 @@ export default function SubscriptionPage() {
           </p>
         </section>
       )}
+      {!DEMO_MODE && <CheckUsage />}
       {DEMO_MODE && access?.limits && <div className="mt-5"><div className="flex flex-wrap justify-between gap-2 text-sm"><span>{sub.billing_cycle ? "Monthly usage" : "Trial usage"} (dummy data)</span><span className="tabular">{sub.billing_cycle ? 17 : 3} / {access.limits.monthlyChecks} checks</span></div><div role="progressbar" aria-label="Demo checks used" aria-valuemin={0} aria-valuemax={access.limits.monthlyChecks} aria-valuenow={sub.billing_cycle ? 17 : 3} className="mt-2 h-2 overflow-hidden rounded-full bg-primary-subtle"><div className="h-full rounded-full bg-primary" style={{ width: `${100 * (sub.billing_cycle ? 17 : 3) / access.limits.monthlyChecks}%` }}/></div><p className="mt-2 text-sm text-muted">2 of {access.limits.dailyChecks} daily checks used. Sample counters for presentation.</p></div>}
       <div className="mt-6 flex flex-wrap gap-3">
         {DEMO_MODE && access?.canRunCheck && <Link href="/pricing" className={buttonClass({ variant: "secondary" })}>Change plan</Link>}
