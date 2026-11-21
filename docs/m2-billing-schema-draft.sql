@@ -15,6 +15,16 @@
 -- USAGE COUNTERS: not here. M4 owns the ledger - see
 --   supabase/drafts/M4-checker-migration-0001-draft.sql (checker_quota_buckets,
 --   checker_usage_events, checker_usage_reservations). M2 exposes limits only.
+--
+-- IDEMPOTENCY: subscription_payments has no idempotency key. The route's compare-and-set guard
+--   (status / started_at / renews_at) rejects an ordinary retry with 409, but a retry after a lost
+--   response can still insert a second ledger row. Accepted for a simulated ledger; a real gateway
+--   integration must add a client-supplied idempotency key with a unique index.
+--
+-- APPLY ORDER: this file is safe to apply before or after the route change that writes these
+--   columns. POST /api/subscription writes the billing columns in the same statement and, if they
+--   are missing, retries without them and reports billingRecorded: false - checkout keeps working
+--   either way.
 -- ============================================================================
 begin;
 
@@ -33,15 +43,27 @@ alter table public.subscriptions
   add column if not exists auto_renew boolean not null default false;
 
 alter table public.subscriptions drop constraint if exists subscriptions_billing_fields_check;
+-- All-or-nothing (review item 3, 21 Nov 2026): a charged period carries its price AND its method,
+-- a trial carries neither. The previous predicate allowed a half-written row (cycle set, price
+-- missing), which is exactly the state a failed partial write would leave behind.
+--
+-- Added NOT VALID on purpose. Rows written before this draft have a billing_cycle but no price and
+-- no payment_method, and the method was never recorded anywhere, so backfilling them would mean
+-- inventing data. NOT VALID still enforces the rule on every new and updated row; it only skips the
+-- historical ones. Once the team decides how to treat those rows, backfill them and run:
+--   alter table public.subscriptions validate constraint subscriptions_billing_fields_check;
 alter table public.subscriptions add constraint subscriptions_billing_fields_check check (
   currency = 'LKR'
   and (price_lkr is null or price_lkr >= 0)
   and (payment_method is null or payment_method in ('debit_card', 'credit_card'))
   -- Mock payments never renew; the column exists so the product rule is explicit in data.
+  -- Real billing will need a migration to relax this CHECK - it is intentional, not an oversight.
   and auto_renew = false
-  -- A trial has no charge and no payment method.
-  and (billing_cycle is not null or (price_lkr is null and payment_method is null))
-);
+  and (
+    (billing_cycle is null     and price_lkr is null     and payment_method is null) or
+    (billing_cycle is not null and price_lkr is not null and payment_method is not null)
+  )
+) not valid;
 
 -- 2. One row per simulated charge: the invoice/audit trail the subscriptions row cannot hold.
 create table if not exists public.subscription_payments (

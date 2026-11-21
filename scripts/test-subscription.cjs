@@ -60,20 +60,40 @@ test('only approved plans/cycles accepted, prices in LKR', () => {
   assert.equal(plans.PLANS.aegis.price.monthly, 1990);
 });
 
-function routeHarness(current = null, signedIn = true, readFailure = false) {
+function routeHarness(current = null, signedIn = true, readFailure = false, failures = {}) {
   const writes = [];
   const readFilters = [];
   const read = { select() { return this; }, eq(column, value) { readFilters.push([column, value]); return this; }, async maybeSingle() { return { data: current, error: readFailure ? new Error('offline') : null }; } };
-  const write = {
-    insert(value) { writes.push({ operation: 'insert', value }); return this; },
-    update(value) { writes.push({ operation: 'update', value }); return this; },
+  let subscriptionAttempts = 0;
+  // Table-aware writer, so the ledger can fail on its own and the first subscriptions write can
+  // report the billing columns as missing (exercising the route's degradation path).
+  const writerFor = table => ({
+    insert(value) { writes.push({ table, operation: 'insert', value }); return this; },
+    update(value) { writes.push({ table, operation: 'update', value }); return this; },
     eq() { return this; }, is() { return this; }, select() { return this; },
-    async single() { return { data: { ...current, ...writes.at(-1).value }, error: null }; },
-  };
+    async single() {
+      if (table === 'subscriptions') {
+        subscriptionAttempts += 1;
+        if (subscriptionAttempts === 1) {
+          if (failures.missingBillingColumns) return { data: null, error: { code: '42703', message: 'column "price_lkr" of relation "subscriptions" does not exist' } };
+          if (failures.subscriptionFailure) return { data: null, error: failures.subscriptionFailure };
+        }
+      }
+      return { data: { ...current, ...writes.at(-1).value }, error: null };
+    },
+    // The ledger insert is awaited directly, so the builder is thenable like a real query. It must
+    // resolve to a plain object: resolving with `this` would re-enter `then` forever.
+    then(resolve) {
+      if (table === 'subscription_payments' && failures.ledgerFailure) {
+        return resolve({ data: null, error: { code: '42P01', message: 'relation "public.subscription_payments" does not exist' } });
+      }
+      return resolve({ data: null, error: null });
+    },
+  });
   const server = load('src/lib/subscription-server.ts', {
     './entitlement': { evaluateEntitlement },
     '@supabase/supabase-js': {
-      createClient: (_url, key) => key === 'writer' ? { from: () => write } : {
+      createClient: (_url, key) => key === 'writer' ? { from: table => writerFor(table) } : {
         auth: { getUser: async token => token === 'valid-token'
           ? { data: { user: { id: 'server-user', created_at: new Date().toISOString() } }, error: null }
           : { data: { user: null }, error: new Error('invalid token') } },
@@ -140,6 +160,7 @@ test('checkout records the price and a simulated charge without storing card det
     assert.equal(response.body.paymentMethod, paymentMethod);
     assert.equal(response.body.priceLkr, 990);
     assert.equal(response.body.mocked, true);
+    assert.equal(response.body.billingRecorded, true);
     // 1) subscription row, 2) payment-history row
     assert.equal(api.writes.length, 2);
     const subscription = api.writes[0].value;
@@ -156,6 +177,42 @@ test('checkout records the price and a simulated charge without storing card det
     for (const key of ['card_number', 'cardNumber', 'expiry', 'cvv', 'security_code', 'securityCode'])
       for (const write of api.writes) assert.equal(key in write.value, false);
   }
+});
+
+test('a ledger failure still grants access and reports paymentRecorded false', async () => {
+  const api = routeHarness(null, true, false, { ledgerFailure: true });
+  const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success', paymentMethod: 'credit_card' });
+  assert.equal(response.status, 200, 'the ledger must never be able to grant or revoke access');
+  assert.equal(response.body.paymentRecorded, false);
+  assert.equal(response.body.billingRecorded, true);
+  assert.equal(response.body.subscription.status, 'active');
+  assert.equal(response.body.subscription.plan, 'guardian');
+  assert.equal(api.writes.filter(write => write.table === 'subscriptions').length, 1);
+  for (const key of ['card_number', 'cardNumber', 'expiry', 'cvv', 'security_code', 'securityCode'])
+    for (const write of api.writes) assert.equal(key in write.value, false);
+});
+
+test('checkout still succeeds when the billing draft has not been applied', async () => {
+  const api = routeHarness(null, true, false, { missingBillingColumns: true });
+  const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success', paymentMethod: 'debit_card' });
+  assert.equal(response.status, 200, 'a missing migration must not 409 the checkout');
+  assert.equal(response.body.billingRecorded, false);
+  assert.equal(response.body.paymentRecorded, true);
+  assert.equal(response.body.subscription.status, 'active');
+  const subscriptionWrites = api.writes.filter(write => write.table === 'subscriptions');
+  assert.equal(subscriptionWrites.length, 2, 'one attempt with the billing columns, one without');
+  assert.equal(subscriptionWrites[0].value.price_lkr, 990);
+  assert.equal('price_lkr' in subscriptionWrites[1].value, false);
+  assert.equal('payment_method' in subscriptionWrites[1].value, false);
+  assert.equal(subscriptionWrites[1].value.billing_cycle, 'monthly', 'access itself is unaffected');
+});
+
+test('a genuine subscription write failure still returns 409 and records no charge', async () => {
+  const api = routeHarness(null, true, false, { subscriptionFailure: { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned' } });
+  const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success' });
+  assert.equal(response.status, 409, 'only a missing schema degrades; a real conflict still fails');
+  assert.equal(api.writes.filter(write => write.table === 'subscriptions').length, 1, 'a conflict is not retried');
+  assert.equal(api.writes.filter(write => write.table === 'subscription_payments').length, 0);
 });
 
 test('invalid methods and declined card payments leave subscriptions unchanged', async () => {

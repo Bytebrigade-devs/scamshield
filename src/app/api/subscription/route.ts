@@ -7,6 +7,22 @@ import { isPaymentMethod } from "@/lib/payment-methods";
 export const dynamic = "force-dynamic";
 const response = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
+/** Columns added by docs/m2-billing-schema-draft.sql; absent until the steward applies it. */
+const BILLING_COLUMNS = ["price_lkr", "currency", "payment_method", "auto_renew"] as const;
+
+/**
+ * True only when Postgres reports the billing columns (42703) or the ledger table (42P01) as
+ * missing, i.e. the draft has not been applied to this database. A concurrency or validation
+ * failure must NOT match, or a real 409 would be silently downgraded to a partial write.
+ */
+function isMissingBillingSchema(error: unknown): boolean {
+  const failure = error as { code?: string | null; message?: string | null } | null;
+  const code = failure?.code ?? null;
+  if (code === "42703" || code === "42P01") return true;
+  const message = (failure?.message ?? "").toLowerCase();
+  return message.includes("does not exist") && BILLING_COLUMNS.some((column) => message.includes(column));
+}
+
 async function sendTrialEmail(email: string, expiresAt: string) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.TRIAL_EMAIL_FROM;
@@ -73,18 +89,33 @@ async function handle(req: NextRequest) {
     // Price is resolved server-side from the plan table, never from the request body.
     const plan = body.plan as PlanId;
     const priceLkr = PLANS[plan].price[cycle];
-    const values = {
+    // `isPlan(body.plan)` above already narrowed this; the cast adds no authority.
+    const accessValues = {
       user_id: user.id, plan, status: "active", billing_cycle: cycle,
       started_at: start.toISOString(), renews_at: billingEnd(start, { monthly: 1, quarterly: 3, yearly: 12 }[cycle]),
-      cancelled_at: null, price_lkr: priceLkr, currency: "LKR", payment_method: paymentMethod, auto_renew: false,
+      cancelled_at: null,
     };
+    const billingValues = { price_lkr: priceLkr, currency: "LKR", payment_method: paymentMethod, auto_renew: false };
     // Compare previous state to prevent a concurrent request overwriting new access or suspension.
-    let query;
-    if (current) {
-      query = db.from("subscriptions").update(values).eq("user_id", user.id).eq("status", current.status).eq("started_at", current.started_at);
-      query = current.renews_at ? query.eq("renews_at", current.renews_at) : query.is("renews_at", null);
-    } else query = db.from("subscriptions").insert(values);
-    const { data, error } = await query.select().single();
+    const writeSubscription = (values: Record<string, unknown>) => {
+      if (current) {
+        let query = db.from("subscriptions").update(values).eq("user_id", user.id).eq("status", current.status).eq("started_at", current.started_at);
+        query = current.renews_at ? query.eq("renews_at", current.renews_at) : query.is("renews_at", null);
+        return query.select().single();
+      }
+      return db.from("subscriptions").insert(values).select().single();
+    };
+    // One atomic write carrying the billing columns, so a charged row can never exist without its
+    // price and method (the draft's all-or-nothing CHECK). If the draft has not been applied, the
+    // missing columns must cost the metadata only — never the checkout (review item 1, 21 Nov 2026).
+    let { data, error } = await writeSubscription({ ...accessValues, ...billingValues });
+    let billingRecorded = !error;
+    if (error && isMissingBillingSchema(error)) {
+      const fallback = await writeSubscription(accessValues);
+      data = fallback.data;
+      error = fallback.error;
+      billingRecorded = false;
+    }
     if (error) return response({ error: "Subscription changed or could not be saved. Refresh before retrying." }, 409);
     // Historise the simulated charge so the amount survives later price changes. A ledger failure
     // must not grant or revoke access, so the subscription result still stands and the flag says so.
@@ -93,9 +124,9 @@ async function handle(req: NextRequest) {
     const payment = await db.from("subscription_payments").insert({
       user_id: user.id, plan, billing_cycle: cycle, amount_lkr: priceLkr, currency: "LKR",
       payment_method: paymentMethod, status: "succeeded", simulated: true,
-      period_start: values.started_at, period_end: values.renews_at,
+      period_start: accessValues.started_at, period_end: accessValues.renews_at,
     });
-    return response({ subscription: data, paymentMethod, priceLkr, paymentRecorded: !payment.error, mocked: true });
+    return response({ subscription: data, paymentMethod, priceLkr, billingRecorded, paymentRecorded: !payment.error, mocked: true });
   } catch {
     return response({ error: "Subscription unavailable. Check the server configuration or retry." }, 503);
   }

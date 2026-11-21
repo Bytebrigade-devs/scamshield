@@ -1,5 +1,16 @@
 # M2 local validation
 
+## PR #50 review round — 21 November 2026
+
+Fixes for the review on `feat/m2-billing-ledger` (items 1–4 plus the minors). Commands run from the repository root on local Node v24.19.0; CI pins 24.22.1.
+
+- `node scripts/test-subscription.cjs`: **31 passed, 0 failed** (was 28). New cases: a ledger failure still returns 200 with `paymentRecorded: false` and the subscription row intact and no card-data keys; checkout returns 200 with `billingRecorded: false` when the billing columns are missing (Postgres `42703`); a genuine write failure still returns 409, is not retried and records no charge.
+- `tsc --noEmit`: passed, no diagnostics. ESLint on `src/app/api/subscription/route.ts` and `scripts/test-subscription.cjs`: clean.
+- `next build --webpack`: compiled successfully, TypeScript check passed, 15 routes, empty stderr.
+- CI on the previous head `5f974bc`: `app-ci.yml` ran `Node 24 / ubuntu-latest` and `Node 24 / windows-latest`, both **success**. That workflow's path filter includes `src/**`, `scripts/**` and `package.json`, so this PR is covered by CI; only `m4-tests.yml` is scoped to `src/lib/scam-checker/**`.
+
+Not run: any live Supabase write. `docs/m2-billing-schema-draft.sql` is still unapplied, so the degradation path is exercised by the harness only, not against a database.
+
 ## Current head validation — 20 November 2026
 
 - `pnpm test:subscription`: 28 passed, zero failed.
