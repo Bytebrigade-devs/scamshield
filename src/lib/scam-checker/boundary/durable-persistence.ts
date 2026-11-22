@@ -10,7 +10,9 @@
  * migration-0002 transaction functions through the server-only service-role client, AFTER
  * session/ownership/entitlement/input verification. The names are recorded in
  * `M4_TRANSACTION_FUNCTIONS` so the adapter, the SQL drafts and this contract cannot drift
- * silently; the SQL-side review is PENDING (schema steward, 20 November 2026).
+ * silently. The SQL drafts (0001 rev 5 / 0002 rev 5) were reviewed by Prashni (21 Nov) and
+ * independently by Lahiru (22 Nov) and merged in PR #52; they are NOT applied — Supabase
+ * access remains pending, and the steward role moved to the M4 owner (22 Nov).
  *
  * HONESTY BOUNDARY: this module defines a contract and an async wrapper over an injected
  * synchronous port. There is NO Supabase client, NO SQL, NO table, NO network and no clock.
@@ -88,7 +90,7 @@ export interface DurablePersistence {
 /**
  * Transaction functions the live adapter must call (draft migration 0002). Recorded here so
  * the interface and the SQL drafts share one name list; nothing is executed or verified by
- * this constant — the steward's SQL review is still open.
+ * this constant — the SQL drafts are reviewed and merged (#52) but not applied.
  */
 export const M4_TRANSACTION_FUNCTIONS = Object.freeze({
   saveCheck: 'm4_save_check',

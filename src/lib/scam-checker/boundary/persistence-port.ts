@@ -3,7 +3,8 @@
  *
  * This module defines the storage contract M4 will implement when the shared database is
  * approved. It follows the recorded positions without creating any database object:
- * - the schema steward's **proposed** design (19 Nov 2026): checks, findings, history,
+ * - the team-approved steward design (19 Nov 2026; SQL drafts reviewed and merged in #52,
+ *   not applied): checks, findings, history,
  *   feedback, usage events, quota/budget buckets and usage reservations;
  * - M2-J access rule (18 Nov 2026): M4 owns history and feedback; users read only their own
  *   rows; no browser writes; verified server routes write with the service role; account
@@ -15,15 +16,16 @@
  *   `0.2.0-draft` revision (`subject_ref` agreed by Vishmi + Lahiru 19 Nov and the
  *   steward 20 Nov). The durable table stores only `0.1.0-draft` until the
  *   separate nine-field migration adds the column; this port accepts both shapes.
- * - account deletion (steward direction (c), 21 Nov, pending Suraji's privacy
- *   confirmation): outstanding reservations/charges are resolved, then the
+ * - account deletion (steward direction (c), 21 Nov; Suraji confirmed the privacy direction
+ *   on 22 Nov 2026): outstanding reservations/charges are resolved, then the
  *   subject's user-linked quota buckets and reservations are removed;
  *   non-user-linked budget totals are retained. Deleting history alone never
  *   resets quota.
  *
  * HONESTY BOUNDARY: no SQL, no Supabase client, no tables, no network. The in-memory
  * adapter exists so the boundary integration and tests can be written now; a Supabase
- * adapter must implement the same port only after team approval.
+ * adapter must implement the same port only after the reviewed SQL is applied and
+ * Supabase access exists.
  *
  * Runner: Node built-in `node --test` (zero dependencies) — M4-19/X-06 convention.
  */
