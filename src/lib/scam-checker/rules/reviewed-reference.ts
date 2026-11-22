@@ -2,10 +2,11 @@
  * Reviewed official-domain reference for the URL-shape rules (R-M4-21…23, v0.3-draft).
  *
  * This is a minimal projection of the reviewed organization directory
- * (`code/ui/organization-directory.ts`, source records reviewed 26–29 October 2026) into the
+ * (`../ui/organization-directory.ts`; workspace source `code/ui/organization-directory.ts`,
+ * source records reviewed 26 October–20 November 2026) into the
  * only two facts the rule engine needs: reviewed brand aliases and exact reviewed hostnames.
  * It is deliberately copied rather than imported, so the zero-setup rule engine keeps no
- * dependency on the browser-facing app layer. `code/ui/reviewed-reference.test.ts` fails if
+ * dependency on the browser-facing app layer. `../ui/reviewed-reference.test.ts` fails if
  * this projection and the reviewed directory drift.
  *
  * Engineering acceptance reference ONLY: a shape flag is evidence for review. It never proves

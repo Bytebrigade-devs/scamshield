@@ -2,7 +2,7 @@
  * M4 — durable persistence interface (async).
  *
  * Implements the owner-side decision of 19 November 2026
- * (evidence/M4-async-persistence-decision-20261119.md): a real Supabase client performs
+ * (workspace evidence: M4-async-persistence-decision-20261119.md — not in this repository): a real Supabase client performs
  * async I/O, so durable persistence is expressed as a Promise-returning interface mirroring
  * `persistence-port.ts`, while the synchronous port stays the deterministic test contract.
  *

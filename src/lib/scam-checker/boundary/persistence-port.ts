@@ -590,7 +590,8 @@ export function createInMemoryPersistence(): PersistencePort {
       const existing = reservations.get(existingId);
       return existing ? { ...existing } : null; // idempotent replay of the same request
     }
-    if (input.budget && (!isNonNegative(input.budget.reservedAmount) || !isFinitePositive(input.budget.limitAmount))) {
+    // limitAmount = 0 is "no spend allowed" (migration 0002 rev 5), not invalid input.
+    if (input.budget && (!isNonNegative(input.budget.reservedAmount) || !isNonNegative(input.budget.limitAmount))) {
       return null;
     }
 
@@ -608,27 +609,41 @@ export function createInMemoryPersistence(): PersistencePort {
     const dailyStored = quotaBuckets.get(dailyKey)!;
     const allowanceStored = quotaBuckets.get(allowanceKey)!;
     if (dailyStored.id === allowanceStored.id) return null; // buckets must be distinct
+
+    // Refresh the trusted allowance and window BEFORE admission, including on refusal
+    // (mirrors 0002 rev 5: a downgrade still records the limit actually applied).
+    dailyStored.limitCount = dailyLimit;
+    dailyStored.periodEnd = input.dailyBucket.periodEnd;
+    allowanceStored.limitCount = allowanceLimit;
+    allowanceStored.periodEnd = input.allowanceBucket.periodEnd;
+    dailyStored.updatedAt = input.now;
+    allowanceStored.updatedAt = input.now;
+
     // Admission under the (single-threaded) bucket state: completed + reserved + 1 <= limit.
     if (dailyStored.completedCount + dailyStored.reservedCount + 1 > dailyLimit
       || allowanceStored.completedCount + allowanceStored.reservedCount + 1 > allowanceLimit) {
       return null;
     }
-    dailyStored.limitCount = dailyLimit;
-    allowanceStored.limitCount = allowanceLimit;
-    dailyStored.reservedCount += 1;
-    dailyStored.updatedAt = input.now;
-    allowanceStored.reservedCount += 1;
-    allowanceStored.updatedAt = input.now;
 
     let budgetBucketId: string | null = null;
     if (input.budget) {
       getOrCreateBudgetBucket(input.budget, input.now);
       const stored = budgetBuckets.get(`${input.budget.bucket.budgetKey}\u0000${input.budget.bucket.periodStart}`)!;
-      if (stored.reservedAmount + input.budget.reservedAmount > stored.limitAmount) return null;
-      stored.reservedAmount += input.budget.reservedAmount;
+      // Currency is immutable per (budgetKey, periodStart); a mismatch is invalid input.
+      if (stored.currency !== input.budget.currency) return null;
+      // Refresh the trusted limit and window before admission (0002 rev 5).
+      stored.limitAmount = input.budget.limitAmount;
+      stored.periodEnd = input.budget.periodEnd;
       stored.updatedAt = input.now;
+      // Cumulative cap: settled spend counts too (spent + reserved + new <= limit).
+      if (stored.spentAmount + stored.reservedAmount + input.budget.reservedAmount > stored.limitAmount) return null;
+      stored.reservedAmount += input.budget.reservedAmount;
       budgetBucketId = stored.id;
     }
+
+    // Every admission passed: mutate the quota counters (nothing mutated on refusal).
+    dailyStored.reservedCount += 1;
+    allowanceStored.reservedCount += 1;
 
     const reservation: ReservationRecord = {
       id: `reservation-${nextId++}`,

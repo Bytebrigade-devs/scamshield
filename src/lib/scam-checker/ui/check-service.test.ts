@@ -449,3 +449,48 @@ test('fallback model: an injected provider is never wrapped, so call counts stay
   assert.equal((outcome as { analysisStatus?: string }).analysisStatus, 'unavailable');
   assert.equal(calls, 1, 'the injected provider is authoritative; the fallback does not double the call');
 });
+
+// ---- Composite fallback wiring: the real adapter path through check-service ----
+
+test('fallback composite: a primary transport failure completes on exactly one fallback fetch', async () => {
+  const calls: Array<{ url: string; body: string }> = [];
+  const fetchImpl = (async (url, init) => {
+    calls.push({ url: String(url), body: String(init?.body ?? '') });
+    if (calls.length === 1) return new Response(null, { status: 500 });
+    return Response.json({ choices: [{ message: { content: JSON.stringify(REPLY) } }] });
+  }) as typeof fetch;
+  const service = createCheckService({ live: { ...LIVE, fallbackModel: 'fallback-model' }, fetchImpl });
+
+  const { outcome, providerMode } = await service.check(FIXTURE);
+
+  assert.equal(providerMode, 'live');
+  assert.equal(calls.length, 2, 'exactly one primary attempt plus one fallback attempt');
+  assert.equal(JSON.parse(calls[0].body).model, LIVE.model, 'the first call uses the primary model');
+  assert.equal(JSON.parse(calls[1].body).model, 'fallback-model', 'the second call uses the fallback model');
+  assert.equal(outcome.kind, 'analysed');
+  if (outcome.kind === 'analysed') {
+    assert.equal(outcome.analysisStatus, 'completed', 'the fallback answer completes the check');
+    assert.equal(outcome.analysisMode, 'rules_and_ai');
+    assert.ok(outcome.reply);
+    assert.deepEqual(outcome.limitations, []);
+  }
+});
+
+test('fallback composite: bad-json on the primary never triggers the fallback', async () => {
+  let calls = 0;
+  const fetchImpl = (async () => {
+    calls += 1;
+    return Response.json({ choices: [{ message: { content: 'not-json' } }] });
+  }) as typeof fetch;
+  const service = createCheckService({ live: { ...LIVE, fallbackModel: 'fallback-model' }, fetchImpl });
+
+  const { outcome } = await service.check(FIXTURE);
+
+  assert.equal(calls, 1, 'an unparseable or refused answer must not be re-asked of another model');
+  assert.equal(outcome.kind, 'analysed');
+  if (outcome.kind === 'analysed') {
+    assert.equal(outcome.analysisStatus, 'unavailable');
+    assert.equal(outcome.analysisMode, 'none');
+    assert.deepEqual(outcome.limitations, [UNAVAILABLE_LIMITATION]);
+  }
+});
