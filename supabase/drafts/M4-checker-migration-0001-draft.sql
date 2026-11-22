@@ -1,5 +1,5 @@
 -- ============================================================================
--- M4 AI Scam Checker — durable persistence migration 0001 (DRAFT, revision 3)
+-- M4 AI Scam Checker — durable persistence migration 0001 (DRAFT, revision 4)
 -- ============================================================================
 -- STATUS: DRAFT for schema-steward review. NOT applied. No table, policy,
 --   function or trigger here exists in any database.
@@ -34,6 +34,15 @@
 --       without granting would break the writes this design exists for.
 --   Length limits are recorded as the steward's 21 NOV DECISIONS, not as
 --   verbatim requirements from her 19 November reply.
+--
+-- REVISION 4 — 22 November 2026: incorporates Lahiru's independent review of
+--   revision 3 (PR #52). Changes made:
+--     * explicit table privileges for service_role, so the SECURITY INVOKER
+--       functions do not depend on Supabase's implicit default grants;
+--     * indexes on the reservation bucket FKs, which the FK checks and the
+--       account-deletion path scan;
+--     * a column comment recording that outcome_status is the settled copy of
+--       the analysis status (not a second vocabulary).
 --
 -- DECISIONS RECORDED 21 NOV (steward answers; see the review/answer records):
 --   * account deletion follows direction (c): the subject's user-linked quota
@@ -409,6 +418,9 @@ CREATE TABLE public.checker_usage_reservations (
   allowance_bucket_id uuid          NOT NULL REFERENCES public.checker_quota_buckets (id),
   budget_bucket_id    uuid          REFERENCES public.checker_budget_buckets (id),
   state               text          NOT NULL DEFAULT 'reserved',
+  -- Settled copy of the analysed outcome (completed/limited/unavailable), kept
+  -- so reconciliation can close spend without re-deciding the quota outcome.
+  -- Not a second vocabulary: same values as scam_checks.analysis_status.
   outcome_status      text,
   reserved_amount     numeric(20,8) NOT NULL DEFAULT 0,
   actual_amount       numeric(20,8),
@@ -438,6 +450,9 @@ CREATE TABLE public.checker_usage_reservations (
 );
 CREATE INDEX checker_usage_reservations_subject_idx ON public.checker_usage_reservations (subject_key);
 CREATE INDEX checker_usage_reservations_state_idx ON public.checker_usage_reservations (state);
+-- The ownership FKs and the account-deletion path scan these two columns.
+CREATE INDEX checker_usage_reservations_daily_idx ON public.checker_usage_reservations (daily_bucket_id);
+CREATE INDEX checker_usage_reservations_allowance_idx ON public.checker_usage_reservations (allowance_bucket_id);
 
 -- ============================================================================
 -- ROW LEVEL SECURITY
@@ -536,6 +551,21 @@ GRANT EXECUTE ON FUNCTION public.m4_valid_highlights(jsonb)       TO service_rol
 GRANT EXECUTE ON FUNCTION public.m4_valid_limitations(jsonb)      TO service_role;
 GRANT EXECUTE ON FUNCTION public.m4_valid_opaque_id(text, integer) TO service_role;
 GRANT EXECUTE ON FUNCTION public.m4_history_matches_parent()      TO service_role;
+
+-- Table privileges for the server-only writer. Supabase's default privileges
+-- usually cover service_role, but relying on an implicit default would make this
+-- migration non-self-contained; the SECURITY INVOKER functions need these
+-- rights when called through the service-role client.
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  public.scam_checks,
+  public.scam_findings,
+  public.checker_history,
+  public.checker_feedback,
+  public.checker_usage_events,
+  public.checker_quota_buckets,
+  public.checker_budget_buckets,
+  public.checker_usage_reservations
+TO service_role;
 
 COMMIT;
 

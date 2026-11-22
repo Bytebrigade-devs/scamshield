@@ -1,8 +1,8 @@
 -- ============================================================================
--- M4 AI Scam Checker — durable persistence transaction functions (DRAFT 0002, revision 2)
+-- M4 AI Scam Checker — durable persistence transaction functions (DRAFT 0002, revision 3)
 -- ============================================================================
--- STATUS: DRAFT for schema-steward review. NOT applied. Depends on migration 0001
---   revision 3 (design/M4-checker-migration-0001-draft.sql). No function here
+-- STATUS: DRAFT for independent review. NOT applied. Depends on migration 0001
+--   revision 4 (design/M4-checker-migration-0001-draft.sql). No function here
 --   exists in any database, and nothing in this file has been executed.
 --
 -- REVISION 2 — 21 November 2026: implements the steward's review item 3 and her
@@ -30,6 +30,30 @@
 --   only by the server-only service_role client (BYPASSRLS) after
 --   session/ownership/entitlement/input verification. EXECUTE is restricted to
 --   service_role below. Callers wrap multi-statement work in a transaction.
+--
+-- LOCK ORDER (true as written): reservation row -> quota buckets -> budget
+--   bucket. Reserve takes the bucket locks first because it creates the
+--   reservation it will own and never locks an existing one; settle, mark,
+--   finalize and delete all take the reservation row first, so the only
+--   cross-function cycles are avoided. Any new function must follow the
+--   reservation-first order.
+--
+-- CALL ORDER FOR DELETION: m4_delete_subject must run BEFORE the auth.users row
+--   is deleted. Deleting the user first cascades the checks while the
+--   text-keyed quota buckets survive, so nothing is settled and the counters
+--   are orphaned. subject_key must be the user uuid rendered as text.
+--
+-- REVISION 3 — 22 November 2026: incorporates Lahiru's independent review of
+--   revision 2 (PR #52). Changes:
+--     * limit_count and both period_end values refresh under the bucket locks
+--       before the admission test, so a refused request still records the
+--       allowance actually applied;
+--     * the budget limit_amount and period_end now refresh under the lock too;
+--     * account deletion locks reservations first (it previously took buckets
+--       first, which could deadlock against a concurrent settlement);
+--     * a request_key replay for a different subject returns NULL;
+--     * malformed budget input returns NULL instead of raising;
+--     * m4_delete_subject takes p_now.
 --
 -- DRAFT NOTES: parameter shapes are M4 proposals for steward confirmation.
 --   Content semantics (exact excerpts, offsets, highlight rules) stay app-side
@@ -139,6 +163,11 @@ DECLARE
   v_budget    public.checker_budget_buckets%ROWTYPE;
   v_budget_id uuid := NULL;
   v_reserved  numeric(20,8) := 0;
+  v_budget_key      text;
+  v_budget_start    timestamptz;
+  v_budget_end      timestamptz;
+  v_budget_currency text;
+  v_budget_limit    numeric(20,8);
   v_res       public.checker_usage_reservations%ROWTYPE;
 BEGIN
   -- Validate before any mutation.
@@ -157,6 +186,27 @@ BEGIN
     RETURN NULL;
   END IF;
 
+  -- Parse and validate the optional budget object up front, so malformed input is
+  -- a refusal (NULL) like every other parameter family rather than an exception.
+  IF p_budget IS NOT NULL THEN
+    BEGIN
+      v_budget_key      := p_budget->>'budget_key';
+      v_budget_start    := (p_budget->>'period_start')::timestamptz;
+      v_budget_end      := (p_budget->>'period_end')::timestamptz;
+      v_budget_currency := p_budget->>'currency';
+      v_budget_limit    := (p_budget->>'limit_amount')::numeric;
+      v_reserved        := COALESCE((p_budget->>'reserved_amount')::numeric, 0);
+    EXCEPTION WHEN others THEN
+      RETURN NULL;
+    END;
+    IF v_budget_key IS NULL OR length(btrim(v_budget_key)) = 0 OR length(v_budget_key) > 64
+       OR v_budget_start IS NULL OR v_budget_end IS NULL OR v_budget_end <= v_budget_start
+       OR v_budget_currency IS NULL OR length(btrim(v_budget_currency)) = 0 OR length(v_budget_currency) > 8
+       OR v_budget_limit IS NULL OR v_budget_limit < 0 OR v_reserved < 0 THEN
+      RETURN NULL;
+    END IF;
+  END IF;
+
   -- FOR UPDATE cannot lock a row that does not exist yet, so duplicate request
   -- keys are serialised with a transaction-scoped advisory lock.
   PERFORM pg_advisory_xact_lock(hashtext(p_request_key));
@@ -164,6 +214,11 @@ BEGIN
   SELECT * INTO v_existing FROM public.checker_usage_reservations
     WHERE request_key = p_request_key;
   IF FOUND THEN
+    -- A replay must belong to the same subject; otherwise it would return another
+    -- subject's reservation row for a guessed request key.
+    IF v_existing.subject_key IS DISTINCT FROM p_subject THEN
+      RETURN NULL;
+    END IF;
     RETURN to_jsonb(v_existing);
   END IF;
 
@@ -188,6 +243,16 @@ BEGIN
     RAISE EXCEPTION 'daily and allowance buckets must be distinct';
   END IF;
 
+  -- The stored allowance and window must reflect the trusted values actually
+  -- applied, including when admission is refused below; otherwise a downgrade
+  -- leaves the bucket advertising a limit the function no longer honours.
+  UPDATE public.checker_quota_buckets
+    SET limit_count = p_daily_limit, period_end = p_daily_end, updated_at = p_now
+    WHERE id = v_daily.id;
+  UPDATE public.checker_quota_buckets
+    SET limit_count = p_allowance_limit, period_end = p_allowance_end, updated_at = p_now
+    WHERE id = v_allow.id;
+
   -- Admission under the bucket locks.
   IF v_daily.completed_count + v_daily.reserved_count + 1 > p_daily_limit
      OR v_allow.completed_count + v_allow.reserved_count + 1 > p_allowance_limit THEN
@@ -195,22 +260,21 @@ BEGIN
   END IF;
 
   IF p_budget IS NOT NULL THEN
-    v_reserved := COALESCE((p_budget->>'reserved_amount')::numeric, 0);
-    IF v_reserved < 0 OR (p_budget->>'limit_amount')::numeric < 0 THEN
-      RETURN NULL;
-    END IF;
     INSERT INTO public.checker_budget_buckets
       (budget_key, period_start, period_end, currency, limit_amount, reserved_amount, spent_amount, updated_at)
     VALUES (
-      p_budget->>'budget_key',
-      (p_budget->>'period_start')::timestamptz, (p_budget->>'period_end')::timestamptz,
-      p_budget->>'currency', (p_budget->>'limit_amount')::numeric, 0, 0, p_now
+      v_budget_key, v_budget_start, v_budget_end,
+      v_budget_currency, v_budget_limit, 0, 0, p_now
     )
     ON CONFLICT (budget_key, period_start) DO NOTHING;
     SELECT * INTO v_budget FROM public.checker_budget_buckets
-      WHERE budget_key = p_budget->>'budget_key' AND period_start = (p_budget->>'period_start')::timestamptz
+      WHERE budget_key = v_budget_key AND period_start = v_budget_start
       FOR UPDATE;
-    IF v_budget.reserved_amount + v_reserved > v_budget.limit_amount THEN
+    -- Refresh the trusted limit and window under the lock, like the quota buckets.
+    UPDATE public.checker_budget_buckets
+      SET limit_amount = v_budget_limit, period_end = v_budget_end, updated_at = p_now
+      WHERE id = v_budget.id;
+    IF v_budget.reserved_amount + v_reserved > v_budget_limit THEN
       RETURN NULL;
     END IF;
     v_budget_id := v_budget.id;
@@ -218,10 +282,10 @@ BEGIN
 
   -- Every check passed: mutate.
   UPDATE public.checker_quota_buckets
-    SET limit_count = p_daily_limit, reserved_count = reserved_count + 1, updated_at = p_now
+    SET reserved_count = reserved_count + 1, updated_at = p_now
     WHERE id = v_daily.id;
   UPDATE public.checker_quota_buckets
-    SET limit_count = p_allowance_limit, reserved_count = reserved_count + 1, updated_at = p_now
+    SET reserved_count = reserved_count + 1, updated_at = p_now
     WHERE id = v_allow.id;
   IF v_budget_id IS NOT NULL THEN
     UPDATE public.checker_budget_buckets
@@ -424,7 +488,10 @@ $$;
 -- aggregate spend totals (checker_budget_buckets) are retained. Checks cascade
 -- their findings/history/feedback. Deleting history alone never resets quota.
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.m4_delete_subject(p_user uuid)
+CREATE OR REPLACE FUNCTION public.m4_delete_subject(
+  p_user uuid,
+  p_now  timestamptz DEFAULT now()
+)
 RETURNS jsonb
 LANGUAGE plpgsql
 AS $$
@@ -445,8 +512,14 @@ BEGIN
   SELECT count(*) INTO v_history  FROM public.checker_history  WHERE user_id = p_user;
   SELECT count(*) INTO v_feedback FROM public.checker_feedback WHERE user_id = p_user;
 
-  -- Lock the subject's buckets before its reservations (agreed lock order).
-  PERFORM 1 FROM public.checker_quota_buckets WHERE subject_key = v_subject ORDER BY id FOR UPDATE;
+  -- Lock order matches settlement: reservation rows first, then the quota buckets,
+  -- then the budget buckets. Locking buckets first here would let this function
+  -- wait on a reservation that a concurrent settle already holds while that settle
+  -- waits for the bucket -- a genuine deadlock.
+  PERFORM 1 FROM public.checker_usage_reservations
+    WHERE subject_key = v_subject ORDER BY id FOR UPDATE;
+  PERFORM 1 FROM public.checker_quota_buckets
+    WHERE subject_key = v_subject ORDER BY id FOR UPDATE;
   PERFORM 1 FROM public.checker_budget_buckets b
     WHERE b.id IN (
       SELECT budget_bucket_id FROM public.checker_usage_reservations
@@ -455,21 +528,21 @@ BEGIN
     ORDER BY b.id FOR UPDATE;
 
   FOR r IN SELECT * FROM public.checker_usage_reservations
-           WHERE subject_key = v_subject ORDER BY id FOR UPDATE LOOP
+           WHERE subject_key = v_subject ORDER BY id LOOP
     IF r.state = 'reserved' THEN
       UPDATE public.checker_quota_buckets
-        SET reserved_count = GREATEST(0, reserved_count - 1), updated_at = now()
+        SET reserved_count = GREATEST(0, reserved_count - 1), updated_at = p_now
         WHERE id IN (r.daily_bucket_id, r.allowance_bucket_id);
       IF r.budget_bucket_id IS NOT NULL THEN
         UPDATE public.checker_budget_buckets
           SET reserved_amount = GREATEST(0, reserved_amount - r.reserved_amount),
-              spent_amount = spent_amount + r.reserved_amount, updated_at = now()
+              spent_amount = spent_amount + r.reserved_amount, updated_at = p_now
           WHERE id = r.budget_bucket_id;
       END IF;
     ELSIF r.state = 'reconciliation_required' AND r.budget_bucket_id IS NOT NULL THEN
       UPDATE public.checker_budget_buckets
         SET reserved_amount = GREATEST(0, reserved_amount - r.reserved_amount),
-            spent_amount = spent_amount + r.reserved_amount, updated_at = now()
+            spent_amount = spent_amount + r.reserved_amount, updated_at = p_now
         WHERE id = r.budget_bucket_id;
     END IF;
   END LOOP;
@@ -513,7 +586,7 @@ REVOKE ALL ON FUNCTION public.m4_reserve_check(text, text, timestamptz, bigint, 
 REVOKE ALL ON FUNCTION public.m4_settle_reservation(uuid, text, numeric, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.m4_mark_reconciliation(uuid, text, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.m4_finalize_reconciliation(uuid, numeric, timestamptz) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.m4_delete_subject(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.m4_delete_subject(uuid, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.m4_purge_expired(timestamptz) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.m4_save_check(jsonb, jsonb, jsonb) TO service_role;
@@ -521,7 +594,7 @@ GRANT EXECUTE ON FUNCTION public.m4_reserve_check(text, text, timestamptz, bigin
 GRANT EXECUTE ON FUNCTION public.m4_settle_reservation(uuid, text, numeric, timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION public.m4_mark_reconciliation(uuid, text, timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION public.m4_finalize_reconciliation(uuid, numeric, timestamptz) TO service_role;
-GRANT EXECUTE ON FUNCTION public.m4_delete_subject(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.m4_delete_subject(uuid, timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION public.m4_purge_expired(timestamptz) TO service_role;
 
 COMMIT;

@@ -2,10 +2,18 @@
 -- M4 AI Scam Checker — migration verification script (for the schema steward)
 -- ============================================================================
 -- PURPOSE: turn the steward's "successful testing" precondition into something
---   checkable. Run this AFTER applying 0001 (revision 3) and 0002 (revision 2)
---   to a SCRATCH Supabase project, as service_role. Every block raises on
---   failure; the whole script is one transaction, so a failure rolls back and
---   leaves nothing behind. On success it prints nothing and commits a cleanup.
+--   checkable. Run this AFTER applying 0001 (revision 4) and 0002 (revision 3)
+--   to a SCRATCH Supabase project, **as the `service_role`**, not as `postgres`.
+--   Running it as `postgres` bypasses the privilege checks, so it would pass even
+--   when `service_role` lacks the table rights the functions need. Every block
+--   raises on failure; the whole script is one transaction, so a failure rolls
+--   back and leaves nothing behind. On success it prints nothing and commits a
+--   cleanup.
+--
+--   REVISION 2 — 22 November 2026: replaced every `<>` assertion with
+--   `IS DISTINCT FROM` and added an explicit NULL guard on the replay, because a
+--   NULL comparison does not raise and would let the duplicate-request-key
+--   regression pass silently.
 --
 -- STATUS: NOT executed by M4. No database was contacted to produce this file.
 --   It is a proposal for the steward to run; M4 cannot run it without access.
@@ -53,13 +61,13 @@ BEGIN
   replay := public.m4_reserve_check('verify-s-cap', 'v-cap-1', now(), 60000,
     date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 1,
     'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 60, NULL);
-  IF (replay->>'id') <> (r1->>'id') THEN
-    RAISE EXCEPTION 'FAIL 2c: duplicate request key must return the same reservation';
+  IF replay IS NULL OR (replay->>'id') IS DISTINCT FROM (r1->>'id') THEN
+    RAISE EXCEPTION 'FAIL 2c: duplicate request key must return the same reservation (replay=%)', replay;
   END IF;
 
   SELECT reserved_count INTO cnt FROM public.checker_quota_buckets
     WHERE subject_key = 'verify-s-cap' AND period_kind = 'daily';
-  IF cnt <> 1 THEN
+  IF cnt IS DISTINCT FROM 1 THEN
     RAISE EXCEPTION 'FAIL 2d: duplicate request must not double-reserve (got %)', cnt;
   END IF;
 END $$;
@@ -79,7 +87,7 @@ BEGIN
 
   SELECT completed_count, reserved_count INTO cc, rc FROM public.checker_quota_buckets
     WHERE subject_key = 'verify-s-settle' AND period_kind = 'monthly';
-  IF cc <> 1 OR rc <> 0 THEN
+  IF cc IS DISTINCT FROM 1 OR rc IS DISTINCT FROM 0 THEN
     RAISE EXCEPTION 'FAIL 3c: expected completed=1 reserved=0, got % / %', cc, rc;
   END IF;
 END $$;
@@ -97,7 +105,7 @@ BEGIN
 
   SELECT completed_count, reserved_count INTO cc, rc FROM public.checker_quota_buckets
     WHERE subject_key = 'verify-s-limited' AND period_kind = 'monthly';
-  IF cc <> 0 OR rc <> 0 THEN
+  IF cc IS DISTINCT FROM 0 OR rc IS DISTINCT FROM 0 THEN
     RAISE EXCEPTION 'FAIL 4b: limited must not consume quota (got % / %)', cc, rc;
   END IF;
 END $$;
@@ -118,25 +126,25 @@ BEGIN
   IF ok THEN RAISE EXCEPTION 'FAIL 5a: uncertain spend must be refused'; END IF;
   SELECT reserved_count INTO rc FROM public.checker_quota_buckets
     WHERE subject_key = 'verify-s-recon' AND period_kind = 'monthly';
-  IF rc <> 1 THEN RAISE EXCEPTION 'FAIL 5b: refused settlement must not mutate quota'; END IF;
+  IF rc IS DISTINCT FROM 1 THEN RAISE EXCEPTION 'FAIL 5b: refused settlement must not mutate quota'; END IF;
 
   -- Reconciliation settles quota now (limited releases); spend stays open.
   ok := public.m4_mark_reconciliation(rid, 'limited', now());
   IF NOT ok THEN RAISE EXCEPTION 'FAIL 5c: reconciliation mark must succeed'; END IF;
   SELECT reserved_count INTO rc FROM public.checker_quota_buckets
     WHERE subject_key = 'verify-s-recon' AND period_kind = 'monthly';
-  IF rc <> 0 THEN RAISE EXCEPTION 'FAIL 5d: quota must be settled at mark time'; END IF;
+  IF rc IS DISTINCT FROM 0 THEN RAISE EXCEPTION 'FAIL 5d: quota must be settled at mark time'; END IF;
 
   -- Finalisation closes only the spend at a known amount.
   ok := public.m4_finalize_reconciliation(rid, 0.03, now());
   IF NOT ok THEN RAISE EXCEPTION 'FAIL 5e: finalisation must succeed'; END IF;
   SELECT spent_amount, reserved_amount INTO spent, reserved FROM public.checker_budget_buckets
     WHERE budget_key = 'verify-budget';
-  IF spent <> 0.03 OR reserved <> 0 THEN
+  IF spent IS DISTINCT FROM 0.03 OR reserved IS DISTINCT FROM 0 THEN
     RAISE EXCEPTION 'FAIL 5f: expected spent=0.03 reserved=0, got % / %', spent, reserved;
   END IF;
   SELECT state INTO st FROM public.checker_usage_reservations WHERE id = rid;
-  IF st <> 'released' THEN RAISE EXCEPTION 'FAIL 5g: finalised limited reservation must be released'; END IF;
+  IF st IS DISTINCT FROM 'released' THEN RAISE EXCEPTION 'FAIL 5g: finalised limited reservation must be released'; END IF;
   ok := public.m4_finalize_reconciliation(rid, 0.03, now());
   IF ok THEN RAISE EXCEPTION 'FAIL 5h: finalisation must be exactly once'; END IF;
 END $$;
@@ -151,7 +159,7 @@ BEGIN
   ok := public.m4_settle_reservation(rid, NULL, NULL, now());
   IF ok THEN RAISE EXCEPTION 'FAIL 6a: NULL status must be rejected'; END IF;
   SELECT state INTO st FROM public.checker_usage_reservations WHERE id = rid;
-  IF st <> 'reserved' THEN RAISE EXCEPTION 'FAIL 6b: NULL status must not change state'; END IF;
+  IF st IS DISTINCT FROM 'reserved' THEN RAISE EXCEPTION 'FAIL 6b: NULL status must not change state'; END IF;
 END $$;
 
 -- 7. Account deletion, direction (c): resolve charges, remove user-linked
@@ -169,13 +177,13 @@ BEGIN
   PERFORM public.m4_settle_reservation(rid, 'completed', NULL, now());
 
   counts := public.m4_delete_subject(u);
-  IF (counts->>'reservations')::int <> 1 OR (counts->>'quota_buckets')::int <> 2 THEN
+  IF (counts->>'reservations')::int IS DISTINCT FROM 1 OR (counts->>'quota_buckets')::int IS DISTINCT FROM 2 THEN
     RAISE EXCEPTION 'FAIL 7a: expected 1 reservation and 2 buckets removed, got %', counts;
   END IF;
   SELECT EXISTS(SELECT 1 FROM public.checker_quota_buckets WHERE subject_key = u::text) INTO bucket_exists;
-  IF bucket_exists THEN RAISE EXCEPTION 'FAIL 7b: user-linked quota buckets must be removed'; END IF;
+  IF bucket_exists IS TRUE THEN RAISE EXCEPTION 'FAIL 7b: user-linked quota buckets must be removed'; END IF;
   SELECT spent_amount INTO spent FROM public.checker_budget_buckets WHERE budget_key = 'verify-budget-del';
-  IF spent <> 0.05 THEN RAISE EXCEPTION 'FAIL 7c: non-user-linked spend total must be retained'; END IF;
+  IF spent IS DISTINCT FROM 0.05 THEN RAISE EXCEPTION 'FAIL 7c: non-user-linked spend total must be retained'; END IF;
 END $$;
 
 -- Cleanup: remove every verification artefact so the scratch project is left clean.
