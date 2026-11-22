@@ -207,6 +207,27 @@ test('checkout still succeeds when the billing draft has not been applied', asyn
   assert.equal(subscriptionWrites[1].value.billing_cycle, 'monthly', 'access itself is unaffected');
 });
 
+test('a returning subscriber still checks out when the billing draft has not been applied', async () => {
+  // writeSubscription() branches on `current`; the insert branch alone does not cover the path every
+  // returning user takes. The existing row is expired, so the plan guard allows the upgrade, and its
+  // renews_at is fixed in the past so the entitlement check never depends on when this runs.
+  const current = { ...row, status: 'active', billing_cycle: 'monthly', renews_at: '2020-01-01T00:00:00Z' };
+  const api = routeHarness(current, true, false, { missingBillingColumns: true });
+  const response = await api.request('POST', { plan: 'guardian', billingCycle: 'quarterly', scenario: 'success', paymentMethod: 'credit_card' });
+  assert.equal(response.status, 200, 'a missing migration must not 409 an existing subscriber');
+  assert.equal(response.body.billingRecorded, false);
+  const subscriptionWrites = api.writes.filter(write => write.table === 'subscriptions');
+  assert.equal(subscriptionWrites.length, 2, 'one attempt with the billing columns, one without');
+  for (const write of subscriptionWrites) assert.equal(write.operation, 'update', 'the existing row is updated, never re-inserted');
+  assert.equal(subscriptionWrites[0].value.price_lkr, 2670, 'the first attempt carries the billing columns');
+  assert.equal(subscriptionWrites[0].value.payment_method, 'credit_card');
+  const retried = subscriptionWrites[1].value;
+  for (const column of ['price_lkr', 'currency', 'payment_method', 'auto_renew']) assert.equal(column in retried, false);
+  assert.equal(retried.plan, 'guardian', 'access itself is unaffected');
+  assert.equal(retried.billing_cycle, 'quarterly', 'the newly selected cycle is still written');
+  assert.equal(response.body.subscription.billing_cycle, 'quarterly');
+});
+
 test('a genuine subscription write failure still returns 409 and records no charge', async () => {
   const api = routeHarness(null, true, false, { subscriptionFailure: { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned' } });
   const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success' });
