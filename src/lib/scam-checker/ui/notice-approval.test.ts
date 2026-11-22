@@ -1,12 +1,15 @@
 /**
- * M4 — privacy notice approval conditions (M1, 22 November 2026).
+ * M4 — privacy notice conditions approved by M1 (owner-relayed, 22 November 2026).
  *
- * Pins the wording Suraji approved: "banking credentials" in the warning, results described as
- * guidance rather than a guarantee, the actual deployed path named (OpenCode Go gateway providing
- * access to the GPT model), the "How your message is used" label with the privacy page still
- * pending, and no database-retention claim while the database rules are unapproved.
+ * Pins the conditions in that approval record: "banking credentials" in the warning and the input
+ * helper, results described as guidance rather than a guarantee, the actual deployed path named
+ * (OpenCode Go gateway providing access to the GPT model), the "How your message is used" label
+ * with the privacy page still pending, no database-retention claim while the database rules are
+ * unapproved, and the feedback-storage disclosure (check id, reason and timestamp only).
  *
- * Source-level assertions, matching the existing drift-test convention: no browser, no network.
+ * The approval is owner-relayed; the dated record is in the M4 workspace
+ * (`evidence/M4-suraji-notice-approval-20261122.md`). Source-level assertions, matching the existing
+ * drift-test convention: no browser, no network.
  *
  * Runner: Node built-in `node --test` (zero dependencies).
  */
@@ -48,4 +51,16 @@ test('notice: no database retention claim while the database rules are unapprove
   assert.equal(/\b(30|90|180)[- ]day\b/i.test(notice), false);
   // The current tab-session behaviour is described instead.
   assert.match(notice, /History holds up to 20 checks in this browser tab’s session/);
+});
+
+test('notice: the feedback storage behaviour is described', () => {
+  assert.match(notice, /Reporting a wrong result stores only the check id, your chosen reason and a timestamp/);
+  assert.match(notice, /never your message text/);
+  assert.match(notice, /in-memory and resets on restart/);
+});
+
+test('input helper: banking credentials are named in the message guidance', () => {
+  const helper = source.split('\n').find(line => line.includes("id: 'message-help'"));
+  assert.ok(helper, 'message-help helper must exist');
+  assert.match(helper, /banking credentials/);
 });

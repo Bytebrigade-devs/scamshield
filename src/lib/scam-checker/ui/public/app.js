@@ -128,6 +128,7 @@ function noticeBlock() {
       el('p', {}, 'Message and sender information are sent only when you select Check message, not while you type. Organization names, phone numbers and website hostnames are compared offline with a reviewed directory; selected Unicode hostname patterns may be flagged as possible lookalikes. This is incomplete, heuristic evidence, not ownership or safety verification. Submitted links are not opened, fetched, resolved or checked for reputation; the AI provider cannot open them either.'),
       el('p', {}, 'Sender information is user-provided evidence and can be spoofed. It is not added to tab-session history.'),
       el('p', {}, 'History holds up to 20 checks in this browser tab’s session and is not synced with an account. Clear history removes this list; it does not delete any provider records. If browser storage is unavailable, the list lasts only until this page is reloaded.'),
+      el('p', {}, 'Reporting a wrong result stores only the check id, your chosen reason and a timestamp — never your message text. Demo storage is in-memory and resets on restart.'),
       el('p', {}, state.config?.liveConfigured
         ? 'The OpenCode Go gateway’s retention depends on its service and account settings. A failed check does not prove that the provider received or kept nothing.'
         : state.config === null ? 'Processing information must be available before you can submit a message.'
