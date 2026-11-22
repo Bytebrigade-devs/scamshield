@@ -2,7 +2,7 @@
 -- M4 AI Scam Checker — migration verification script (for the schema steward)
 -- ============================================================================
 -- PURPOSE: turn the steward's "successful testing" precondition into something
---   checkable. Run this AFTER applying 0001 (revision 4) and 0002 (revision 4)
+--   checkable. Run this AFTER applying 0001 (revision 5) and 0002 (revision 5)
 --   to a SCRATCH Supabase project, **as the `service_role`**, not as `postgres`.
 --   Running it as `postgres` bypasses the privilege checks, so it would pass even
 --   when `service_role` lacks the table rights the functions need. Every block
@@ -18,6 +18,11 @@
 --   REVISION 3 — 22 November 2026: SET LOCAL ROLE service_role plus a
 --   current_user guard, so the script cannot be run as postgres and silently
 --   skip the privilege checks the service_role grants exist to prove.
+--
+--   REVISION 4 — 22 November 2026: adds assertions for the revision-5 fixes and
+--   for the four items in Lahiru's static re-check: cumulative budget spend,
+--   budget-exceeded refusal, different-subject replay, malformed budget, and
+--   limit_count refresh after a downgrade. Each block goes red without its fix.
 --
 -- STATUS: NOT executed by M4. No database was contacted to produce this file.
 --   It is a proposal for the steward to run; M4 cannot run it without access.
@@ -199,10 +204,120 @@ BEGIN
   IF spent IS DISTINCT FROM 0.05 THEN RAISE EXCEPTION 'FAIL 7c: non-user-linked spend total must be retained'; END IF;
 END $$;
 
+-- 8. Settled spend counts against the budget cap (cumulative, not per-call).
+DO $$
+DECLARE r jsonb; rid uuid; spent numeric; reserved numeric;
+BEGIN
+  r := public.m4_reserve_check('verify-s-budget-cap', 'v-budget-cap-1', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 60,
+    jsonb_build_object('budget_key','verify-budget-cap','period_start',date_trunc('month', now()),
+      'period_end',date_trunc('month', now()) + interval '1 month','currency','USD',
+      'limit_amount',0.10,'reserved_amount',0.06));
+  IF r IS NULL THEN RAISE EXCEPTION 'FAIL 8a: first budget reservation must be admitted'; END IF;
+  rid := (r->>'id')::uuid;
+  IF NOT public.m4_settle_reservation(rid, 'completed', NULL, now()) THEN
+    RAISE EXCEPTION 'FAIL 8b: settlement of the budget reservation must succeed';
+  END IF;
+
+  -- spent_amount is now 0.06; another 0.06 would exceed the 0.10 period cap.
+  r := public.m4_reserve_check('verify-s-budget-cap', 'v-budget-cap-2', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 60,
+    jsonb_build_object('budget_key','verify-budget-cap','period_start',date_trunc('month', now()),
+      'period_end',date_trunc('month', now()) + interval '1 month','currency','USD',
+      'limit_amount',0.10,'reserved_amount',0.06));
+  IF r IS NOT NULL THEN RAISE EXCEPTION 'FAIL 8c: settled spend must count against the budget cap'; END IF;
+
+  SELECT spent_amount, reserved_amount INTO spent, reserved FROM public.checker_budget_buckets
+    WHERE budget_key = 'verify-budget-cap';
+  IF spent IS DISTINCT FROM 0.06 OR reserved IS DISTINCT FROM 0 THEN
+    RAISE EXCEPTION 'FAIL 8d: a refused reservation must not mutate the budget (spent=% reserved=%)', spent, reserved;
+  END IF;
+END $$;
+
+-- 9. A request_key replay cannot return another subject's reservation.
+DO $$
+DECLARE r1 jsonb; r2 jsonb; cnt bigint;
+BEGIN
+  r1 := public.m4_reserve_check('verify-s-replay-a', 'v-replay-shared', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 60, NULL);
+  IF r1 IS NULL THEN RAISE EXCEPTION 'FAIL 9a: first subject must be admitted'; END IF;
+
+  r2 := public.m4_reserve_check('verify-s-replay-b', 'v-replay-shared', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 60, NULL);
+  IF r2 IS NOT NULL THEN RAISE EXCEPTION 'FAIL 9b: a replay must not return another subject reservation'; END IF;
+
+  SELECT count(*) INTO cnt FROM public.checker_usage_reservations WHERE request_key = 'v-replay-shared';
+  IF cnt IS DISTINCT FROM 1 THEN RAISE EXCEPTION 'FAIL 9c: refused replay must not add a reservation (got %)', cnt; END IF;
+  SELECT count(*) INTO cnt FROM public.checker_quota_buckets WHERE subject_key = 'verify-s-replay-b';
+  IF cnt IS DISTINCT FROM 0 THEN RAISE EXCEPTION 'FAIL 9d: refused replay must not create buckets'; END IF;
+END $$;
+
+-- 10. Malformed budget input returns NULL and creates nothing.
+DO $$
+DECLARE r jsonb;
+BEGIN
+  r := public.m4_reserve_check('verify-s-badbudget', 'v-badbudget', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 60,
+    jsonb_build_object('budget_key','verify-budget-bad','period_start','not-a-timestamp',
+      'period_end',date_trunc('month', now()) + interval '1 month','currency','USD',
+      'limit_amount',15,'reserved_amount',0.05));
+  IF r IS NOT NULL THEN RAISE EXCEPTION 'FAIL 10a: malformed budget must return NULL'; END IF;
+  IF EXISTS (SELECT 1 FROM public.checker_budget_buckets WHERE budget_key = 'verify-budget-bad') THEN
+    RAISE EXCEPTION 'FAIL 10b: malformed budget must not create a bucket';
+  END IF;
+END $$;
+
+-- 11. A reservation above the budget is refused; limit_amount = 0 allows no spend.
+DO $$
+DECLARE r jsonb;
+BEGIN
+  r := public.m4_reserve_check('verify-s-budget-over', 'v-budget-over', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 60,
+    jsonb_build_object('budget_key','verify-budget-over','period_start',date_trunc('month', now()),
+      'period_end',date_trunc('month', now()) + interval '1 month','currency','USD',
+      'limit_amount',0.05,'reserved_amount',0.06));
+  IF r IS NOT NULL THEN RAISE EXCEPTION 'FAIL 11a: a reservation above the budget must be refused'; END IF;
+
+  r := public.m4_reserve_check('verify-s-budget-zero', 'v-budget-zero', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 60,
+    jsonb_build_object('budget_key','verify-budget-zero','period_start',date_trunc('month', now()),
+      'period_end',date_trunc('month', now()) + interval '1 month','currency','USD',
+      'limit_amount',0,'reserved_amount',0.01));
+  IF r IS NOT NULL THEN RAISE EXCEPTION 'FAIL 11b: limit_amount = 0 must refuse any spend'; END IF;
+END $$;
+
+-- 12. A refused request still refreshes the stored limit (downgrade visibility).
+DO $$
+DECLARE r jsonb; lc bigint;
+BEGIN
+  r := public.m4_reserve_check('verify-s-downgrade', 'v-downgrade-1', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 60, NULL);
+  IF r IS NULL THEN RAISE EXCEPTION 'FAIL 12a: first reservation must be admitted'; END IF;
+
+  r := public.m4_reserve_check('verify-s-downgrade', 'v-downgrade-2', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 0,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 0, NULL);
+  IF r IS NOT NULL THEN RAISE EXCEPTION 'FAIL 12b: zero limits must refuse admission'; END IF;
+
+  SELECT limit_count INTO lc FROM public.checker_quota_buckets
+    WHERE subject_key = 'verify-s-downgrade' AND period_kind = 'daily';
+  IF lc IS DISTINCT FROM 0 THEN
+    RAISE EXCEPTION 'FAIL 12c: a refused request must still refresh limit_count (got %)', lc;
+  END IF;
+END $$;
+
 -- Cleanup: remove every verification artefact so the scratch project is left clean.
 DELETE FROM public.checker_usage_reservations WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
 DELETE FROM public.checker_quota_buckets WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
-DELETE FROM public.checker_budget_buckets WHERE budget_key IN ('verify-budget', 'verify-budget-del');
+DELETE FROM public.checker_budget_buckets WHERE budget_key IN ('verify-budget', 'verify-budget-del', 'verify-budget-cap', 'verify-budget-bad', 'verify-budget-over', 'verify-budget-zero');
 
 COMMIT;
 

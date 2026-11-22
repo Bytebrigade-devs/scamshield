@@ -1,5 +1,5 @@
 -- ============================================================================
--- M4 AI Scam Checker — durable persistence migration 0001 (DRAFT, revision 4)
+-- M4 AI Scam Checker — durable persistence migration 0001 (DRAFT, revision 5)
 -- ============================================================================
 -- STATUS: DRAFT for schema-steward review. NOT applied. No table, policy,
 --   function or trigger here exists in any database.
@@ -43,6 +43,11 @@
 --       account-deletion path scan;
 --     * a column comment recording that outcome_status is the settled copy of
 --       the analysis status (not a second vocabulary).
+--
+-- REVISION 5 — 22 November 2026: apply-note follow-up from Lahiru's re-check:
+--   * explicit USAGE on schema public for service_role, so the verifier's
+--     SET LOCAL ROLE path does not depend on Supabase's implicit default;
+--   * a one-time-apply note (below); no table, column or policy behaviour changed.
 --
 -- DECISIONS RECORDED 21 NOV (steward answers; see the review/answer records):
 --   * account deletion follows direction (c): the subject's user-linked quota
@@ -561,6 +566,9 @@ GRANT EXECUTE ON FUNCTION public.m4_history_matches_parent()      TO service_rol
 -- usually cover service_role, but relying on an implicit default would make this
 -- migration non-self-contained; the SECURITY INVOKER functions need these
 -- rights when called through the service-role client.
+-- Schema USAGE is normally implicit too; grant it explicitly for the verifier's
+-- SET LOCAL ROLE service_role path.
+GRANT USAGE ON SCHEMA public TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON
   public.scam_checks,
   public.scam_findings,

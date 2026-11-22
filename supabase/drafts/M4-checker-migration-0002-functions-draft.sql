@@ -1,8 +1,8 @@
 -- ============================================================================
--- M4 AI Scam Checker — durable persistence transaction functions (DRAFT 0002, revision 4)
+-- M4 AI Scam Checker — durable persistence transaction functions (DRAFT 0002, revision 5)
 -- ============================================================================
 -- STATUS: DRAFT for independent review. NOT applied. Depends on migration 0001
---   revision 4 (design/M4-checker-migration-0001-draft.sql). No function here
+--   revision 5 (design/M4-checker-migration-0001-draft.sql). No function here
 --   exists in any database, and nothing in this file has been executed.
 --
 -- REVISION 2 — 21 November 2026: implements the steward's review item 3 and her
@@ -70,6 +70,18 @@
 --     * the request-key lock is namespaced ('m4-request') and taken after the
 --       subject lock ('m4-subject'), a fixed order everywhere;
 --     * the header lock order is corrected and the revision-2 claim superseded.
+--
+-- REVISION 5 — 22 November 2026: closes the four items from Lahiru's static
+--   re-check of revision 4 (PR #52). Changes:
+--     * budget admission is cumulative: spent_amount + reserved_amount + the new
+--       reservation must not exceed limit_amount. Revision 4 checked only
+--       reserved_amount, so settled spend could be exceeded by later reservations
+--       against the same period cap;
+--     * a daily == allowance bucket collision returns NULL (the documented
+--       invalid-input contract) instead of raising;
+--     * currency is immutable per (budget_key, period_start): a different
+--       currency is refused rather than silently refreshed;
+--     * no change to the subject-lock order from revision 4.
 --
 -- DRAFT NOTES: parameter shapes are M4 proposals for steward confirmation.
 --   Content semantics (exact excerpts, offsets, highlight rules) stay app-side
@@ -259,7 +271,10 @@ BEGIN
     FOR UPDATE;
 
   IF v_daily.id = v_allow.id THEN
-    RAISE EXCEPTION 'daily and allowance buckets must be distinct';
+    -- Invalid input, not an exception: the contract is NULL for every other
+    -- parameter family. The lookups use different period_kind values, so this is
+    -- unreachable; return NULL rather than raise if it ever becomes reachable.
+    RETURN NULL;
   END IF;
 
   -- The stored allowance and window must reflect the trusted values actually
@@ -289,14 +304,19 @@ BEGIN
     SELECT * INTO v_budget FROM public.checker_budget_buckets
       WHERE budget_key = v_budget_key AND period_start = v_budget_start
       FOR UPDATE;
+    -- Currency is immutable per (budget_key, period_start). A different currency
+    -- is invalid input (NULL), never a silent rewrite of stored spend.
+    IF v_budget.currency <> v_budget_currency THEN
+      RETURN NULL;
+    END IF;
     -- Refresh the trusted limit and window under the lock, like the quota buckets.
     UPDATE public.checker_budget_buckets
       SET limit_amount = v_budget_limit, period_end = v_budget_end, updated_at = p_now
       WHERE id = v_budget.id;
-    -- limit_amount = 0 means "no spend allowed": any reserved_amount > 0 refuses;
-    -- a zero-cost reservation (reserved_amount = 0) is admitted. NULL is
-    -- unconfigured and was refused at validation above.
-    IF v_budget.reserved_amount + v_reserved > v_budget_limit THEN
+    -- Cumulative period cap: settled spend counts too. limit_amount = 0 means
+    -- "no spend allowed": any spent/reserved amount > 0 refuses; a zero-cost
+    -- reservation is admitted. NULL is unconfigured and was refused above.
+    IF v_budget.spent_amount + v_budget.reserved_amount + v_reserved > v_budget_limit THEN
       RETURN NULL;
     END IF;
     v_budget_id := v_budget.id;
