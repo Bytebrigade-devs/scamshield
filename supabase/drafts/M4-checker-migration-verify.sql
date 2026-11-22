@@ -2,7 +2,7 @@
 -- M4 AI Scam Checker — migration verification script (for the schema steward)
 -- ============================================================================
 -- PURPOSE: turn the steward's "successful testing" precondition into something
---   checkable. Run this AFTER applying 0001 (revision 4) and 0002 (revision 3)
+--   checkable. Run this AFTER applying 0001 (revision 4) and 0002 (revision 4)
 --   to a SCRATCH Supabase project, **as the `service_role`**, not as `postgres`.
 --   Running it as `postgres` bypasses the privilege checks, so it would pass even
 --   when `service_role` lacks the table rights the functions need. Every block
@@ -14,6 +14,10 @@
 --   `IS DISTINCT FROM` and added an explicit NULL guard on the replay, because a
 --   NULL comparison does not raise and would let the duplicate-request-key
 --   regression pass silently.
+--
+--   REVISION 3 — 22 November 2026: SET LOCAL ROLE service_role plus a
+--   current_user guard, so the script cannot be run as postgres and silently
+--   skip the privilege checks the service_role grants exist to prove.
 --
 -- STATUS: NOT executed by M4. No database was contacted to produce this file.
 --   It is a proposal for the steward to run; M4 cannot run it without access.
@@ -27,6 +31,15 @@
 -- ============================================================================
 
 BEGIN;
+
+-- Run as service_role so the privilege checks are real. Running as postgres
+-- bypasses them and would pass even if the service_role grants were missing.
+SET LOCAL ROLE service_role;
+DO $$ BEGIN
+  IF current_user <> 'service_role' THEN
+    RAISE EXCEPTION 'FAIL 0: run this script as service_role, not %', current_user;
+  END IF;
+END $$;
 
 -- 1. A NULL (unconfigured) limit must refuse admission, never allow unlimited.
 DO $$

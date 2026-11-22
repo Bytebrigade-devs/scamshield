@@ -68,6 +68,11 @@
 --   migration. The name IS agreed (Vishmi/M5 + Lahiru/M2 19 Nov; the steward
 --   20 Nov); only the migration is separate, and it must land before per-user
 --   dashboard integration. Earlier "name unagreed" notes are corrected here.
+--
+-- RE-RUNNABILITY: this migration is a ONE-TIME apply on a fresh project. It uses
+--   plain CREATE TRIGGER / CREATE POLICY (no IF NOT EXISTS), so re-running it
+--   after a partial manual run will fail at the first already-created object.
+--   That is intentional for a single steward apply; do not treat it as idempotent.
 -- ============================================================================
 
 BEGIN;

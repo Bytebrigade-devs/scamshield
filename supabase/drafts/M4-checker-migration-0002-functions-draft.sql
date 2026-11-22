@@ -1,5 +1,5 @@
 -- ============================================================================
--- M4 AI Scam Checker — durable persistence transaction functions (DRAFT 0002, revision 3)
+-- M4 AI Scam Checker — durable persistence transaction functions (DRAFT 0002, revision 4)
 -- ============================================================================
 -- STATUS: DRAFT for independent review. NOT applied. Depends on migration 0001
 --   revision 4 (design/M4-checker-migration-0001-draft.sql). No function here
@@ -12,8 +12,9 @@
 --       REFUSES admission when a limit is NULL (unconfigured);
 --     * duplicate request keys are serialised with a transaction-scoped
 --       advisory lock — FOR UPDATE cannot lock a row that does not exist yet;
---     * one lock order everywhere: daily bucket -> allowance bucket -> budget
---       bucket -> reservation row, all before mutation;
+--     * one lock order claimed everywhere: daily bucket -> allowance bucket ->
+--       budget bucket -> reservation row (SUPERSEDED by revision 4: delete's
+--       bucket-first/uuid-order locks could still cycle with reserve/settle);
 --     * settlement validates BEFORE changing any counter (RETURN does not roll
 --       back, so a refused settlement must not have mutated anything);
 --     * NULL/invalid statuses are rejected explicitly (NULL NOT IN (...) is
@@ -31,12 +32,13 @@
 --   session/ownership/entitlement/input verification. EXECUTE is restricted to
 --   service_role below. Callers wrap multi-statement work in a transaction.
 --
--- LOCK ORDER (true as written): reservation row -> quota buckets -> budget
---   bucket. Reserve takes the bucket locks first because it creates the
---   reservation it will own and never locks an existing one; settle, mark,
---   finalize and delete all take the reservation row first, so the only
---   cross-function cycles are avoided. Any new function must follow the
---   reservation-first order.
+-- LOCK ORDER (true as written): subject advisory lock (all five accounting
+--   functions) -> request-key advisory lock (reserve only) -> reservation row
+--   (settle/mark/finalize/delete) -> quota buckets (daily then allowance) ->
+--   budget bucket. Delete takes the subject lock first, then its reservation
+--   rows, then quota buckets, then budget buckets; the subject lock serialises
+--   it against reserve/settle/mark/finalize, so no bucket-order cycle remains.
+--   Any new accounting function must take the subject lock first.
 --
 -- CALL ORDER FOR DELETION: m4_delete_subject must run BEFORE the auth.users row
 --   is deleted. Deleting the user first cascades the checks while the
@@ -54,6 +56,20 @@
 --     * a request_key replay for a different subject returns NULL;
 --     * malformed budget input returns NULL instead of raising;
 --     * m4_delete_subject takes p_now.
+--
+-- REVISION 4 — 22 November 2026: closes the remaining cycle from Lahiru's
+--   review item 2 (PR #52). Revision 3 made delete reservation-first, which
+--   removed the settle/mark cycle, but delete still locked quota buckets in
+--   uuid order while reserve locks daily -> allowance, so reserve x delete
+--   could still deadlock. Changes:
+--     * every accounting function (reserve/settle/mark/finalize/delete) takes a
+--       subject-scoped pg_advisory_xact_lock FIRST, so all accounting for one
+--       subject is serialised and no bucket-order cycle remains;
+--     * settle/mark/finalize read subject_key unlocked, take the subject lock,
+--       then re-lock the reservation row FOR UPDATE and re-check its state;
+--     * the request-key lock is namespaced ('m4-request') and taken after the
+--       subject lock ('m4-subject'), a fixed order everywhere;
+--     * the header lock order is corrected and the revision-2 claim superseded.
 --
 -- DRAFT NOTES: parameter shapes are M4 proposals for steward confirmation.
 --   Content semantics (exact excerpts, offsets, highlight rules) stay app-side
@@ -208,8 +224,11 @@ BEGIN
   END IF;
 
   -- FOR UPDATE cannot lock a row that does not exist yet, so duplicate request
-  -- keys are serialised with a transaction-scoped advisory lock.
-  PERFORM pg_advisory_xact_lock(hashtext(p_request_key));
+  -- keys are serialised with a transaction-scoped advisory lock. The subject
+  -- lock comes first and also serialises this call against delete/settle/mark/
+  -- finalize for the same subject, so no bucket-order cycle remains.
+  PERFORM pg_advisory_xact_lock(hashtext('m4-subject'), hashtext(p_subject));
+  PERFORM pg_advisory_xact_lock(hashtext('m4-request'), hashtext(p_request_key));
 
   SELECT * INTO v_existing FROM public.checker_usage_reservations
     WHERE request_key = p_request_key;
@@ -274,6 +293,9 @@ BEGIN
     UPDATE public.checker_budget_buckets
       SET limit_amount = v_budget_limit, period_end = v_budget_end, updated_at = p_now
       WHERE id = v_budget.id;
+    -- limit_amount = 0 means "no spend allowed": any reserved_amount > 0 refuses;
+    -- a zero-cost reservation (reserved_amount = 0) is admitted. NULL is
+    -- unconfigured and was refused at validation above.
     IF v_budget.reserved_amount + v_reserved > v_budget_limit THEN
       RETURN NULL;
     END IF;
@@ -326,6 +348,7 @@ DECLARE
   v_allow  public.checker_quota_buckets%ROWTYPE;
   v_budget public.checker_budget_buckets%ROWTYPE;
   v_spend  numeric;
+  v_subject text;
 BEGIN
   -- Validate first: NULL NOT IN (...) is NULL and would slip through a bare
   -- NOT IN guard, silently releasing the reservation.
@@ -336,6 +359,14 @@ BEGIN
   IF p_actual_spend IS NOT NULL AND p_actual_spend < 0 THEN
     RETURN false;
   END IF;
+
+  -- Subject lock first so this call cannot cycle with a concurrent reserve or
+  -- delete for the same subject. subject_key never changes; the row is re-read
+  -- and re-checked after the lock.
+  SELECT subject_key INTO v_subject FROM public.checker_usage_reservations
+    WHERE id = p_reservation_id;
+  IF NOT FOUND THEN RETURN false; END IF;
+  PERFORM pg_advisory_xact_lock(hashtext('m4-subject'), hashtext(v_subject));
 
   SELECT * INTO v_res FROM public.checker_usage_reservations
     WHERE id = p_reservation_id FOR UPDATE;
@@ -400,11 +431,17 @@ DECLARE
   v_res   public.checker_usage_reservations%ROWTYPE;
   v_daily public.checker_quota_buckets%ROWTYPE;
   v_allow public.checker_quota_buckets%ROWTYPE;
+  v_subject text;
 BEGIN
   IF p_reservation_id IS NULL OR p_now IS NULL
      OR p_status IS NULL OR p_status NOT IN ('completed','limited','unavailable') THEN
     RETURN false;
   END IF;
+
+  SELECT subject_key INTO v_subject FROM public.checker_usage_reservations
+    WHERE id = p_reservation_id;
+  IF NOT FOUND THEN RETURN false; END IF;
+  PERFORM pg_advisory_xact_lock(hashtext('m4-subject'), hashtext(v_subject));
 
   SELECT * INTO v_res FROM public.checker_usage_reservations
     WHERE id = p_reservation_id FOR UPDATE;
@@ -448,11 +485,17 @@ AS $$
 DECLARE
   v_res    public.checker_usage_reservations%ROWTYPE;
   v_budget public.checker_budget_buckets%ROWTYPE;
+  v_subject text;
 BEGIN
   IF p_reservation_id IS NULL OR p_now IS NULL
      OR p_actual_spend IS NULL OR p_actual_spend < 0 THEN
     RETURN false;
   END IF;
+
+  SELECT subject_key INTO v_subject FROM public.checker_usage_reservations
+    WHERE id = p_reservation_id;
+  IF NOT FOUND THEN RETURN false; END IF;
+  PERFORM pg_advisory_xact_lock(hashtext('m4-subject'), hashtext(v_subject));
 
   SELECT * INTO v_res FROM public.checker_usage_reservations
     WHERE id = p_reservation_id FOR UPDATE;
@@ -509,13 +552,17 @@ BEGIN
   END IF;
   v_subject := p_user::text;
 
+  -- Subject lock first: serialises deletion against reserve/settle/mark/finalize
+  -- for this subject, so the reservation/bucket locks below cannot cycle.
+  PERFORM pg_advisory_xact_lock(hashtext('m4-subject'), hashtext(v_subject));
+
   SELECT count(*) INTO v_history  FROM public.checker_history  WHERE user_id = p_user;
   SELECT count(*) INTO v_feedback FROM public.checker_feedback WHERE user_id = p_user;
 
   -- Lock order matches settlement: reservation rows first, then the quota buckets,
-  -- then the budget buckets. Locking buckets first here would let this function
-  -- wait on a reservation that a concurrent settle already holds while that settle
-  -- waits for the bucket -- a genuine deadlock.
+  -- then the budget buckets. The subject advisory lock above also serialises this
+  -- function against reserve (which locks buckets without holding a reservation
+  -- row), so neither the row-first nor the bucket-order cycle remains.
   PERFORM 1 FROM public.checker_usage_reservations
     WHERE subject_key = v_subject ORDER BY id FOR UPDATE;
   PERFORM 1 FROM public.checker_quota_buckets
