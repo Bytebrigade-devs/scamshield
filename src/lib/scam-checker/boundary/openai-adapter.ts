@@ -32,8 +32,14 @@
 import type { ProviderAttempt, ProviderPort } from './check-boundary.ts';
 import { DRAFT_VERDICT_LABELS, MAX_REASON_CHARS, TAXONOMY_VERSION } from './check-boundary.ts';
 
-/** Primary model, one shared model for all tiers (M4-usage-quotas decision §2, 18 Oct 2026). */
-export const DEFAULT_MODEL = 'gpt-5.6-luna';
+/**
+ * Primary model, one shared model for all tiers. `gpt-5.6-luna` was the owner choice of
+ * 18 Oct 2026; owner decision 22 Nov 2026 promotes `gpt-6-luna` on the 80-message comparison
+ * (evidence/M4-pilot-live-80-gpt6luna-20261122.md: 39/39 scams flagged as before, 40/40 legitimate
+ * near-matches cleared vs 29/40, no safety failures). No automatic fallback is enabled — a
+ * failure still ends in a labelled unavailable state (owner decision 19 Oct 2026, unchanged).
+ */
+export const DEFAULT_MODEL = 'gpt-6-luna';
 
 /** Draft provider deadline — the reviewed value is still open under OD-M4-04. */
 export const DEFAULT_DEADLINE_MS = 45_000;

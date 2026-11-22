@@ -11,7 +11,7 @@ No live provider call is made or authorized by this code: X-09 (written funding 
 - `runCheck({ text }, deps)` in `check-boundary.ts` validates input server-side (FR-M4-01; a 2,000-character cap with an edit/reduce instruction — never silent truncation), resolves access per the access-policy mapping (active/trial allow; cancelled strictly until expiry; suspended/past-due/expired/unverifiable block), gates usage, runs the injected stages 1–2, then makes exactly one provider attempt. Missing key or unpermitted budget yields an explicitly labelled rules-only limited result; provider failure, timeout or invalid output yields unavailable. Invalid replies are never "repaired" into completed results.
 - Results use only the three valid X-13 §4.1 pairs (`completed`+`rules_and_ai`, `limited`+`rules_only`, `unavailable`+`none`); `unknown_other` is the fallback category and never a "safe" outcome. Rejections are terminal, make zero provider calls and are never counted.
 - `usage-store.ts` enforces the confirmed quotas per plan (Sentinel 60/5, Guardian 200/15, Aegis 600/40, trial 15) with a sliding ≈5/minute burst window; only `recordCompletion` consumes quota — denied and failed checks never count (NFR-M4-10). It is in-memory and per-process; a persistent store implementing the same port replaces it later.
-- `openai-adapter.ts` targets the primary model `gpt-5.6-luna`: absent key → `unconfigured` with zero fetches; AbortController deadline (default 45 s, injectable between 1 ms and 60 s for offline timeout tests); one attempt, no retry, no fallback model; enum-coded failures only, so the key cannot appear in any result or message. A 429 exposes a bounded `retryAfterSeconds` hint without retrying. The key arrives only as a server-side constructor argument (the future route handler reads `process.env`); the library never reads the environment.
+- `openai-adapter.ts` targets the primary model **`gpt-6-luna`** (promoted from `gpt-5.6-luna` on 22 November 2026): absent key → `unconfigured` with zero fetches; AbortController deadline (default 45 s, injectable between 1 ms and 60 s for offline timeout tests); the provider may make **at most one bounded fallback attempt** on `gpt-5.6-luna`, and only on a transport-class failure (`timeout`/`network`/`http-error`) — never on `bad-json`, a refusal or any answer-confidence reason (see `fallback-provider.ts`); a failed fallback still ends in the labelled `unavailable` state; enum-coded failures only, so the key cannot appear in any result or message. A 429 exposes a bounded `retryAfterSeconds` hint without retrying. The key arrives only as a server-side constructor argument (the future route handler reads `process.env`); the library never reads the environment.
 
 ## Port contracts
 
@@ -51,3 +51,21 @@ Historical repository suite after the 24 October fix and same-day recheck round:
 - The default draft prompt now states the supported taxonomy version, allowed labels/categories and reason bound, so it can satisfy validation without guessing. Custom payload builders must also follow this draft reply contract; the adapter still enforces their token cap.
 - Completion accounting must be atomic: `recordCompletion` either commits the reservation-to-usage conversion or throws with no mutation. Only then can the existing `finally` safely release a failed check's still-held reservation. A regression test pins rollback cleanup while another request remains pending. No future persistent store is implemented or claimed here; it must transact/reconcile internally, never throw after committing. Moving the completed flag before the write would strand reservations on rollback and is deliberately not done.
 - Companion stage hardening also bounds amount matching to a line, verifies actual shortener hostnames and prevents sentence punctuation from entering stitched URL readings. The generic hostname-shape heuristic remains evidence-only and can match benign hyphenated names; it is not brand verification. No UI or workspace files are published.
+
+## Model policy and bounded fallback — 23 November 2026
+
+Publishes the 22 November owner decision into the shared repository. `gpt-6-luna` is the **primary model** (promoted on the 40-pair / 80-message comparison: 39/39 intended scams flagged, 40/40 legitimate near-matches cleared versus 29/40 on `gpt-5.6-luna`, zero clear scams labelled safe), and `gpt-5.6-luna` is the **single fallback** implemented in `fallback-provider.ts`.
+
+Bounds that did not change:
+
+- At most **one** additional attempt per check; never a third, never a loop.
+- Fallback is eligible **only** on `timeout`, `network` or `http-error` — failures where a second attempt cannot change the substance of the answer, only availability.
+- **Never** after `bad-json` (truncated, unparseable or refused output) and never from `unconfigured`; retrying those would be the "retry for a more confident answer" the contract forbids.
+- A failed fallback still ends in the boundary's `unavailable` state — never a verdict, never a safety conclusion.
+- Spend note: a failed primary may still be billed, so one check's worst case is primary + fallback, not one cheap call.
+
+`check-boundary.ts` and its `ProviderPort` documentation now state this explicitly; the port itself is unchanged for callers.
+
+Also published in the same slice: the steward-aligned `persistence-port.ts` contract revision (`limitCount`, distinct-bucket enforcement, limit-enforcing reserve, `outcomeStatus`, `finalizeReconciliation`, direction-(c) deletion counts) and the async `durable-persistence.ts` **contract only** — it wraps an injected synchronous port in promises so the durable interface can be exercised today. It contains no Supabase client, no SQL, no table and no network, and nothing is applied to any database.
+
+Verified in this branch: **597/597** tests across 49 files, `tsc --noEmit` exit 0, `eslint` exit 0. No live provider call was made for this publication, and the model comparison remains synthetic-set evidence, not an accuracy claim.

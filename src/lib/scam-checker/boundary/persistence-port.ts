@@ -11,9 +11,15 @@
  * - retention (TC-2): 30/90/180-day windows; expired rows are hidden and then purged;
  * - quota (code-verified 19 Nov 2026): **only completed** analyses consume quota; `limited`
  *   (rules-only) and `unavailable` release their reservation;
- * - events: the current eight-field `m4.check_outcome`. The accepted nine-field revision's
- *   opaque reference name is NOT agreed (`subject_ref` is proposed, pending Vishmi + Lahiru),
- *   so the event type here stays at the current eight fields until it is confirmed.
+ * - events: the eight-field `m4.check_outcome` and the agreed nine-field
+ *   `0.2.0-draft` revision (`subject_ref` agreed by Vishmi + Lahiru 19 Nov and the
+ *   steward 20 Nov). The durable table stores only `0.1.0-draft` until the
+ *   separate nine-field migration adds the column; this port accepts both shapes.
+ * - account deletion (steward direction (c), 21 Nov, pending Suraji's privacy
+ *   confirmation): outstanding reservations/charges are resolved, then the
+ *   subject's user-linked quota buckets and reservations are removed;
+ *   non-user-linked budget totals are retained. Deleting history alone never
+ *   resets quota.
  *
  * HONESTY BOUNDARY: no SQL, no Supabase client, no tables, no network. The in-memory
  * adapter exists so the boundary integration and tests can be written now; a Supabase
@@ -102,6 +108,8 @@ export interface QuotaBucketKey {
 export interface QuotaBucket extends QuotaBucketKey {
   id: string;
   periodEnd: number;
+  /** Trusted plan allowance; null = unconfigured, and reserve must refuse admission. */
+  limitCount: number | null;
   completedCount: number;
   reservedCount: number;
   updatedAt: number;
@@ -130,8 +138,8 @@ export interface QuotaReservationInput {
   requestKey: string;
   now: number;
   leaseMs: number;
-  dailyBucket: Omit<QuotaBucketKey, 'subjectKey'> & { periodEnd: number };
-  allowanceBucket: Omit<QuotaBucketKey, 'subjectKey'> & { periodEnd: number };
+  dailyBucket: Omit<QuotaBucketKey, 'subjectKey'> & { periodEnd: number; limit: number | null };
+  allowanceBucket: Omit<QuotaBucketKey, 'subjectKey'> & { periodEnd: number; limit: number | null };
   /** Optional provider-spend reservation for this check (rules-only work passes null). */
   budget?: {
     bucket: BudgetBucketKey;
@@ -150,6 +158,8 @@ export interface ReservationRecord {
   allowanceBucketId: string;
   budgetBucketId: string | null;
   state: ReservationState;
+  /** Anal outcome once quota is settled; lets finalisation close spend without re-deciding quota. */
+  outcomeStatus: AnalysisStatus | null;
   reservedAmount: number;
   actualAmount: number | null;
   createdAt: number;
@@ -167,6 +177,10 @@ export interface DeleteCounts {
   checks: number;
   history: number;
   feedback: number;
+  /** Direction (c): the subject's user-linked quota buckets removed. */
+  quotaBuckets: number;
+  /** Direction (c): the subject's reservations removed after resolution. */
+  reservations: number;
 }
 
 /** A stored dashboard event: the 0.1.0-draft eight-field shape or the agreed 0.2.0-draft nine-field shape. */
@@ -201,23 +215,35 @@ export interface PersistencePort {
     purgeBefore(epochMs: number): number;
   };
   quota: {
-    getOrCreateBucket(key: QuotaBucketKey & { periodEnd: number }, now: number): QuotaBucket;
-    /** Atomically reserves one unit on both quota buckets and optional budget capacity. */
+    getOrCreateBucket(key: QuotaBucketKey & { periodEnd: number; limitCount?: number | null }, now: number): QuotaBucket;
+    /**
+     * Atomically reserves one unit on both quota buckets and optional budget capacity.
+     * Refuses (null) when a limit is unconfigured (null) or would be exceeded.
+     */
     reserve(input: QuotaReservationInput): ReservationRecord | null;
     /**
      * Converts or releases exactly once: completed counts + settles spend; limited and
      * unavailable release quota (a provider charge may still be settled).
      */
     settle(reservationId: string, result: SettleResult, now: number): boolean;
-    /** Keeps the reservation (spend uncertain) instead of blindly releasing it. */
-    markReconciliationRequired(reservationId: string, now: number): boolean;
+    /**
+     * Records the outcome and settles quota now; only the provider spend stays open.
+     * Keeps the spend reservation instead of blindly releasing it.
+     */
+    markReconciliationRequired(reservationId: string, status: AnalysisStatus, now: number): boolean;
+    /** Closes a reconciliation's provider spend at a known amount; quota is already settled. */
+    finalizeReconciliation(reservationId: string, actualSpend: number, now: number): boolean;
     reservationByRequestKey(requestKey: string): ReservationRecord | null;
     getBucket(key: QuotaBucketKey): QuotaBucket | null;
   };
   budget: {
     getBucket(key: BudgetBucketKey): BudgetBucket | null;
   };
-  /** Account deletion: removes the subject's checks/findings/history/feedback rows. */
+  /**
+   * Account deletion (direction (c)): resolves outstanding reservations/charges, then
+   * removes the subject's checks/findings/history/feedback and user-linked quota
+   * buckets/reservations. Non-user-linked budget totals are retained.
+   */
   deleteSubject(subjectKey: string): DeleteCounts;
 }
 
@@ -502,7 +528,7 @@ export function createInMemoryPersistence(): PersistencePort {
   }
 
   function getOrCreateQuotaBucket(
-    key: QuotaBucketKey & { periodEnd: number },
+    key: QuotaBucketKey & { periodEnd: number; limitCount?: number | null },
     now: number,
   ): QuotaBucket {
     const id = bucketKeyOf(key);
@@ -514,6 +540,7 @@ export function createInMemoryPersistence(): PersistencePort {
       periodKind: key.periodKind,
       periodStart: key.periodStart,
       periodEnd: key.periodEnd,
+      limitCount: key.limitCount ?? null,
       completedCount: 0,
       reservedCount: 0,
       updatedAt: now,
@@ -551,6 +578,11 @@ export function createInMemoryPersistence(): PersistencePort {
     if (!isText(input.subjectKey, 128) || !isText(input.requestKey, 128)) return null;
     if (!isFinitePositive(input.now) || !isFinitePositive(input.leaseMs)) return null;
     if (!isFinitePositive(input.dailyBucket.periodStart) || !isFinitePositive(input.allowanceBucket.periodStart)) return null;
+    // NULL limit = unconfigured: refuse admission, never treat it as unlimited.
+    const dailyLimit = input.dailyBucket.limit;
+    const allowanceLimit = input.allowanceBucket.limit;
+    if (dailyLimit === null || allowanceLimit === null
+      || !isNonNegative(dailyLimit) || !isNonNegative(allowanceLimit)) return null;
     const existingId = reservationByKey.get(input.requestKey);
     if (existingId) {
       const existing = reservations.get(existingId);
@@ -561,11 +593,11 @@ export function createInMemoryPersistence(): PersistencePort {
     }
 
     const daily = getOrCreateQuotaBucket(
-      { ...input.dailyBucket, subjectKey: input.subjectKey },
+      { ...input.dailyBucket, subjectKey: input.subjectKey, limitCount: dailyLimit },
       input.now,
     );
     const allowance = getOrCreateQuotaBucket(
-      { ...input.allowanceBucket, subjectKey: input.subjectKey },
+      { ...input.allowanceBucket, subjectKey: input.subjectKey, limitCount: allowanceLimit },
       input.now,
     );
     // The reservation is the atomic unit: both quota buckets plus optional spend capacity.
@@ -573,6 +605,14 @@ export function createInMemoryPersistence(): PersistencePort {
     const allowanceKey = bucketKeyOf({ ...input.allowanceBucket, subjectKey: allowance.subjectKey });
     const dailyStored = quotaBuckets.get(dailyKey)!;
     const allowanceStored = quotaBuckets.get(allowanceKey)!;
+    if (dailyStored.id === allowanceStored.id) return null; // buckets must be distinct
+    // Admission under the (single-threaded) bucket state: completed + reserved + 1 <= limit.
+    if (dailyStored.completedCount + dailyStored.reservedCount + 1 > dailyLimit
+      || allowanceStored.completedCount + allowanceStored.reservedCount + 1 > allowanceLimit) {
+      return null;
+    }
+    dailyStored.limitCount = dailyLimit;
+    allowanceStored.limitCount = allowanceLimit;
     dailyStored.reservedCount += 1;
     dailyStored.updatedAt = input.now;
     allowanceStored.reservedCount += 1;
@@ -582,6 +622,7 @@ export function createInMemoryPersistence(): PersistencePort {
     if (input.budget) {
       getOrCreateBudgetBucket(input.budget, input.now);
       const stored = budgetBuckets.get(`${input.budget.bucket.budgetKey}\u0000${input.budget.bucket.periodStart}`)!;
+      if (stored.reservedAmount + input.budget.reservedAmount > stored.limitAmount) return null;
       stored.reservedAmount += input.budget.reservedAmount;
       stored.updatedAt = input.now;
       budgetBucketId = stored.id;
@@ -595,6 +636,7 @@ export function createInMemoryPersistence(): PersistencePort {
       allowanceBucketId: allowanceStored.id,
       budgetBucketId,
       state: 'reserved',
+      outcomeStatus: null,
       reservedAmount: input.budget?.reservedAmount ?? 0,
       actualAmount: null,
       createdAt: input.now,
@@ -629,6 +671,7 @@ export function createInMemoryPersistence(): PersistencePort {
       : result.actualSpend;
     if (reportedSpend !== null && !isNonNegative(reportedSpend)) return false;
     if (!completed && budget !== null && reportedSpend === null) return false;
+    if (daily.reservedCount < 1 || allowance.reservedCount < 1) return false; // inconsistent state
 
     // Only completed analyses consume quota; limited and unavailable release the unit.
     daily.reservedCount = Math.max(0, daily.reservedCount - 1);
@@ -649,16 +692,47 @@ export function createInMemoryPersistence(): PersistencePort {
     }
 
     reservation.state = completed ? 'completed' : 'released';
+    reservation.outcomeStatus = status;
     reservation.settledAt = now;
     return true;
   }
 
-  function markReconciliationRequired(reservationId: string, now: number): boolean {
+  function markReconciliationRequired(reservationId: string, status: AnalysisStatus, now: number): boolean {
     const reservation = reservations.get(reservationId);
     if (!reservation || reservation.state !== 'reserved') return false;
+    if (status !== 'completed' && status !== 'limited' && status !== 'unavailable') return false;
     if (!isFinitePositive(now)) return false;
-    // Uncertain provider cost: keep the spending reservation instead of releasing it.
+    const daily = [...quotaBuckets.values()].find(bucket => bucket.id === reservation.dailyBucketId);
+    const allowance = [...quotaBuckets.values()].find(bucket => bucket.id === reservation.allowanceBucketId);
+    if (!daily || !allowance || daily.reservedCount < 1 || allowance.reservedCount < 1) return false;
+    // The outcome is known, so quota is settled now; only the provider spend stays open.
+    daily.reservedCount = Math.max(0, daily.reservedCount - 1);
+    allowance.reservedCount = Math.max(0, allowance.reservedCount - 1);
+    daily.updatedAt = now;
+    allowance.updatedAt = now;
+    if (status === 'completed') {
+      daily.completedCount += 1;
+      allowance.completedCount += 1;
+    }
     reservation.state = 'reconciliation_required';
+    reservation.outcomeStatus = status;
+    reservation.settledAt = now;
+    return true;
+  }
+
+  function finalizeReconciliation(reservationId: string, actualSpend: number, now: number): boolean {
+    const reservation = reservations.get(reservationId);
+    if (!reservation || reservation.state !== 'reconciliation_required' || reservation.outcomeStatus === null) return false;
+    if (!isNonNegative(actualSpend) || !isFinitePositive(now)) return false;
+    if (reservation.budgetBucketId !== null) {
+      const budget = [...budgetBuckets.values()].find(bucket => bucket.id === reservation.budgetBucketId);
+      if (!budget) return false;
+      budget.reservedAmount = Math.max(0, budget.reservedAmount - reservation.reservedAmount);
+      budget.spentAmount += actualSpend;
+      budget.updatedAt = now;
+      reservation.actualAmount = actualSpend;
+    }
+    reservation.state = reservation.outcomeStatus === 'completed' ? 'completed' : 'released';
     reservation.settledAt = now;
     return true;
   }
@@ -677,10 +751,51 @@ export function createInMemoryPersistence(): PersistencePort {
 
   function deleteSubject(subjectKey: string): DeleteCounts {
     const key = subjectKey?.trim();
-    if (!isText(key, 128)) return { checks: 0, history: 0, feedback: 0 };
+    const empty: DeleteCounts = { checks: 0, history: 0, feedback: 0, quotaBuckets: 0, reservations: 0 };
+    if (!isText(key, 128)) return empty;
     let checkCount = 0;
     let historyCount = 0;
     let feedbackCount = 0;
+
+    // Direction (c): resolve outstanding reservations/charges before removing their
+    // accounting links. An unresolved charge is settled conservatively at its reserved
+    // amount so spend is never under-counted; quota units are released.
+    let reservationCount = 0;
+    for (const [id, reservation] of reservations) {
+      if (reservation.subjectKey !== key) continue;
+      if (reservation.state === 'reserved') {
+        for (const bucket of quotaBuckets.values()) {
+          if (bucket.id === reservation.dailyBucketId || bucket.id === reservation.allowanceBucketId) {
+            bucket.reservedCount = Math.max(0, bucket.reservedCount - 1);
+          }
+        }
+        if (reservation.budgetBucketId !== null) {
+          const budget = [...budgetBuckets.values()].find(b => b.id === reservation.budgetBucketId);
+          if (budget) {
+            budget.reservedAmount = Math.max(0, budget.reservedAmount - reservation.reservedAmount);
+            budget.spentAmount += reservation.reservedAmount;
+          }
+        }
+      } else if (reservation.state === 'reconciliation_required' && reservation.budgetBucketId !== null) {
+        const budget = [...budgetBuckets.values()].find(b => b.id === reservation.budgetBucketId);
+        if (budget) {
+          budget.reservedAmount = Math.max(0, budget.reservedAmount - reservation.reservedAmount);
+          budget.spentAmount += reservation.reservedAmount;
+        }
+      }
+      reservations.delete(id);
+      reservationByKey.delete(reservation.requestKey);
+      reservationCount += 1;
+    }
+    // Remove the subject's user-linked quota buckets; non-user-linked budget totals stay.
+    let bucketCount = 0;
+    for (const [id, bucket] of quotaBuckets) {
+      if (bucket.subjectKey === key) {
+        quotaBuckets.delete(id);
+        bucketCount += 1;
+      }
+    }
+
     for (const [checkId, check] of checks) {
       if (check.subjectKey === key) {
         // Count dependents before cascading so the caller sees what was removed.
@@ -704,8 +819,10 @@ export function createInMemoryPersistence(): PersistencePort {
         feedbackCount += 1;
       }
     }
-    // Quota/spend counters are deliberately NOT reset by deletion (steward design).
-    return { checks: checkCount, history: historyCount, feedback: feedbackCount };
+    return {
+      checks: checkCount, history: historyCount, feedback: feedbackCount,
+      quotaBuckets: bucketCount, reservations: reservationCount,
+    };
   }
 
   return {
@@ -718,6 +835,7 @@ export function createInMemoryPersistence(): PersistencePort {
       reserve,
       settle,
       markReconciliationRequired,
+      finalizeReconciliation,
       reservationByRequestKey,
       getBucket: findQuotaBucket,
     },

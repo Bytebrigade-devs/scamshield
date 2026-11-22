@@ -5,7 +5,7 @@ import { ORGANIZATION_DIRECTORY } from './organization-directory.ts';
 import { verifyOrganizationContacts, isFresh } from './organization-verification.ts';
 import { inspectLinks } from './link-inspection.ts';
 
-const NOW = Date.UTC(2026, 10, 10, 12);
+const NOW = Date.UTC(2026, 10, 20, 12);
 const verification = (text = '') => verifyOrganizationContacts(text, ORGANIZATION_DIRECTORY, NOW);
 const REFRESHED = GUIDANCE_DIRECTORY.filter(record => record.source.reviewedAt === '2026-11-10');
 
@@ -19,7 +19,7 @@ test('separate guidance catalog uses stable IDs, known organizations, official H
     if (record.url) assert.equal(new URL(record.url).protocol, 'https:');
     if (record.organizationId) assert.ok(ORGANIZATION_DIRECTORY.some(org => org.id === record.organizationId));
   }
-  assert.deepEqual(new Set(ORGANIZATION_DIRECTORY.map(org => org.kind)), new Set(['bank', 'payment', 'delivery', 'technology', 'utility']));
+  assert.deepEqual(new Set(ORGANIZATION_DIRECTORY.map(org => org.kind)), new Set(['bank', 'payment', 'delivery', 'technology', 'utility', 'government', 'commerce']));
 });
 
 test('10 November refreshed records use their own review date and expire at the documented 90-day boundary', () => {
@@ -66,7 +66,7 @@ test('lookalike-only comparisons can add relevant help without asserting sender 
 });
 
 test('stale, future and invalid resource review dates never expose current actionable destinations', () => {
-  for (const reviewedAt of ['2026-01-01', '2026-11-11', '2026-02-30', 'invalid']) {
+  for (const reviewedAt of ['2026-01-01', '2026-11-21', '2026-02-30', 'invalid']) {
     const stale = GUIDANCE_DIRECTORY.map(record => ({ ...record, source: { ...record.source, reviewedAt } }));
     const result = getGuidanceResources(verification('Google'), stale, NOW);
     assert.ok(result.resources.every(resource => resource.status === 'outdated'));

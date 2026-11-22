@@ -3,6 +3,8 @@
  * Sources reviewed 31 October 2026; the BOC, Commercial Bank and DHL pages were re-read
  * and added on 10 November 2026. HNB and FedEx remained unavailable, so no route or phone
  * is inferred for them; missing coverage stays an explicit fallback, not a guess.
+ * Seylan Bank and National Savings Bank resources were added on 20 November 2026 from
+ * their own official pages (see the Tier 1–3 directory-expansion evidence).
  */
 import type { EvidenceSource } from './organization-directory.ts';
 import type { OrganizationVerification } from './organization-verification.ts';
@@ -108,6 +110,12 @@ export const GUIDANCE_DIRECTORY: readonly GuidanceRecord[] = [
   { id: 'edl-contact', organizationId: 'edl', purpose: 'general-contact', title: 'EDL electricity-service customer support', region: 'LK',
     url: 'https://edl.lk/contact', phone: '1987', scope: 'Sri Lanka domestic 24/7 electricity call centre; not a dedicated financial-fraud hotline.',
     source: evidence('https://edl.lk/contact', 'Electricity Distribution Lanka — Contact Us', 'Official contact page lists 1987 as a 24/7 call centre and +94 11 232 3232 separately as head-office telephone. No dedicated fraud or payment-reversal number is claimed.') },
+  { id: 'seylan-security', organizationId: 'seylan-bank', purpose: 'security', title: 'Seylan Bank online-banking security notice', region: 'LK',
+    url: 'https://www.seylanbank.lk/', phone: '011 2 00 88 88', scope: 'Sri Lanka call centre; general customer contact, not identified as a dedicated fraud hotline.',
+    source: evidence('https://www.seylanbank.lk/', 'Seylan Bank PLC — Online-banking security notice', 'Seylan Bank states it does not request banking information through email or SMS and warns against clicking unfamiliar links; publishes its 011 2 00 88 88 call centre. No dedicated fraud hotline is claimed.', '2026-11-20') },
+  { id: 'nsb-contact', organizationId: 'nsb', purpose: 'general-contact', title: 'National Savings Bank contact page', region: 'LK',
+    url: 'https://www.nsb.lk/contact-and-inquiries', scope: 'General contact page; not identified as a dedicated fraud hotline.',
+    source: evidence('https://www.nsb.lk/contact-and-inquiries', 'National Savings Bank — Contact us', 'Official contact-and-inquiries page was reachable at review; the homepage separately displays 011 2 379 379. No dedicated fraud hotline is claimed.', '2026-11-20') },
 ];
 
 interface ReviewedAction extends GuidanceAction { source: EvidenceSource }

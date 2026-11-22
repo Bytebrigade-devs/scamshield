@@ -45,7 +45,7 @@ test('summary is an immutable allowlist model and excludes every raw/private fie
   assert.match(output, /Website 1: Not confirmed/);
   assert.equal(output.includes('Website: Not confirmed'), false);
   assert.match(output, /Clicked a link; Shared information/);
-  assert.match(output, /\[x\] Pause\./);
+  assert.match(output, /^- Pause\./m);
   assert.match(output, /Official phone: 101/);
   assert.ok(output.includes(`Official website: ${SOURCE.url}`));
   assert.match(output, /Review before sharing/);
@@ -93,7 +93,7 @@ test('canonical span validator preserves existing AI-reason highlights without r
 });
 test('missing metadata and unknown data yield deterministic safe empty summary', () => {
   const model = createSummaryModel({ outcome: { analysisStatus: 'limited' }, unexpected: original }, original, NOW);
-  const output = summaryText(model, ['bogus'], ['bogus']);
+  const output = summaryText(model, ['bogus']);
   assert.equal(output, summaryText(model));
   assert.match(output, /^ScamShield check summary\nCheck time \(UTC\): 2026-10-31T10:30:00.000Z\nAnalysis: Limited — local patterns only\nRisk: Undetermined\nCategory: Not classified\nLocal patterns found: 0/);
   assert.match(output, /No source-backed organization evidence available/);
@@ -103,14 +103,14 @@ test('missing metadata and unknown data yield deterministic safe empty summary',
   assert.equal(output.includes(original), false);
   assert.throws(() => createSummaryModel({}, '', 'not-a-time'), TypeError);
 });
-test('new check starts fresh and nonexistent ticks cannot appear in exports', () => {
+test('exports list every visible step once and never carry tick marks', () => {
   const model = createSummaryModel(payload(), original, NOW);
-  assert.match(summaryText(model, ['paid'], ['contact-bank']), /\[x\] If you shared banking/);
+  const output = summaryText(model, ['paid']);
+  assert.match(output, /Suggested actions\n- If you shared banking or payment details/);
   const fresh = createSummaryModel({ outcome: { analysisStatus: 'unavailable' } }, '', '2026-10-31T10:31:00.000Z');
-  const output = summaryText(fresh);
-  assert.match(output, /Not answered/);
+  assert.match(summaryText(fresh), /Not answered/);
   assert.equal(output.includes('[x]'), false);
-  assert.equal(summaryText(model, [], ['contact-bank']).includes('[x]'), false);
+  assert.equal(summaryText(model, []).includes('[x]'), false);
 });
 test('M4-15: local evidence spans stay exact UTF-16 offsets with emoji/surrogate text', () => {
   const text = `🙂🙂 ${'Your bank account will be suspended in 30 minutes. Verify your password.'}`;
@@ -140,7 +140,7 @@ Not available for this response.
 Your selected answers
 Not answered — general guidance only.
 
-Suggested actions (ticks are your own record, not verified completion)
+Suggested actions
 No current, validated action guidance is available. Use the trusted-channel fallback below.
 
 Official resources
@@ -157,6 +157,6 @@ Limitations
 - Link-inspection metadata was not available in this response.
 - Official-resource metadata was not available in this response.
 
-Review before sharing: this summary includes organization names, your selected answers and action ticks. The original message, sender details and AI explanation are not included.
-Selections and ticks stay in this page’s browser memory only and reset for a new check. Copying, downloading or printing creates a separate copy you control. This is not an automatic redaction service.`);
+Review before sharing: this summary includes organization names and your selected answers. The original message, sender details and AI explanation are not included.
+Selections stay in this page’s browser memory only and reset for a new check. Copying, downloading or printing creates a separate copy you control. This is not an automatic redaction service.`);
 });

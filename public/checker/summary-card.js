@@ -11,8 +11,8 @@ export function summaryCard(model, el) {
   const fallback = el('textarea', { class: 'message-input summary-copy-fallback', id: 'summary-copy-fallback', readonly: true, hidden: true, 'aria-describedby': 'summary-status' });
   const card = el('section', { class: 'card summary-card', id: 'check-summary' }, [
     el('h2', { class: 'card__title' }, 'Share a check summary'),
-    el('p', { class: 'card__helper', id: 'summary-sharing-note' }, 'Review before sharing. The full summary is shown below and includes organization names, your selected answers and action ticks, but not the original message, sender details, submitted contact values or AI explanation. This is not automatic redaction. Answers and ticks stay only in this page’s browser memory until a new check or reload; exported copies are yours to manage.'),
-    preview,
+    el('p', { class: 'card__helper', id: 'summary-sharing-note' }, 'Review before sharing. The summary covers this check and your selected answers, but not the original message, sender details, submitted contact values or AI explanation. This is not automatic redaction. Answers stay only in this page’s browser memory until a new check or reload; exported copies are yours to manage.'),
+    el('details', { class: 'summary-review', id: 'summary-review' }, [el('summary', {}, 'Review summary text'), preview]),
   ]);
   const copy = el('button', { class: 'btn', type: 'button', id: 'summary-copy' }, 'Copy summary');
   copy.addEventListener('click', async () => {
@@ -53,8 +53,8 @@ export function summaryCard(model, el) {
     catch { status.textContent = 'The print dialog could not be opened. You can copy or download the summary instead.'; }
   });
   card.append(el('div', { class: 'card__actions summary-actions' }, [copy, download, print]), status, fallbackLabel, fallback);
-  return { card, update(answers, completed) {
-    canonical = summaryText(model, answers, completed);
+  return { card, update(answers) {
+    canonical = summaryText(model, answers);
     preview.textContent = canonical;
     document.getElementById('print-summary').textContent = canonical;
     fallback.hidden = true;

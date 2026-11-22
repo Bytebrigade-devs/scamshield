@@ -13,6 +13,10 @@ const REVIEWED_SOURCE_HOSTS = [
   'dhl.com', 'express.dhl', 'fedex.com', 'paypal.com', 'paypalobjects.com',
   'microsoft.com', 'google.com', 'apple.com', 'amazon.com', 'aboutamazon.com', 'edl.lk', 'ceb.lk',
   'cert.gov.lk', 'police.lk', 'consumer.ftc.gov',
+  // Tier 1–3 expansion sources, reviewed 20 November 2026.
+  'nsb.lk', 'seylan.lk', 'seylanbank.lk', 'dialog.lk', 'slt.lk', 'sltmobitel.lk', 'mobitel.lk',
+  'leco.lk', 'ird.gov.lk', 'slpost.gov.lk', 'immigration.gov.lk', 'daraz.lk', 'kapruka.com',
+  'whatsapp.com', 'telegram.org', 'westernunion.com', 'wise.com',
 ];
 const WARNING = 'Matching official contact details does not authenticate the sender or prove the message is safe.';
 
@@ -34,14 +38,16 @@ export function reviewedSource(source) {
   } catch { return null; }
 }
 
-export function sourceDetails(source, el, live = false, linkable = true) {
+export function sourceDetails(source, el, live = false, linkable = true, compact = false) {
   const approved = reviewedSource(source);
   if (!approved) return null;
   const date = new Date(`${approved.reviewedAt}T00:00:00Z`).toLocaleDateString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
   });
   return el('div', { class: 'organization-source' }, [
-    approved.context ? el('p', { class: 'organization-source__context' }, text(approved.context)) : null,
+    // Compact mode drops the per-source context sentence: titles are shown once per record, not
+    // repeated under every contact that cites the same source.
+    !compact && approved.context ? el('p', { class: 'organization-source__context' }, text(approved.context)) : null,
     linkable ? el('a', {
       class: 'organization-source__link', href: approved.url, target: '_blank', rel: 'noopener noreferrer',
       'aria-label': `${text(approved.title)} (opens in a new tab)`,
@@ -50,7 +56,16 @@ export function sourceDetails(source, el, live = false, linkable = true) {
   ]);
 }
 
-function contactRow(contact, el) {
+/** One deduplicated reviewed-source list per record instead of a citation under every contact. */
+function recordSources(sources, el) {
+  if (!sources.size) return null;
+  return el('div', { class: 'organization-sources' }, [
+    el('p', { class: 'organization-contact__label' }, 'Reviewed sources'),
+    ...[...sources.values()].map((source) => sourceDetails(source, el, false, true, true)),
+  ]);
+}
+
+function contactRow(contact, el, ctx) {
   if (!contact || typeof contact !== 'object' || !['phone', 'website'].includes(contact.kind)) return null;
   const matches = Array.isArray(contact.matches)
     ? contact.matches.filter((match) => match && typeof match.organizationName === 'string' && reviewedSource(match.source)).slice(0, 12)
@@ -59,32 +74,35 @@ function contactRow(contact, el) {
   if (typeof contact.value !== 'string' || !contact.value.trim()) status = 'not-provided';
   if (['matched', 'another-organization', 'outdated'].includes(status) && matches.length === 0) status = 'not-confirmed';
   const kind = contact.kind === 'phone' ? 'Phone number' : 'Website';
+  // Label and value share one line; the source citation is collected once per record (ctx.sources).
   const row = el('li', { class: 'organization-contact', 'data-contact-status': status }, [
-    el('p', { class: 'organization-contact__label' }, kind),
-    typeof contact.value === 'string' && contact.value
-      ? el('p', { class: 'organization-contact__value' }, text(contact.value)) : null,
+    el('p', { class: 'organization-contact__value' }, [
+      el('span', { class: 'organization-contact__label' }, `${kind}: `),
+      typeof contact.value === 'string' && contact.value ? text(contact.value) : 'not supplied',
+    ]),
     el('p', { class: `organization-status organization-status--${status}` }, STATUS_LABELS[status]),
   ]);
   for (const match of matches) {
+    const approved = reviewedSource(match.source);
+    if (approved) ctx.sources.set(`${approved.url}|${approved.reviewedAt}`, match.source);
     row.append(el('p', { class: 'organization-contact__owner' }, [
       `Listed for ${text(match.organizationName)}`,
       match.scope ? ` · ${text(match.scope)}` : '',
-    ]), sourceDetails(match.source, el));
+    ]));
   }
-  if (status === 'not-confirmed') {
-    row.append(el('p', { class: 'organization-contact__help' }, 'The reviewed directory does not confirm this detail. That does not establish that it is fake.'));
-  }
+  if (status === 'not-confirmed') ctx.unconfirmed = true;
   return row;
 }
 
-function officialContactsSection(contacts, el) {
+function officialContactsSection(contacts, el, ctx) {
   if (!Array.isArray(contacts)) return null;
   const reviewed = contacts.filter(contact => contact && ['phone', 'website'].includes(contact.kind)
     && typeof contact.value === 'string' && contact.value.trim()
     && ['matched', 'outdated'].includes(contact.status) && reviewedSource(contact.source)).slice(0, 64);
   const groups = ['website', 'phone'].map(kind => {
     const entries = reviewed.filter(contact => contact.kind === kind);
-    const sources = [...new Map(entries.map(contact => [JSON.stringify(contact.source), contact.source])).values()];
+    // Sources are collected into the record's deduplicated list, not repeated per group.
+    entries.forEach(contact => { ctx.sources.set(JSON.stringify(contact.source), contact.source); });
     return el('li', { class: 'organization-contact' }, [
       el('p', { class: 'organization-contact__label' }, kind === 'website' ? 'Official websites' : 'Official phone numbers'),
       entries.length ? el('ul', { class: 'organization-reference__entries' }, entries.map(contact => el('li', {
@@ -96,7 +114,6 @@ function officialContactsSection(contacts, el) {
           ? 'Outdated record — recheck the source' : 'Listed in reviewed official source'),
       ]))) : el('p', { class: 'organization-contact__help' }, kind === 'phone'
         ? 'No phone number is available in the reviewed directory.' : 'No website is available in the reviewed directory.'),
-      ...sources.map(source => sourceDetails(source, el)),
     ]);
   });
   return el('div', { class: 'organization-reference' }, [
@@ -122,6 +139,8 @@ export function organizationChecksCard(data, el) {
   for (const organization of organizations) {
     const identity = organization.identity;
     const source = ['matched', 'outdated'].includes(identity?.status) ? reviewedSource(identity?.source) : null;
+    const ctx = { sources: new Map(), unconfirmed: false };
+    if (source) ctx.sources.set(`${source.url}|${source.reviewedAt}`, identity.source);
     const section = el('section', { class: 'organization-record' }, [
       el('h3', { class: 'organization-record__name' }, text(organization.name)),
       el('p', { class: 'organization-record__basis' }, organization.identifiedBy === 'phone'
@@ -136,20 +155,30 @@ export function organizationChecksCard(data, el) {
         : 'Organization record not confirmed'),
     ]);
     if (source && typeof identity?.description === 'string') section.append(el('p', { class: 'organization-record__description' }, text(identity.description)));
-    if (source) section.append(sourceDetails(source, el));
-    const contacts = Array.isArray(organization.contacts) ? organization.contacts.slice(0, 64).map((contact) => contactRow(contact, el)).filter(Boolean) : [];
+    const contacts = Array.isArray(organization.contacts) ? organization.contacts.slice(0, 64).map((contact) => contactRow(contact, el, ctx)).filter(Boolean) : [];
     if (contacts.length) section.append(
       el('h4', { class: 'organization-record__subheading' }, 'Contact details in the message'),
       el('ul', { class: 'organization-contacts' }, contacts));
-    const officialContacts = officialContactsSection(organization.officialContacts, el);
+    // One shared honesty line per record instead of one under every unconfirmed contact.
+    if (ctx.unconfirmed) section.append(el('p', { class: 'organization-contact__help' }, 'The reviewed directory does not confirm these details. That does not establish that they are fake.'));
+    const officialContacts = officialContactsSection(organization.officialContacts, el, ctx);
     if (officialContacts) section.append(officialContacts);
+    const sources = recordSources(ctx.sources, el);
+    if (sources) section.append(sources);
     card.append(section);
   }
-  const unmatched = data.unmatchedContacts.slice(0, 64).map((contact) => contactRow(contact, el)).filter(Boolean);
-  if (unmatched.length) card.append(el('section', { class: 'organization-record' }, [
-    el('h3', { class: 'organization-record__name' }, 'Contact details in the message'),
-    el('ul', { class: 'organization-contacts' }, unmatched),
-  ]));
+  const unmatchedCtx = { sources: new Map(), unconfirmed: false };
+  const unmatched = data.unmatchedContacts.slice(0, 64).map((contact) => contactRow(contact, el, unmatchedCtx)).filter(Boolean);
+  if (unmatched.length) {
+    const unmatchedSection = el('section', { class: 'organization-record' }, [
+      el('h3', { class: 'organization-record__name' }, 'Contact details in the message'),
+      el('ul', { class: 'organization-contacts' }, unmatched),
+    ]);
+    if (unmatchedCtx.unconfirmed) unmatchedSection.append(el('p', { class: 'organization-contact__help' }, 'The reviewed directory does not confirm these details. That does not establish that they are fake.'));
+    const unmatchedSources = recordSources(unmatchedCtx.sources, el);
+    if (unmatchedSources) unmatchedSection.append(unmatchedSources);
+    card.append(unmatchedSection);
+  }
   card.append(el('p', { class: 'organization-warning' }, WARNING));
   return card;
 }

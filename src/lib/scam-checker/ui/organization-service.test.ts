@@ -127,9 +127,11 @@ test('official reference contacts reach the hosted API for third-party and phone
   }
 });
 
-test('the reviewed directory covers thirteen named organizations with source-backed facts', () => {
+test('the reviewed directory covers twenty-eight named organizations with source-backed facts', () => {
   assert.deepEqual(ORGANIZATION_DIRECTORY.map(org => org.id), ['sampath-bank', 'bank-of-ceylon', 'commercial-bank', 'hnb', 'peoples-bank',
-    'dhl', 'fedex', 'paypal', 'microsoft', 'google', 'apple', 'edl', 'amazon']);
+    'dhl', 'fedex', 'paypal', 'microsoft', 'google', 'apple', 'edl', 'amazon',
+    'nsb', 'seylan-bank', 'dialog-axiata', 'slt-mobitel', 'ceb', 'leco', 'ird', 'sl-post', 'immigration',
+    'daraz', 'kapruka', 'whatsapp', 'telegram', 'western-union', 'wise']);
   for (const org of ORGANIZATION_DIRECTORY) {
     assert.ok(org.aliases.length > 0);
     const sources = [org.identity.source, ...org.domains.map(domain => domain.source), ...org.phones.map(phone => phone.source)];

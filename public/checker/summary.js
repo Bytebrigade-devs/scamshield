@@ -76,11 +76,10 @@ export function createSummaryModel(payload, submittedText, at) {
 }
 
 /** One canonical string drives preview, clipboard, UTF-8 TXT and print. */
-export function summaryText(model, answers = [], completed = []) {
+export function summaryText(model, answers = []) {
   const exposures = normalizeExposures(answers);
   const resources = relevantResources(model.resources, exposures);
   const actions = selectedActions(exposures, resources, model.actions);
-  const done = new Set(Array.isArray(completed) ? completed : []);
   const lines = ['ScamShield check summary', `Check time (UTC): ${model.checkedAt}`, `Analysis: ${STATUS_LABELS[model.status]}`,
     `Risk: ${model.risk}`, `Category: ${model.category}`, `Local patterns found: ${model.patterns.count}`,
     ...model.patterns.reasons.map(reason => `- ${reason}`), '', 'Organization / contact evidence'];
@@ -96,9 +95,9 @@ export function summaryText(model, answers = [], completed = []) {
     lines.push(`- Link ${index + 1}: ${LINK_LABELS[finding.status]}`);
     finding.matches.forEach(match => lines.push(`  Related official record: ${match.organizationName}${match.outdated ? ' — outdated' : ''}`));
   });
-  lines.push('', 'Your selected answers', exposures.length ? exposures.map(value => EXPOSURE_LABELS[value]).join('; ') : 'Not answered — general guidance only.', '', 'Suggested actions (ticks are your own record, not verified completion)');
+  lines.push('', 'Your selected answers', exposures.length ? exposures.map(value => EXPOSURE_LABELS[value]).join('; ') : 'Not answered — general guidance only.', '', 'Suggested actions');
   if (!actions.length) lines.push('No current, validated action guidance is available. Use the trusted-channel fallback below.');
-  actions.forEach(action => lines.push(`[${done.has(action.id) ? 'x' : ' '}] ${action.text}`));
+  actions.forEach(action => lines.push(`- ${action.text}`));
   lines.push('', 'Official resources');
   if (!resources.length) lines.push('No validated resource available for these selections.');
   for (const resource of resources) {
@@ -113,8 +112,8 @@ export function summaryText(model, answers = [], completed = []) {
   if (!model.sources.length) lines.push('No validated official evidence sources available.');
   model.sources.forEach(source => lines.push(`- Official source: ${source.url} (reviewed ${source.reviewedAt}${source.outdated ? '; outdated' : ''})`));
   lines.push('', 'Limitations', ...model.limitations.map(value => `- ${value}`), '',
-    'Review before sharing: this summary includes organization names, your selected answers and action ticks. The original message, sender details and AI explanation are not included.',
-    'Selections and ticks stay in this page’s browser memory only and reset for a new check. Copying, downloading or printing creates a separate copy you control. This is not an automatic redaction service.');
+    'Review before sharing: this summary includes organization names and your selected answers. The original message, sender details and AI explanation are not included.',
+    'Selections stay in this page’s browser memory only and reset for a new check. Copying, downloading or printing creates a separate copy you control. This is not an automatic redaction service.');
   return lines.join('\n');
 }
 export function summaryFilename(model) {

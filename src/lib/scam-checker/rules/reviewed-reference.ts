@@ -110,6 +110,97 @@ export const REVIEWED_BRANDS: readonly ReviewedBrand[] = [
       'pay.amazon.com', 'payments.amazon.com', 'authorize.payments.amazon.com'],
     officialDomains: ['amazon.com', 'aboutamazon.com'],
   },
+  // ---- Tier 1–3 expansion projection (directory reviewed 20 November 2026) ----
+  {
+    organizationId: 'nsb',
+    aliases: ['National Savings Bank', 'NSB'],
+    officialHosts: ['nsb.lk', 'www.nsb.lk'],
+    officialDomains: ['nsb.lk'],
+  },
+  {
+    organizationId: 'seylan-bank',
+    aliases: ['Seylan Bank PLC', 'Seylan Bank', 'Seylan'],
+    officialHosts: ['seylan.lk', 'www.seylan.lk', 'seylanbank.lk', 'www.seylanbank.lk'],
+    officialDomains: ['seylan.lk', 'seylanbank.lk'],
+  },
+  {
+    organizationId: 'dialog-axiata',
+    aliases: ['Dialog Axiata PLC', 'Dialog Axiata', 'Dialog'],
+    officialHosts: ['dialog.lk', 'www.dialog.lk'],
+    officialDomains: ['dialog.lk'],
+  },
+  {
+    organizationId: 'slt-mobitel',
+    aliases: ['Sri Lanka Telecom', 'SLT Mobitel', 'SLT', 'Mobitel'],
+    officialHosts: ['slt.lk', 'www.slt.lk', 'sltmobitel.lk', 'www.sltmobitel.lk', 'mobitel.lk', 'www.mobitel.lk'],
+    officialDomains: ['slt.lk', 'sltmobitel.lk', 'mobitel.lk'],
+  },
+  {
+    organizationId: 'ceb',
+    aliases: ['Ceylon Electricity Board', 'Ceylon Electricity', 'CEB'],
+    officialHosts: ['ceb.lk', 'www.ceb.lk'],
+    officialDomains: ['ceb.lk'],
+  },
+  {
+    organizationId: 'leco',
+    aliases: ['Lanka Electricity Company', 'LECO'],
+    officialHosts: ['leco.lk', 'www.leco.lk'],
+    officialDomains: ['leco.lk'],
+  },
+  {
+    organizationId: 'ird',
+    aliases: ['Inland Revenue Department', 'Inland Revenue', 'IRD'],
+    officialHosts: ['ird.gov.lk', 'www.ird.gov.lk'],
+    officialDomains: ['ird.gov.lk'],
+  },
+  {
+    organizationId: 'sl-post',
+    aliases: ['Department of Posts', 'Sri Lanka Post', 'SL Post', 'Post Office'],
+    officialHosts: ['slpost.gov.lk', 'www.slpost.gov.lk'],
+    officialDomains: ['slpost.gov.lk'],
+  },
+  {
+    organizationId: 'immigration',
+    aliases: ['Department of Immigration and Emigration', 'Immigration Department', 'Immigration and Emigration'],
+    officialHosts: ['immigration.gov.lk', 'www.immigration.gov.lk'],
+    officialDomains: ['immigration.gov.lk'],
+  },
+  {
+    organizationId: 'daraz',
+    aliases: ['Daraz Sri Lanka', 'Daraz'],
+    officialHosts: ['daraz.lk', 'www.daraz.lk'],
+    officialDomains: ['daraz.lk'],
+  },
+  {
+    organizationId: 'kapruka',
+    aliases: ['Kapruka'],
+    officialHosts: ['kapruka.com', 'www.kapruka.com'],
+    officialDomains: ['kapruka.com'],
+  },
+  {
+    organizationId: 'whatsapp',
+    aliases: ['WhatsApp', 'Meta Platforms', 'Meta'],
+    officialHosts: ['whatsapp.com', 'www.whatsapp.com'],
+    officialDomains: ['whatsapp.com'],
+  },
+  {
+    organizationId: 'telegram',
+    aliases: ['Telegram Messenger', 'Telegram'],
+    officialHosts: ['telegram.org', 'www.telegram.org'],
+    officialDomains: ['telegram.org'],
+  },
+  {
+    organizationId: 'western-union',
+    aliases: ['Western Union'],
+    officialHosts: ['westernunion.com', 'www.westernunion.com'],
+    officialDomains: ['westernunion.com'],
+  },
+  {
+    organizationId: 'wise',
+    aliases: ['Wise', 'TransferWise'],
+    officialHosts: ['wise.com', 'www.wise.com'],
+    officialDomains: ['wise.com'],
+  },
 ] as const;
 
 /** Documented small list of two-level suffixes used by the depth heuristic (not a PSL). */
