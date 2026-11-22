@@ -115,20 +115,22 @@ function noticeBlock() {
   const transfer = state.config === null
     ? state.configLoading ? 'Checking how your message will be processed…' : 'Processing information is unavailable. Connect to the service before submitting.'
     : state.config.liveConfigured
-      ? 'When you check, your message, optional sender information and local findings go to ScamShield’s server and the configured AI provider for analysis.'
+      ? 'When you check, your message, optional sender information and local findings go to ScamShield’s server and the OpenCode Go gateway, which provides access to the GPT model, for analysis.'
       : 'When you check, your text goes to ScamShield’s server for local pattern checks. AI analysis is not available.';
   return el('section', { class: 'notice', 'aria-labelledby': 'notice-title' }, [
     el('h3', { class: 'notice__title', id: 'notice-title' }, 'Before you check'),
     el('p', { id: 'transfer-notice' }, transfer),
-    el('p', { id: 'safety-notice' }, 'Remove personal details. Do not paste passwords, one-time codes (OTPs), full card or bank account numbers, private keys or private vault notes. These are not automatically removed.'),
+    el('p', { id: 'safety-notice' }, 'Remove personal details. Do not paste passwords, banking credentials, one-time codes (OTPs), full card or bank account numbers, private keys or private vault notes. These are not automatically removed.'),
     el('p', {}, 'Results are guidance, not a guarantee of safety. A short excerpt and result are kept in this tab’s history.'),
     el('details', { class: 'privacy-details' }, [
       el('summary', {}, 'How your message is used'),
+      el('p', {}, 'The dedicated privacy page is not available in this demo yet; this panel describes what happens today.'),
       el('p', {}, 'Message and sender information are sent only when you select Check message, not while you type. Organization names, phone numbers and website hostnames are compared offline with a reviewed directory; selected Unicode hostname patterns may be flagged as possible lookalikes. This is incomplete, heuristic evidence, not ownership or safety verification. Submitted links are not opened, fetched, resolved or checked for reputation; the AI provider cannot open them either.'),
       el('p', {}, 'Sender information is user-provided evidence and can be spoofed. It is not added to tab-session history.'),
       el('p', {}, 'History holds up to 20 checks in this browser tab’s session and is not synced with an account. Clear history removes this list; it does not delete any provider records. If browser storage is unavailable, the list lasts only until this page is reloaded.'),
+      el('p', {}, 'Reporting a wrong result stores only the check id, your chosen reason and a timestamp — never your message text. Demo storage is in-memory and resets on restart.'),
       el('p', {}, state.config?.liveConfigured
-        ? 'The AI provider’s retention depends on its service and account settings. A failed check does not prove that the provider received or kept nothing.'
+        ? 'The OpenCode Go gateway’s retention depends on its service and account settings. A failed check does not prove that the provider received or kept nothing.'
         : state.config === null ? 'Processing information must be available before you can submit a message.'
           : 'This check uses local rules only and does not send your text to an AI provider.'),
     ]),
@@ -143,7 +145,7 @@ function renderInput(options = {}) {
   view.replaceChildren(...heading('Scam checker', 'Check a suspicious message', 'Review suspicious email, SMS or agreement text before deciding what to do next.'));
   const form = el('form', { class: 'card', novalidate: true, 'aria-busy': loading ? 'true' : 'false' });
   form.append(el('h2', { class: 'card__title' }, 'Message to check'));
-  form.append(el('p', { class: 'card__helper', id: 'message-help' }, 'Paste the message as text. Do not include passwords, OTPs, full card or bank account numbers, or private keys. Sensitive details are not automatically removed.'));
+  form.append(el('p', { class: 'card__helper', id: 'message-help' }, 'Paste the message as text. Do not include passwords, banking credentials, OTPs, full card or bank account numbers, or private keys. Sensitive details are not automatically removed.'));
   const formAlert = formError ?? (!state.configLoading && state.config === null
     ? 'We couldn’t load the checking service. Try connecting again before submitting your message.' : null);
   if (formAlert) {
