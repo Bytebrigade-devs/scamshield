@@ -2,7 +2,7 @@
 
 **Status: DRAFT — NOT APPLIED.** No table, policy or function in these files exists in any database. Team approval (19 Nov 2026) authorises drafting only; applying needs the named implementer plus Supabase access, and deployment stays separately gated.
 
-These two files are published so the schema steward can review them from a permanent link, as she requested (20 Nov):
+These two files are published so the schema steward can review them from a permanent link (originally requested by Prashnidha on 20 Nov; the steward role moved to the M4 owner on 22 Nov — see [`m4-steward-reassignment-20261122.md`](m4-steward-reassignment-20261122.md)):
 
 | File | Contents |
 |---|---|
@@ -19,9 +19,9 @@ These two files are published so the schema steward can review them from a perma
 
 ## Ownership and next steps
 
-- **Steward:** Prashnidha (M3) — reviews these drafts, then applies the reviewed migrations herself.
-- **Access:** Lahiru (M2) arranges the correct Supabase project access through her own account.
-- **Proposed target:** 22 November 2026, conditional on the SQL review completing and access being granted.
+- **Steward:** **Svishwa (M4 owner / project manager)** — reassigned 22 Nov 2026 (manager decision; Prashni remains the design author). Reviews these drafts, then applies the reviewed migrations.
+- **Access:** Lahiru (M2) arranges the correct Supabase project access — requested for Prashni's account, now to be re-routed to the steward's.
+- **Target:** 22 November 2026 was conditional and has **slipped**; both preconditions (review, access) were still open on that date.
 - **M4's next dependency:** once the reviewed migrations are applied, M4 implements the Supabase adapter behind the existing `persistence-port` and runs the live end-to-end entitlement/history test.
 
 ## Sources (authoritative, in the owner workspace)
