@@ -70,4 +70,6 @@ Closes the drift recorded in the 23 November workspace sync: the repository was 
 
 **Verified:** repository suite **597/597** across 49 files (was 569/47), `tsc --noEmit` exit 0, `eslint` exit 0, and `sync-public.ts` regenerated without drift.
 
+**Merged — 23 November 2026:** published as PR #54 and merged 23 Nov 13:31:51Z as `e35db9d`; re-verified at the merged head **605/605** across 49 files, `tsc`/`eslint`/`next build` exit 0, `sync-public.ts --check` clean, CI success on both workflows.
+
 **Not claimed:** no live provider call in this publication, no accuracy or coverage claim, no database object or migration applied, no deployment, and no change to the demo notice text beyond what the 22 November notice PR already merged.
