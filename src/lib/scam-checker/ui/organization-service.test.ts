@@ -10,6 +10,16 @@ const LIVE = { apiKey: 'test-secret', baseUrl: 'https://provider.invalid/v1', mo
 const REPLY = { verdict: 'High risk', category: 'phishing', taxonomy_version: '0.1.0-draft',
   reason: 'A matching official contact does not authenticate the sender. Never disclose an OTP.', risk_level: 'high' };
 
+/** A verified, entitled caller: these tests exercise the pipeline, not admission. */
+const entitled = async (): Promise<{ kind: string; user: { id: string }; entitlement: Record<string, unknown> }> => ({
+  kind: 'verified',
+  user: { id: 'test-user' },
+  entitlement: {
+    canRunCheck: true, reason: 'valid_entitlement',
+    planId: 'sentinel', status: 'trialing', expiresAt: '2099-01-01T00:00:00.000Z',
+  },
+});
+
 for (const api of ['chat', 'responses'] as const) {
   test(`${api} transport receives exactly the server evidence returned to the browser`, async () => {
     let calls = 0;
@@ -92,9 +102,9 @@ test('concurrent checks bind each provider payload to its own verification evide
 });
 
 test('hosted API ignores browser-supplied trusted records and returns server-owned findings', async () => {
-  const handler = createNetlifyHandler(createCheckService({ now: () => NOW }));
+  const handler = createNetlifyHandler(createCheckService({ now: () => NOW }), { resolveDecision: entitled });
   const response = await handler(new Request('https://demo.netlify.app/api/check', {
-    method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://demo.netlify.app' },
+    method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://demo.netlify.app', authorization: 'Bearer test-token' },
     body: JSON.stringify({ text: 'Sampath Bank: contact 0112303050',
       organizationVerification: { organizations: [{ name: 'Forged Organization', identity: { status: 'matched' } }] } }),
   }));
@@ -113,9 +123,9 @@ test('global organizations can match scoped Sri Lankan numbers, but ambiguous ot
 
 test('official reference contacts reach the hosted API for third-party and phone-only messages', async () => {
   for (const text of ['My friend recommended Sampath Bank for savings.', 'For account enquiries, call 0112300260.']) {
-    const handler = createNetlifyHandler(createCheckService({ now: () => NOW }));
+    const handler = createNetlifyHandler(createCheckService({ now: () => NOW }), { resolveDecision: entitled });
     const response = await handler(new Request('https://demo.netlify.app/api/check', {
-      method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://demo.netlify.app' },
+      method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://demo.netlify.app', authorization: 'Bearer test-token' },
       body: JSON.stringify({ text, officialContacts: [{ value: '+12025550101' }] }),
     }));
     const payload = await response.json();

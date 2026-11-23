@@ -8,6 +8,16 @@ import { possibleLookalikeEvidence } from './link-inspection.ts';
 import { createNetlifyHandler } from './netlify-handler.ts';
 import { createUiServer } from './server.ts';
 
+/** A verified, entitled caller: these tests exercise the pipeline, not admission. */
+const ENTITLED_TEST_DECISION = {
+  kind: 'verified',
+  user: { id: 'test-user' },
+  entitlement: {
+    canRunCheck: true, reason: 'valid_entitlement',
+    planId: 'sentinel', status: 'trialing', expiresAt: '2099-01-01T00:00:00.000Z',
+  },
+} as const;
+
 const NOW = Date.UTC(2026, 9, 31, 12);
 const TEXT = 'Google: please check https://g00gle.com/private?token=synthetic';
 const LIVE = { apiKey: 'synthetic-guidance-secret', baseUrl: 'https://provider.invalid/v1', model: 'fixture' };
@@ -148,9 +158,11 @@ test('local and hosted POST preserve {text,sender?}, ignore forged findings, gui
     if (server) await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
     const address = server?.address();
     const base = hosted ? 'https://demo.netlify.app' : `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
-    const handler = hosted ? createNetlifyHandler(service) : (request: Request) => fetch(request);
+    const handler = hosted
+      ? createNetlifyHandler(service, { resolveDecision: async () => ENTITLED_TEST_DECISION })
+      : (request: Request) => fetch(request);
     try {
-      const response = await handler(new Request(`${base}/api/check`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base },
+      const response = await handler(new Request(`${base}/api/check`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base, authorization: 'Bearer test-token' },
         body: JSON.stringify({ text: TEXT, sender: 'Unverified displayed name', exposure: 'paid',
           linkInspection: { findings: [{ status: 'official-match', hostname: 'g00gle.com' }] },
           guidanceResources: { resources: [{ url: 'https://attacker.invalid/forged', phone: '+12025550123' }] },

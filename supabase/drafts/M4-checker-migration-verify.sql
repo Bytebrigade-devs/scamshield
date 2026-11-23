@@ -2,13 +2,15 @@
 -- M4 AI Scam Checker — migration verification script (for the schema steward)
 -- ============================================================================
 -- PURPOSE: turn the steward's "successful testing" precondition into something
---   checkable. Run this AFTER applying 0001 (revision 5) and 0002 (revision 5)
---   to a SCRATCH Supabase project, **as the `service_role`**, not as `postgres`.
+--   checkable. Run this AFTER applying 0001 (revision 6) and 0002 (revision 5)
+--   to the applied project (or a scratch one), **as the `service_role`**, not as `postgres`.
 --   Running it as `postgres` bypasses the privilege checks, so it would pass even
 --   when `service_role` lacks the table rights the functions need. Every block
---   raises on failure; the whole script is one transaction, so a failure rolls
---   back and leaves nothing behind. On success it prints nothing and commits a
---   cleanup.
+--   raises on failure, and the whole script is one transaction that ends in
+--   ROLLBACK: on success it reaches the end without raising and prints nothing,
+--   on failure it raises and stops — and either way the transaction is rolled
+--   back, so the fixtures and their cleanup never persist. "Passed" therefore
+--   means "no predicate raised", not "something was committed".
 --
 --   REVISION 2 — 22 November 2026: replaced every `<>` assertion with
 --   `IS DISTINCT FROM` and added an explicit NULL guard on the replay, because a
@@ -24,8 +26,18 @@
 --   budget-exceeded refusal, different-subject replay, malformed budget, and
 --   limit_count refresh after a downgrade. Each block goes red without its fix.
 --
--- STATUS: NOT executed by M4. No database was contacted to produce this file.
---   It is a proposal for the steward to run; M4 cannot run it without access.
+--   REVISION 5 — 23 November 2026: adds block 13, currency immutability per
+--   (budget_key, period_start). Lahiru's 23 November carry-over noted that 0002
+--   enforces the rule (a different currency returns NULL, never a silent rewrite
+--   of stored spend) but nothing here asserted it. Also notes 0001 at revision 6
+--   (a syntax fix, no semantic change), and switches the final COMMIT to
+--   ROLLBACK so the script is safe to run against the applied project.
+--
+-- STATUS: NOT YET EXECUTED. No run against any project exists as of 23 Nov 2026.
+--   The script ends in ROLLBACK (revision 5), so it can be run against the
+--   applied project without leaving anything behind — not even its cleanup.
+--   A green run and a red run both leave the project exactly as they found it;
+--   the assertions fire before the end of the transaction either way.
 --
 -- SCOPE: the quota / reservation / reconciliation / deletion accounting paths,
 --   which need no auth.users row. The m4_save_check / history-trigger / RLS
@@ -314,15 +326,54 @@ BEGIN
   END IF;
 END $$;
 
--- Cleanup: remove every verification artefact so the scratch project is left clean.
+-- 13. Currency is immutable per (budget_key, period_start): a different currency
+--     refuses admission, and the stored currency is never rewritten. 0002 enforces
+--     this; without this block the rule had no assertion (Lahiru, 23 Nov 2026).
+DO $$
+DECLARE
+  r   jsonb;
+  ccy text;
+BEGIN
+  r := public.m4_reserve_check('verify-s-currency', 'v-currency-1', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 10,
+    jsonb_build_object('budget_key', 'verify-budget-ccy',
+      'period_start', date_trunc('month', now()),
+      'period_end', date_trunc('month', now()) + interval '1 month',
+      'currency', 'USD', 'limit_amount', 10, 'reserved_amount', 0.01));
+  IF r IS NULL THEN RAISE EXCEPTION 'FAIL 13a: the first reservation with a currency must be admitted'; END IF;
+
+  r := public.m4_reserve_check('verify-s-currency', 'v-currency-2', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 10,
+    jsonb_build_object('budget_key', 'verify-budget-ccy',
+      'period_start', date_trunc('month', now()),
+      'period_end', date_trunc('month', now()) + interval '1 month',
+      'currency', 'LKR', 'limit_amount', 10, 'reserved_amount', 0.01));
+  IF r IS NOT NULL THEN RAISE EXCEPTION 'FAIL 13b: a different currency must refuse admission'; END IF;
+
+  SELECT currency INTO ccy FROM public.checker_budget_buckets
+    WHERE budget_key = 'verify-budget-ccy' AND period_start = date_trunc('month', now());
+  IF ccy IS DISTINCT FROM 'USD' THEN
+    RAISE EXCEPTION 'FAIL 13c: the stored currency must stay USD (got %)', ccy;
+  END IF;
+END $$;
+
+-- Cleanup: every artefact this script creates carries a verify-* key, so a run that
+-- commits still leaves nothing behind. The script ends in ROLLBACK, so in practice
+-- even this cleanup is undone — belt and braces for a shared project.
 DELETE FROM public.checker_usage_reservations WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
 DELETE FROM public.checker_quota_buckets WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
-DELETE FROM public.checker_budget_buckets WHERE budget_key IN ('verify-budget', 'verify-budget-del', 'verify-budget-cap', 'verify-budget-bad', 'verify-budget-over', 'verify-budget-zero');
+DELETE FROM public.checker_budget_buckets WHERE budget_key IN ('verify-budget', 'verify-budget-del', 'verify-budget-cap', 'verify-budget-bad', 'verify-budget-over', 'verify-budget-zero', 'verify-budget-ccy');
 
-COMMIT;
+-- ROLLBACK, not COMMIT (revision 5, 23 November 2026). The assertions all fire
+-- inside this transaction, so nothing is lost by undoing it — and running the
+-- script against the applied project then leaves the database exactly as it was
+-- found, which COMMIT could not promise for any pre-existing verify-* rows.
+ROLLBACK;
 
 -- ============================================================================
--- If this script commits without raising, the accounted paths above hold on the
--- applied schema. Report the result with a date. The save/history/RLS paths
+-- If this script reaches the end without raising, the accounted paths above hold
+-- on the applied schema. Report the result with a date. The save/history/RLS paths
 -- still need a provisioned test auth user and a separate check.
 -- ============================================================================

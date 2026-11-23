@@ -1,8 +1,14 @@
 -- ============================================================================
--- M4 AI Scam Checker — durable persistence migration 0001 (DRAFT, revision 5)
+-- M4 AI Scam Checker — durable persistence migration 0001 (revision 6, APPLIED)
 -- ============================================================================
--- STATUS: DRAFT for schema-steward review. NOT applied. No table, policy,
---   function or trigger here exists in any database.
+-- STATUS: APPLIED — 23 November 2026, revision 6, to the authoritative project
+--   https://gcqfwynvtjjokndpturf.supabase.co, after docs/m2-schema.sql.
+--   Creates 8 tables, 5 helper functions, 4 policies and 1 trigger.
+--   The first attempt (revision 5) failed with 42601 on the missing FUNCTION
+--   keyword and rolled back completely; see REVISION 6 below.
+--   DO NOT RE-RUN: this file is one-time and creates objects without IF NOT EXISTS.
+--   Review provenance: Prashni 21 Nov and Lahiru 22 Nov, both static; the apply
+--   added no semantic change, only the keyword fix.
 --
 -- REVISION 2 — 21 November 2026: incorporates the steward's review at commit
 --   74d0958 ("Changes are needed before approval"). Changes made:
@@ -48,6 +54,20 @@
 --   * explicit USAGE on schema public for service_role, so the verifier's
 --     SET LOCAL ROLE path does not depend on Supabase's implicit default;
 --   * a one-time-apply note (below); no table, column or policy behaviour changed.
+--
+-- REVISION 6 — 23 November 2026: SYNTAX FIX FOUND AT APPLY TIME. The first real
+--   execution of this file failed with
+--     ERROR 42601 syntax error at or near "("  (line 551)
+--   because five privilege statements said `REVOKE ALL ON public.<fn>(args)`
+--   without the required `FUNCTION` keyword. Fixed in place:
+--     * `REVOKE ALL ON public.m4_*` → `REVOKE ALL ON FUNCTION public.m4_*`
+--       (five statements: m4_utf16_units, m4_valid_highlights,
+--       m4_valid_limitations, m4_valid_opaque_id, m4_history_matches_parent).
+--   NOTHING SEMANTIC CHANGED: the same five functions, the same argument lists,
+--   the same target role. The file was already wrapped in BEGIN…COMMIT, so the
+--   failed apply rolled back completely and no object was left behind.
+--   Static review (Prashni 21 Nov, Lahiru 22 Nov) did not catch this: a
+--   keyword-level syntax defect is only visible to a parser or a real run.
 --
 -- DECISIONS RECORDED 21 NOV (steward answers; see the review/answer records):
 --   * account deletion follows direction (c): the subject's user-linked quota
@@ -548,11 +568,11 @@ GRANT SELECT ON public.scam_findings    TO authenticated;
 GRANT SELECT ON public.checker_history  TO authenticated;
 GRANT SELECT ON public.checker_feedback TO authenticated;
 
-REVOKE ALL ON public.m4_utf16_units(text)        FROM PUBLIC;
-REVOKE ALL ON public.m4_valid_highlights(jsonb)  FROM PUBLIC;
-REVOKE ALL ON public.m4_valid_limitations(jsonb) FROM PUBLIC;
-REVOKE ALL ON public.m4_valid_opaque_id(text, integer) FROM PUBLIC;
-REVOKE ALL ON public.m4_history_matches_parent() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_utf16_units(text)        FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_valid_highlights(jsonb)  FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_valid_limitations(jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_valid_opaque_id(text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_history_matches_parent() FROM PUBLIC;
 
 -- CHECK constraints and triggers evaluate as the inserting role, so the
 -- server-only writer needs EXECUTE on the helpers it indirectly invokes.
