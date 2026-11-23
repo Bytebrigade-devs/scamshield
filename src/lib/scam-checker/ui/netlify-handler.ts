@@ -27,6 +27,7 @@ export function createNetlifyHandler(service: CheckService) {
         return json(200, {
           liveConfigured: service.liveConfigured,
           model: service.model,
+          fallbackModel: service.fallbackModel,
           api: service.api,
           ...metadata,
         });

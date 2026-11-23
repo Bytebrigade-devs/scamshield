@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCheckService, normalizeEndpoint, normalizeResponsesEndpoint } from './check-service.ts';
+import { createCheckService, liveConfigFromEnv, normalizeEndpoint, normalizeResponsesEndpoint } from './check-service.ts';
 import type { ProviderPort } from '../boundary/check-boundary.ts';
 import { RULES_ONLY_LIMITATION, UNAVAILABLE_LIMITATION, EMPTY_INPUT_MESSAGE } from '../boundary/check-boundary.ts';
 import { readFileSync } from 'node:fs';
@@ -53,7 +53,7 @@ test('rules-only outcome: limited/rules_only with unknown_other and no reply', a
   assert.deepEqual(outcome.limitations, [RULES_ONLY_LIMITATION]);
 });
 
-test('configured provider failure is unavailable, without a fallback completion', async () => {
+test('configured provider failure with no fallback configured is unavailable, never a fabricated completion', async () => {
   const service = createCheckService({ live: LIVE, provider: { analyze: async () => ({ kind: 'failed', failure: 'http-error' }) } });
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
@@ -265,7 +265,7 @@ test('invalid inputs never invoke the provider; exactly 2,000 characters remain 
 
 // ---- M4-15 edge cases and graceful fallback (10 November 2026 additions) ----
 
-test('M4-15/FS-M4-06: a configured provider timeout is unavailable at the UI layer — one attempt, no fallback', async () => {
+test('M4-15/FS-M4-06: a configured provider timeout with no fallback configured is unavailable at the UI layer — one attempt', async () => {
   let calls = 0;
   const service = createCheckService({ live: LIVE, provider: { analyze: async () => {
     calls += 1;
@@ -389,4 +389,108 @@ test('events: null disables emission without affecting the check', async () => {
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
   assert.equal(service.listEvents().length, 0);
+});
+
+test('fallback model: configured via M4_UI_FALLBACK_MODEL and reported without the key', () => {
+  const live = liveConfigFromEnv({
+    OPENAI_API_KEY: 'synthetic-service-key',
+    OPENAI_BASE_URL: 'https://provider.invalid/v1',
+    M4_UI_MODEL: 'primary-model',
+    M4_UI_FALLBACK_MODEL: 'fallback-model',
+  } as NodeJS.ProcessEnv);
+
+  assert.equal(live?.model, 'primary-model');
+  assert.equal(live?.fallbackModel, 'fallback-model');
+
+  const service = createCheckService({ live: live ?? undefined });
+  assert.equal(service.model, 'primary-model');
+  assert.equal(service.fallbackModel, 'fallback-model');
+});
+
+test('fallback model: absent or blank configuration means no fallback at all', () => {
+  for (const value of [undefined, '', '   ']) {
+    const live = liveConfigFromEnv({
+      OPENAI_API_KEY: 'synthetic-service-key',
+      M4_UI_MODEL: 'primary-model',
+      M4_UI_FALLBACK_MODEL: value,
+    } as NodeJS.ProcessEnv);
+    assert.equal(live?.fallbackModel, null);
+    const service = createCheckService({ live: live ?? undefined });
+    assert.equal(service.fallbackModel, null, 'no fallback is enabled unless it is explicitly configured');
+  }
+});
+
+test('fallback model: the same id as the primary is not a fallback', () => {
+  const live = liveConfigFromEnv({
+    OPENAI_API_KEY: 'synthetic-service-key',
+    M4_UI_MODEL: 'same-model',
+    M4_UI_FALLBACK_MODEL: 'same-model',
+  } as NodeJS.ProcessEnv);
+
+  const service = createCheckService({ live: live ?? undefined });
+  assert.equal(service.fallbackModel, null, 'a second call to the same model is not a fallback');
+});
+
+test('fallback model: an injected provider is never wrapped, so call counts stay exact', async () => {
+  let calls = 0;
+  const injected: ProviderPort = {
+    analyze: async () => {
+      calls += 1;
+      return { kind: 'failed', failure: 'timeout' };
+    },
+  };
+  const service = createCheckService({
+    live: { apiKey: 'synthetic-service-key', baseUrl: 'https://provider.invalid/v1', model: 'primary-model', fallbackModel: 'fallback-model' },
+    provider: injected,
+  });
+
+  const { outcome } = await service.check(FIXTURE);
+
+  assert.equal((outcome as { analysisStatus?: string }).analysisStatus, 'unavailable');
+  assert.equal(calls, 1, 'the injected provider is authoritative; the fallback does not double the call');
+});
+
+// ---- Composite fallback wiring: the real adapter path through check-service ----
+
+test('fallback composite: a primary transport failure completes on exactly one fallback fetch', async () => {
+  const calls: Array<{ url: string; body: string }> = [];
+  const fetchImpl = (async (url, init) => {
+    calls.push({ url: String(url), body: String(init?.body ?? '') });
+    if (calls.length === 1) return new Response(null, { status: 500 });
+    return Response.json({ choices: [{ message: { content: JSON.stringify(REPLY) } }] });
+  }) as typeof fetch;
+  const service = createCheckService({ live: { ...LIVE, fallbackModel: 'fallback-model' }, fetchImpl });
+
+  const { outcome, providerMode } = await service.check(FIXTURE);
+
+  assert.equal(providerMode, 'live');
+  assert.equal(calls.length, 2, 'exactly one primary attempt plus one fallback attempt');
+  assert.equal(JSON.parse(calls[0].body).model, LIVE.model, 'the first call uses the primary model');
+  assert.equal(JSON.parse(calls[1].body).model, 'fallback-model', 'the second call uses the fallback model');
+  assert.equal(outcome.kind, 'analysed');
+  if (outcome.kind === 'analysed') {
+    assert.equal(outcome.analysisStatus, 'completed', 'the fallback answer completes the check');
+    assert.equal(outcome.analysisMode, 'rules_and_ai');
+    assert.ok(outcome.reply);
+    assert.deepEqual(outcome.limitations, []);
+  }
+});
+
+test('fallback composite: bad-json on the primary never triggers the fallback', async () => {
+  let calls = 0;
+  const fetchImpl = (async () => {
+    calls += 1;
+    return Response.json({ choices: [{ message: { content: 'not-json' } }] });
+  }) as typeof fetch;
+  const service = createCheckService({ live: { ...LIVE, fallbackModel: 'fallback-model' }, fetchImpl });
+
+  const { outcome } = await service.check(FIXTURE);
+
+  assert.equal(calls, 1, 'an unparseable or refused answer must not be re-asked of another model');
+  assert.equal(outcome.kind, 'analysed');
+  if (outcome.kind === 'analysed') {
+    assert.equal(outcome.analysisStatus, 'unavailable');
+    assert.equal(outcome.analysisMode, 'none');
+    assert.deepEqual(outcome.limitations, [UNAVAILABLE_LIMITATION]);
+  }
 });

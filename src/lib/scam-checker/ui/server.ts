@@ -169,6 +169,7 @@ export function createUiServer(options: UiServerOptions): Server {
         sendJson(res, 200, {
           liveConfigured: service.liveConfigured,
           model: service.model,
+          fallbackModel: service.fallbackModel,
           api: service.api,
           limits: {
             inputCharCap: DEFAULT_LIMITS.inputCharCap,

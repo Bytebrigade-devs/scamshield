@@ -24,6 +24,7 @@ import { emitCheckOutcome, type EventSink } from '../boundary/event-emitter.ts';
 import { createOpenAIProvider, DEFAULT_DEADLINE_MS, DEFAULT_MODEL, MAX_OUTPUT_TOKENS } from '../boundary/openai-adapter.ts';
 import type { AiFailure } from '../boundary/openai-adapter.ts';
 import { createResponsesProvider } from './responses-adapter.ts';
+import { createFallbackProvider } from '../boundary/fallback-provider.ts';
 import { extractCandidates } from '../preprocess/preprocess.ts';
 import { analyzeRules } from '../rules/rule-engine.ts';
 import { ORGANIZATION_DIRECTORY } from './organization-directory.ts';
@@ -42,6 +43,13 @@ export interface LiveConfig {
   /** Base URL or full endpoint URL. Normalised by `normalizeEndpoint` / `normalizeResponsesEndpoint`. */
   baseUrl: string;
   model: string;
+  /**
+   * Optional single fallback model (owner decision 22 Nov 2026). When set and different from
+   * `model`, a transport failure on the primary (`timeout`/`network`/`http-error`) gets exactly one
+   * attempt here. Never used for invalid or refused output. Ignored when a test `provider` is
+   * injected, so automated call-count assertions stay exact.
+   */
+  fallbackModel?: string | null;
   /** Transport style: OpenAI chat-completions (default) or the Responses API. */
   api?: 'chat' | 'responses';
   deadlineMs?: number;
@@ -152,6 +160,8 @@ export interface CheckServiceResult {
 export interface CheckService {
   readonly liveConfigured: boolean;
   readonly model: string | null;
+  /** Configured single fallback model, or null when none is in use (owner decision 22 Nov 2026). */
+  readonly fallbackModel: string | null;
   /** Transport style of the configured live provider (for honest UI labelling). */
   readonly api: 'chat' | 'responses' | null;
   /**
@@ -219,39 +229,59 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
   let eventSeq = 0;
   // No credentials means rules only, never a fabricated AI reply. Test provider injection
   // is available only when constructing the service, not through the public request body.
+  const buildLiveProvider = (
+    model: string,
+    verification: () => OrganizationVerification,
+    sender: () => SenderVerification | undefined,
+    links: () => LinkInspection | undefined,
+    onDiagnostic: (failure: AiFailure) => void,
+  ): ProviderPort => (live?.api === 'responses'
+    ? createResponsesProvider({
+        apiKey: live.apiKey,
+        endpointUrl: normalizeResponsesEndpoint(live.baseUrl),
+        model,
+        deadlineMs: live.deadlineMs ?? DEFAULT_DEADLINE_MS,
+        maxOutputTokens: live.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+        onDiagnostic,
+        fetchImpl: options.fetchImpl,
+        buildPayload: (text: string, payloadModel: string) => ({
+          model: payloadModel,
+          instructions: analysisInstructions(text, verification(), sender(), links()),
+          input: text,
+          max_output_tokens: live.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+        }),
+      })
+    : createOpenAIProvider({
+        apiKey: live?.apiKey ?? '',
+        endpointUrl: normalizeEndpoint(live?.baseUrl ?? ''),
+        model,
+        deadlineMs: live?.deadlineMs ?? DEFAULT_DEADLINE_MS,
+        maxOutputTokens: live?.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
+        onDiagnostic,
+        buildPayload: live?.buildPayload ?? ((text, payloadModel) => draftShapePayload(text, payloadModel, verification(), sender(), links())),
+        fetchImpl: options.fetchImpl,
+      }));
+
+  const fallbackModel = live?.fallbackModel?.trim() || null;
+
   const providerFor = (verification: () => OrganizationVerification, sender: () => SenderVerification | undefined,
-    links: () => LinkInspection | undefined, onDiagnostic: (failure: AiFailure) => void): ProviderPort => live === null
-    ? { analyze: async () => ({ kind: 'unconfigured' }) }
-    : options.provider ?? (live.api === 'responses'
-      ? createResponsesProvider({
-          apiKey: live.apiKey,
-          endpointUrl: normalizeResponsesEndpoint(live.baseUrl),
-          model: live.model,
-          deadlineMs: live.deadlineMs ?? DEFAULT_DEADLINE_MS,
-          maxOutputTokens: live.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
-          onDiagnostic,
-          fetchImpl: options.fetchImpl,
-          buildPayload: (text: string, model: string) => ({
-            model,
-            instructions: analysisInstructions(text, verification(), sender(), links()),
-            input: text,
-            max_output_tokens: live.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
-          }),
-        })
-      : createOpenAIProvider({
-          apiKey: live.apiKey,
-          endpointUrl: normalizeEndpoint(live.baseUrl),
-          model: live.model,
-          deadlineMs: live.deadlineMs ?? DEFAULT_DEADLINE_MS,
-          maxOutputTokens: live.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
-          onDiagnostic,
-          buildPayload: live.buildPayload ?? ((text, model) => draftShapePayload(text, model, verification(), sender(), links())),
-          fetchImpl: options.fetchImpl,
-        }));
+    links: () => LinkInspection | undefined, onDiagnostic: (failure: AiFailure) => void): ProviderPort => {
+    if (live === null) return { analyze: async () => ({ kind: 'unconfigured' }) };
+    // An injected provider is authoritative and is never wrapped, so tests keep exact call counts.
+    if (options.provider) return options.provider;
+
+    const primary = buildLiveProvider(live.model, verification, sender, links, onDiagnostic);
+    if (fallbackModel === null || fallbackModel === live.model) return primary;
+    return createFallbackProvider({
+      primary,
+      fallback: buildLiveProvider(fallbackModel, verification, sender, links, onDiagnostic),
+    });
+  };
 
   return {
     liveConfigured: live !== null,
     model: live?.model ?? null,
+    fallbackModel: live === null || fallbackModel === live.model ? null : fallbackModel,
     api: live !== null ? (live.api ?? 'chat') : null,
     listEvents: () => persistence.events.listAll(),
     async check(text: unknown, sender?: unknown): Promise<CheckServiceResult> {
@@ -324,6 +354,9 @@ export function liveConfigFromEnv(env: NodeJS.ProcessEnv = process.env): LiveCon
     apiKey,
     baseUrl: baseUrl.length > 0 ? baseUrl : 'https://api.openai.com/v1',
     model: (env.M4_UI_MODEL ?? '').trim() || DEFAULT_MODEL,
+    // Single fallback model (owner decision 22 Nov 2026). Blank/absent = no fallback, which keeps
+    // the governed single-model behaviour unless it is explicitly configured.
+    fallbackModel: (env.M4_UI_FALLBACK_MODEL ?? '').trim() || null,
     api: (env.M4_UI_API ?? '').trim().toLowerCase() === 'responses' ? 'responses' : 'chat',
     maxOutputTokens,
     deadlineMs,

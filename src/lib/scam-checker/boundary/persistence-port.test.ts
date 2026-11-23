@@ -65,8 +65,8 @@ function reservation(overrides: Partial<QuotaReservationInput> = {}): QuotaReser
     requestKey: 'request-1',
     now: NOW,
     leaseMs: 60_000,
-    dailyBucket: { periodKind: 'daily', periodStart: DAY_START, periodEnd: DAY_START + DAY_MS },
-    allowanceBucket: { periodKind: 'monthly', periodStart: MONTH_START, periodEnd: MONTH_END },
+    dailyBucket: { periodKind: 'daily', periodStart: DAY_START, periodEnd: DAY_START + DAY_MS, limit: 5 },
+    allowanceBucket: { periodKind: 'monthly', periodStart: MONTH_START, periodEnd: MONTH_END, limit: 60 },
     ...overrides,
   };
 }
@@ -163,7 +163,25 @@ test('deleteCheck: enforces ownership and cascades findings, history and feedbac
   assert.equal(port.feedback.listOwned('subject-a').length, 0);
 });
 
-test('deleteSubject: removes all of a subject’s rows and never resets quota counters', () => {
+test('deleteCheck never resets quota counters (only account deletion may)', () => {
+  const port = createInMemoryPersistence();
+  port.checks.save(input());
+  const record = port.quota.reserve(reservation());
+  assert.ok(record);
+  assert.equal(port.quota.settle(record.id, { analysisStatus: 'completed' }, NOW + 1_000), true);
+
+  assert.equal(port.checks.deleteCheck('check-1', 'subject-a'), true, 'history deletion succeeds');
+
+  // M1 privacy confirmation, 22 Nov 2026: deleting history alone must never reset quota.
+  const daily = port.quota.getBucket({ subjectKey: 'subject-a', periodKind: 'daily', periodStart: DAY_START });
+  const monthly = port.quota.getBucket({ subjectKey: 'subject-a', periodKind: 'monthly', periodStart: MONTH_START });
+  assert.equal(daily?.completedCount, 1, 'daily counter survives history deletion');
+  assert.equal(monthly?.completedCount, 1, 'monthly counter survives history deletion');
+  assert.equal(daily?.reservedCount, 0);
+  assert.equal(monthly?.reservedCount, 0);
+});
+
+test('deleteSubject: direction (c) removes user-linked quota/reservations, keeps budget totals', () => {
   const port = createInMemoryPersistence();
   port.checks.save(input());
   port.checks.save(input({ checkId: 'check-2' }));
@@ -171,17 +189,27 @@ test('deleteSubject: removes all of a subject’s rows and never resets quota co
     subjectKey: 'subject-a', checkId: 'check-1', category: 'phishing',
     reasonCode: 'wrong_category', createdAt: NOW,
   });
-  const record = port.quota.reserve(reservation());
+  const record = port.quota.reserve(reservation({
+    budget: {
+      bucket: { budgetKey: 'openai-nov-2026', periodStart: MONTH_START },
+      periodEnd: MONTH_END, currency: 'USD', limitAmount: 15, reservedAmount: 0.1,
+    },
+  }));
   assert.ok(record);
 
   const deleted = port.deleteSubject('subject-a');
   assert.equal(deleted.checks, 2);
   assert.equal(deleted.history, 2);
   assert.equal(deleted.feedback, 1);
+  assert.equal(deleted.reservations, 1);
+  assert.equal(deleted.quotaBuckets, 2);
   assert.equal(port.history.listOwned('subject-a', NOW).length, 0);
 
-  const bucket = port.quota.getBucket({ subjectKey: 'subject-a', periodKind: 'monthly', periodStart: MONTH_START });
-  assert.equal(bucket?.reservedCount, 1, 'deletion must not reset quota counters');
+  // User-linked quota buckets are gone; the outstanding charge was resolved into spend.
+  assert.equal(port.quota.getBucket({ subjectKey: 'subject-a', periodKind: 'monthly', periodStart: MONTH_START }), null);
+  const budget = port.budget.getBucket({ budgetKey: 'openai-nov-2026', periodStart: MONTH_START });
+  assert.equal(budget?.reservedAmount, 0, 'outstanding spend resolved before removal');
+  assert.equal(budget?.spentAmount, 0.1, 'non-user-linked aggregate spend retained');
 });
 
 test('quota: a completed analysis converts its reservation exactly once', () => {
@@ -240,7 +268,16 @@ test('quota: a limited attempt with an unknown provider charge must use reconcil
   assert.equal(monthly?.reservedCount, 1, 'nothing committed when settlement is refused');
   const budget = port.budget.getBucket({ budgetKey: 'openai-nov-2026', periodStart: MONTH_START });
   assert.equal(budget?.reservedAmount, 0.1, 'spend reservation retained for reconciliation');
-  assert.equal(port.quota.markReconciliationRequired(record.id, NOW + 2_000), true);
+  assert.equal(port.quota.markReconciliationRequired(record.id, 'limited', NOW + 2_000), true);
+  // Quota is settled at mark time (limited releases); only the spend stays open.
+  const afterMark = port.quota.getBucket({ subjectKey: 'subject-a', periodKind: 'monthly', periodStart: MONTH_START });
+  assert.equal(afterMark?.reservedCount, 0);
+  assert.equal(afterMark?.completedCount, 0);
+  assert.equal(port.quota.finalizeReconciliation(record.id, 0.07, NOW + 3_000), true);
+  const settledBudget = port.budget.getBucket({ budgetKey: 'openai-nov-2026', periodStart: MONTH_START });
+  assert.equal(settledBudget?.reservedAmount, 0);
+  assert.equal(settledBudget?.spentAmount, 0.07);
+  assert.equal(port.quota.reservationByRequestKey('request-unknown-spend')?.state, 'released');
 });
 
 test('quota: a limited attempt can still charge provider spend without consuming quota', () => {
@@ -265,16 +302,39 @@ test('quota: a limited attempt can still charge provider spend without consuming
   assert.equal(budget?.spentAmount, 0.05);
 });
 
-test('quota: reconciliation keeps an uncertain spend reservation instead of releasing it', () => {
+test('quota: reconciliation settles quota at mark time and finalisation closes only spend', () => {
   const port = createInMemoryPersistence();
   const record = port.quota.reserve(reservation({ requestKey: 'request-reconcile' }));
   assert.ok(record);
-  assert.equal(port.quota.markReconciliationRequired(record.id, NOW + 1_000), true);
+  assert.equal(port.quota.markReconciliationRequired(record.id, 'limited', NOW + 1_000), true);
   assert.equal(port.quota.settle(record.id, { analysisStatus: 'completed' }, NOW + 2_000), false,
     'a reconciliation reservation cannot be settled blindly');
   const monthly = port.quota.getBucket({ subjectKey: 'subject-a', periodKind: 'monthly', periodStart: MONTH_START });
   assert.equal(monthly?.completedCount, 0);
-  assert.equal(monthly?.reservedCount, 1, 'quota stays reserved until reconciliation resolves it');
+  assert.equal(monthly?.reservedCount, 0, 'quota settled at mark time, not left reserved');
+  // No budget attached: finalisation still closes the row using its recorded outcome.
+  assert.equal(port.quota.finalizeReconciliation(record.id, 0, NOW + 3_000), true);
+  assert.equal(port.quota.reservationByRequestKey('request-reconcile')?.state, 'released');
+  assert.equal(port.quota.finalizeReconciliation(record.id, 0, NOW + 4_000), false, 'exactly once');
+});
+
+test('quota: an unconfigured (null) limit refuses admission; a configured limit is enforced', () => {
+  const port = createInMemoryPersistence();
+  assert.equal(port.quota.reserve(reservation({
+    requestKey: 'request-null-limit',
+    dailyBucket: { periodKind: 'daily', periodStart: DAY_START, periodEnd: DAY_START + DAY_MS, limit: null },
+  })), null, 'NULL limit = unconfigured = refuse, never unlimited');
+
+  // Daily limit 1: the first reservation is admitted, the second is refused.
+  const first = port.quota.reserve(reservation({
+    requestKey: 'request-cap-1',
+    dailyBucket: { periodKind: 'daily', periodStart: DAY_START, periodEnd: DAY_START + DAY_MS, limit: 1 },
+  }));
+  assert.ok(first);
+  assert.equal(port.quota.reserve(reservation({
+    requestKey: 'request-cap-2',
+    dailyBucket: { periodKind: 'daily', periodStart: DAY_START, periodEnd: DAY_START + DAY_MS, limit: 1 },
+  })), null, 'completed + reserved + 1 would exceed the limit');
 });
 
 test('quota: request keys are idempotent and buckets are unique per period', () => {
@@ -341,4 +401,88 @@ test('events: stored shape is exactly the eight allowlisted fields', () => {
     ['analysis_mode', 'analysis_status', 'category_id', 'contract_version', 'event_id',
       'event_type', 'occurred_at', 'taxonomy_version'],
   );
+});
+
+// ---- Migration 0002 rev 5 parity: the double must admit exactly what the SQL admits ----
+
+test('quota: the budget cap is cumulative — settled spend counts', () => {
+  const port = createInMemoryPersistence();
+  const budget = {
+    bucket: { budgetKey: 'cap', periodStart: MONTH_START },
+    periodEnd: MONTH_END, currency: 'USD', limitAmount: 0.10, reservedAmount: 0.06,
+  };
+  const first = port.quota.reserve(reservation({ requestKey: 'cap-1', budget }));
+  assert.ok(first);
+  assert.equal(port.quota.settle(first.id, { analysisStatus: 'completed' }, NOW + 1_000), true);
+  // spent 0.06 + reserved 0 + new 0.06 > 0.10: the database refuses, so must the double.
+  const second = port.quota.reserve(reservation({ requestKey: 'cap-2', budget: { ...budget } }));
+  assert.equal(second, null, 'settled spend must count against the period cap');
+  const stored = port.budget.getBucket({ budgetKey: 'cap', periodStart: MONTH_START });
+  assert.equal(stored?.spentAmount, 0.06);
+  assert.equal(stored?.reservedAmount, 0);
+});
+
+test('quota: limitAmount = 0 means no spend allowed, not invalid input', () => {
+  const port = createInMemoryPersistence();
+  const zero = {
+    bucket: { budgetKey: 'zero', periodStart: MONTH_START },
+    periodEnd: MONTH_END, currency: 'USD', limitAmount: 0, reservedAmount: 0.01,
+  };
+  assert.equal(port.quota.reserve(reservation({ requestKey: 'zero-1', budget: zero })), null);
+  const free = port.quota.reserve(reservation({ requestKey: 'zero-2', budget: { ...zero, reservedAmount: 0 } }));
+  assert.ok(free, 'a zero-cost reservation is admitted');
+});
+
+test('quota: currency is immutable per budget bucket', () => {
+  const port = createInMemoryPersistence();
+  const usd = {
+    bucket: { budgetKey: 'cur', periodStart: MONTH_START },
+    periodEnd: MONTH_END, currency: 'USD', limitAmount: 15, reservedAmount: 0.1,
+  };
+  assert.ok(port.quota.reserve(reservation({ requestKey: 'cur-1', budget: usd })));
+  const eur = port.quota.reserve(reservation({ requestKey: 'cur-2', budget: { ...usd, currency: 'EUR' } }));
+  assert.equal(eur, null, 'a different currency is refused, not silently rewritten');
+  assert.equal(port.budget.getBucket({ budgetKey: 'cur', periodStart: MONTH_START })?.currency, 'USD');
+});
+
+test('quota: an existing budget bucket refreshes limit and window before admission', () => {
+  const port = createInMemoryPersistence();
+  const base = {
+    bucket: { budgetKey: 'refresh', periodStart: MONTH_START },
+    periodEnd: MONTH_END, currency: 'USD', limitAmount: 15, reservedAmount: 0.1,
+  };
+  assert.ok(port.quota.reserve(reservation({ requestKey: 'refresh-1', budget: base })));
+  const next = port.quota.reserve(reservation({
+    requestKey: 'refresh-2',
+    budget: { ...base, limitAmount: 10, periodEnd: MONTH_END + DAY_MS },
+  }));
+  assert.ok(next);
+  const stored = port.budget.getBucket({ budgetKey: 'refresh', periodStart: MONTH_START });
+  assert.equal(stored?.limitAmount, 10);
+  assert.equal(stored?.periodEnd, MONTH_END + DAY_MS);
+});
+
+test('quota: a refused budget does not leak a reserved quota unit', () => {
+  const port = createInMemoryPersistence();
+  const over = {
+    bucket: { budgetKey: 'leak', periodStart: MONTH_START },
+    periodEnd: MONTH_END, currency: 'USD', limitAmount: 0.01, reservedAmount: 0.02,
+  };
+  assert.equal(port.quota.reserve(reservation({ requestKey: 'leak-1', budget: over })), null);
+  const daily = port.quota.getBucket({ subjectKey: 'subject-a', periodKind: 'daily', periodStart: DAY_START });
+  const monthly = port.quota.getBucket({ subjectKey: 'subject-a', periodKind: 'monthly', periodStart: MONTH_START });
+  assert.equal(daily?.reservedCount, 0, 'quota counters mutate only after every admission passes');
+  assert.equal(monthly?.reservedCount, 0);
+});
+
+test('quota: a refused request still refreshes the stored limit', () => {
+  const port = createInMemoryPersistence();
+  assert.ok(port.quota.reserve(reservation({ requestKey: 'down-1' })));
+  const refused = port.quota.reserve(reservation({
+    requestKey: 'down-2',
+    dailyBucket: { periodKind: 'daily', periodStart: DAY_START, periodEnd: DAY_START + DAY_MS, limit: 0 },
+  }));
+  assert.equal(refused, null);
+  const daily = port.quota.getBucket({ subjectKey: 'subject-a', periodKind: 'daily', periodStart: DAY_START });
+  assert.equal(daily?.limitCount, 0, 'the downgrade is recorded even though admission was refused');
 });

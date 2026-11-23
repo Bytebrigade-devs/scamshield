@@ -8,10 +8,12 @@
  * enum-coded failures — there is structurally no path by which the key can enter a result,
  * message or log line.
  *
- * GATES RESPECTED: X-09 remains open — no live call is authorized or performed by this
- * work; tests inject `fetchImpl` and never touch the network. One model, ONE attempt per
- * analyze() call, no retry and no fallback model (owner decision 19 Oct 2026): a primary
- * failure ends in the boundary's labelled unavailable state, never a second model guess and
+ * GATES RESPECTED: X-09 is closed owner-self-certified (19 Nov 2026; workspace contract
+ * contracts/M4-usage-quotas-and-funding-decision.md), and this work still
+ * makes no live call; tests inject `fetchImpl` and never touch the network. The adapter makes
+ * ONE attempt with the model it is given; the server-side `fallback-provider.ts` may add at
+ * most one bounded fallback on a transport failure (owner decision 22 Nov 2026 — see below).
+ * A failure not answered by that wrapper ends in the boundary's labelled unavailable state,
  * never a fabricated verdict. The default request payload is a DRAFT transport shape — the
  * analysis prompt and result semantics remain OD-M4-04 (open).
  *
@@ -32,8 +34,16 @@
 import type { ProviderAttempt, ProviderPort } from './check-boundary.ts';
 import { DRAFT_VERDICT_LABELS, MAX_REASON_CHARS, TAXONOMY_VERSION } from './check-boundary.ts';
 
-/** Primary model, one shared model for all tiers (M4-usage-quotas decision §2, 18 Oct 2026). */
-export const DEFAULT_MODEL = 'gpt-5.6-luna';
+/**
+ * Primary model, one shared model for all tiers. `gpt-5.6-luna` was the owner choice of
+ * 18 Oct 2026; owner decision 22 Nov 2026 promotes `gpt-6-luna` on the 80-message comparison
+ * (workspace evidence M4-pilot-live-80-gpt6luna-20261122.md: 39/39 scams flagged as before, 40/40 legitimate
+ * near-matches cleared vs 29/40, no safety failures). A single bounded fallback
+ * (`gpt-5.6-luna`) is enabled in `fallback-provider.ts` on timeout/network/http-error only
+ * (owner decision 22 Nov 2026); this adapter itself still makes one attempt with the model it
+ * is given, and a failed fallback ends in the labelled unavailable state.
+ */
+export const DEFAULT_MODEL = 'gpt-6-luna';
 
 /** Draft provider deadline — the reviewed value is still open under OD-M4-04. */
 export const DEFAULT_DEADLINE_MS = 45_000;

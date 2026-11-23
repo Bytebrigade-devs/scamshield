@@ -36,9 +36,11 @@
  * 4. Missing key (provider "unconfigured") or an unpermitted budget disables the live call
  *    and yields an explicitly LABELLED rules-only limited result (FS-M4-05) — never a
  *    fabricated or implied completed AI verdict and never a safety conclusion.
- * 5. Exactly one provider attempt on one model — no retry, no fallback model (owner decision
- *    19 Oct 2026); failure, timeout or invalid output ends in `unavailable` with category
- *    `unknown_other`, which is not a "safe" outcome.
+ * 5. Exactly one provider `analyze()` call per check. The provider implementation may perform at
+ *    most ONE bounded fallback attempt, and only on a transport failure (owner decision 22 Nov
+ *    2026 — see `fallback-provider.ts`); it must never retry for a more confident answer and must
+ *    never fall back after an invalid or refused response. Failure, timeout or invalid output
+ *    still ends in `unavailable` with category `unknown_other`, which is not a "safe" outcome.
  * 6. Only a completed analysis is counted (NFR-M4-10); rejected, denied and failed checks
  *    never consume quota. No duplicate/count policy is invented here (OD-M4-06 stays open).
  *
@@ -199,7 +201,11 @@ export type ProviderAttempt =
   | { kind: 'failed'; failure: ProviderFailure };
 
 export interface ProviderPort {
-  /** Exactly one attempt on one model. No retry, no fallback model (owner decision 19 Oct 2026). */
+  /**
+   * One `analyze()` call per check. An implementation may attempt at most one bounded fallback on
+   * a transport failure (`timeout`/`network`/`http-error`) — never on invalid or refused output and
+   * never to obtain a more confident answer (owner decision 22 Nov 2026).
+   */
   analyze(text: string): Promise<ProviderAttempt>;
 }
 
@@ -454,8 +460,9 @@ export async function runCheck(request: CheckRequest, deps: CheckDeps): Promise<
     if (attempt.kind === 'unconfigured') {
       return analysed('limited', 'rules_only', 'unknown_other', candidates, rules, null, [RULES_ONLY_LIMITATION]);
     }
-    // 6) One attempt only (owner decision 19 Oct 2026): no retry, no fallback model —
-    //    failure, timeout or invalid output ends in the honest unavailable state.
+    // 6) One analyze() call per check. A transport failure may already have been answered by ONE
+    //    bounded fallback inside the provider (owner decision 22 Nov 2026); invalid or refused
+    //    output never was. Either way, a failure here ends in the honest unavailable state.
     if (attempt.kind === 'failed') {
       return analysed('unavailable', 'none', 'unknown_other', candidates, rules, null, [UNAVAILABLE_LIMITATION]);
     }

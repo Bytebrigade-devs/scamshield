@@ -13,6 +13,7 @@ import { feedbackControl, feedbackFailedText, feedbackSubmittedText } from '/fee
 const view = document.getElementById('view');
 const navCheck = document.getElementById('nav-check');
 const navHistory = document.getElementById('nav-history');
+const progressTrack = document.getElementById('check-progress');
 const HISTORY_KEY = 'scamshield-check-history-v2';
 const HISTORY_LIMIT = 20;
 const FALLBACK_CAP = 2000;
@@ -140,6 +141,7 @@ function noticeBlock() {
 function renderInput(options = {}) {
   document.getElementById('print-summary').textContent = '';
   const { loading = false, fieldError = null, senderError = null, formError = null, focus = null } = options;
+  progressTrack.hidden = !loading;
   state.view = 'input';
   updateNavigation();
   view.replaceChildren(...heading('Scam checker', 'Check a suspicious message', 'Review suspicious email, SMS or agreement text before deciding what to do next.'));
@@ -182,7 +184,9 @@ function renderInput(options = {}) {
   senderField.append(senderInput);
   let senderAlert = senderError ? el('p', { class: 'field-error', id: 'sender-error', role: 'alert' }, sanitizeText(senderError)) : null;
   if (senderAlert) senderField.append(senderAlert);
-  const button = el('button', { type: 'submit', class: 'btn' }, loading ? 'Checking…' : 'Check message');
+  const button = el('button', { type: 'submit', class: 'btn' }, loading
+    ? [el('span', { class: 'btn__spinner', 'aria-hidden': 'true' }), el('span', {}, 'Checking…')]
+    : 'Check message');
   const progress = el('p', { class: 'actions-note', role: 'status' }, loading
     ? 'Checking your message…' : state.configLoading ? 'Connecting to the checking service…' : '');
   function refreshFieldState() {
@@ -237,9 +241,10 @@ function messageParagraph(text, matches, explanation = false) {
 }
 
 /**
- * A long AI reason can push the next steps past the first screen on a phone. Clamp it only on narrow
- * viewports, only when the saving is worth the control, and never truncate without an explicit,
- * keyboard-operable way to read the whole text. Text stays in the DOM and is only visually clipped.
+ * A long AI reason can push the next steps past the first screen. Clamp it on every width (4 lines on a
+ * phone, 6 on desktop), only when the saving is worth the control, and never truncate without an
+ * explicit, keyboard-operable way to read the whole text. Text stays in the DOM and is only visually
+ * clipped, so copy, exports and screen readers keep the full reason.
  */
 function explanationToggle(paragraph) {
   const button = el('button', { type: 'button', class: 'assessment__more', 'aria-expanded': 'false', 'aria-controls': paragraph.id }, 'Read full explanation');
@@ -247,15 +252,10 @@ function explanationToggle(paragraph) {
   const narrow = window.matchMedia(NARROW_QUERY);
   let expanded = false;
   function sync() {
-    paragraph.classList.remove('is-clamped');
-    let clipped = false;
-    if (narrow.matches) {
-      paragraph.classList.add('is-clamped');
-      clipped = paragraph.scrollHeight - paragraph.clientHeight > CLAMP_OVERFLOW_MIN;
-      if (!clipped || expanded) paragraph.classList.remove('is-clamped');
-    } else {
-      expanded = false;
-    }
+    paragraph.style.setProperty('--clamp-lines', narrow.matches ? '4' : '6');
+    paragraph.classList.add('is-clamped');
+    const clipped = paragraph.scrollHeight - paragraph.clientHeight > CLAMP_OVERFLOW_MIN;
+    if (!clipped || expanded) paragraph.classList.remove('is-clamped');
     row.hidden = !clipped;
     button.setAttribute('aria-expanded', String(expanded));
     button.textContent = expanded ? 'Show less' : 'Read full explanation';
@@ -296,8 +296,8 @@ function evidenceCard(matches) {
   for (const group of groups) {
     list.append(el('div', { class: 'evidence-item' }, [
       el('p', { class: 'evidence-item__quote' }, sanitizeText(state.check.text.slice(group.start, group.end))),
-      el('ul', { class: 'evidence-item__reasons' },
-        [...group.reasons].map((reason) => el('li', { class: 'evidence-item__reason' }, reason))),
+      // One compact line per pattern instead of a quote plus bulleted reasons.
+      el('p', { class: 'evidence-item__reasons' }, [...group.reasons].join(' · ')),
     ]));
   }
   card.append(list);
@@ -381,18 +381,16 @@ function renderResult(payload) {
   const { outcome } = payload;
   const status = outcome.analysisStatus;
   const risk = riskAssessment(outcome);
+  progressTrack.hidden = true;
   state.view = 'result';
   updateNavigation();
   explanationClamps.clear();
-  // No subtitle on the result: the verdict and the actions card already say what this is and what to do.
-  view.replaceChildren(...heading(status === 'completed' ? 'Check complete'
-    : status === 'limited' ? 'Local patterns only' : 'AI step unavailable',
-  status === 'completed' ? 'Your message assessment'
-    : status === 'limited' ? 'Limited message assessment' : 'Local scan completed'));
+  // No separate eyebrow/title block: the verdict heading is the page heading. One thing to read first.
+  view.replaceChildren();
   const assessment = el('section', { class: `assessment${status === 'limited' ? ' assessment--limited' : status === 'unavailable' ? ' assessment--failed' : ''}`, 'data-risk': risk.level });
   assessment.append(el('div', { class: 'assessment__head' }, [
     verdictIcon(status, risk.level),
-    el('h2', { class: 'assessment__title' }, status === 'completed'
+    el('h1', { class: 'assessment__title' }, status === 'completed'
       ? risk.heading : status === 'limited' ? 'Rules-only analysis' : 'AI analysis failed'),
   ]));
   const reason = status === 'completed'
@@ -414,12 +412,16 @@ function renderResult(payload) {
   const linkBanner = linkWarningBanner(payload.linkInspection, el);
   if (linkBanner) view.append(linkBanner);
   view.append(assessment);
+  // The checked message is shown near the top (owner decision, 20 November 2026) so the user can
+  // confirm what was assessed without scrolling. It sits below the verdict so the verdict stays the
+  // page h1; links inside it remain inert text.
+  view.append(messageCard(outcome));
   // Layout is only measurable once the paragraph is in the document.
   explanationMore.sync();
   if (document.fonts?.ready) document.fonts.ready.then(() => explanationMore.sync()).catch(() => {});
   // The actions card follows the verdict directly: it is what a worried user needs first.
   const summary = summaryCard(state.check.summary, el);
-  const guidance = guidanceCards(payload.guidanceResources, el, (answers, completed) => summary.update(answers, completed));
+  const guidance = guidanceCards(payload.guidanceResources, el, (answers) => summary.update(answers));
   view.append(guidance.card);
   // Local rule evidence is shown in every analysed state, including unavailable: stages 1–2
   // always ran, so hiding real evidence would leave the user with less than the server knows.
@@ -461,7 +463,6 @@ function renderResult(payload) {
   const senderCard = senderVerificationCard(payload.senderVerification, el);
   const resourceCount = payload.guidanceResources?.resources?.length ?? 0;
   view.append(el('div', { class: 'result-secondary' }, [
-    disclosure('The message you checked', null, [messageCard(outcome)]),
     disclosure('Sender, organization and link checks', null,
       [organizationCard, senderCard, linkInspectionCard(payload.linkInspection, el)]),
     disclosure('Official support and reporting', resourceCount ? `${resourceCount} reviewed` : null, [guidance.resources]),
@@ -476,6 +477,7 @@ function renderResult(payload) {
 
 function renderHistory() {
   document.getElementById('print-summary').textContent = '';
+  progressTrack.hidden = true;
   state.view = 'history';
   updateNavigation();
   view.replaceChildren(...heading('Recent checks', 'Your check history', 'Up to 20 checks from this tab’s session. This history is not synced with an account.'));
