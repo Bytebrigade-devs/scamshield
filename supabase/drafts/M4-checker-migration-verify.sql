@@ -33,11 +33,22 @@
 --   (a syntax fix, no semantic change), and switches the final COMMIT to
 --   ROLLBACK so the script is safe to run against the applied project.
 --
--- STATUS: NOT YET EXECUTED. No run against any project exists as of 23 Nov 2026.
---   The script ends in ROLLBACK (revision 5), so it can be run against the
---   applied project without leaving anything behind — not even its cleanup.
---   A green run and a red run both leave the project exactly as they found it;
---   the assertions fire before the end of the transaction either way.
+--   REVISION 6 — 24 November 2026: adds blocks 14–15 for migration 0003 (events
+--   v2). They are GUARDED by the presence of `checker_usage_events.subject_ref`,
+--   so this script still runs correctly BEFORE 0003 is applied: it skips them with
+--   a NOTICE instead of failing. Block 14 asserts that a 0.2.0-draft event needs a
+--   hygiene-valid subject_ref (and that a legacy 0.1.0-draft row needs none);
+--   block 15 asserts direction-(c) deletion now removes the subject's events and
+--   reports the count. Cleanup covers the new verify-evt-* fixtures.
+--
+-- STATUS: EXECUTED — 24 November 2026, revision 5 as merged (block 13 included),
+--   twice against the applied project, completing without raising (320 ms / 314 ms)
+--   with its own SET LOCAL ROLE service_role guard satisfied; the closing ROLLBACK
+--   left all nine tables empty. Revision 6 has NOT been executed. The script ends
+--   in ROLLBACK, so it can be run against the applied project without leaving
+--   anything behind — not even its cleanup. A green run and a red run both leave
+--   the project exactly as they found it; the assertions fire before the end of the
+--   transaction either way.
 --
 -- SCOPE: the quota / reservation / reconciliation / deletion accounting paths,
 --   which need no auth.users row. The m4_save_check / history-trigger / RLS
@@ -359,9 +370,90 @@ BEGIN
   END IF;
 END $$;
 
+-- 14. Events v2 (migration 0003): a 0.2.0-draft event must carry a hygiene-valid
+--     subject_ref; a legacy 0.1.0-draft row must not. Guarded on the column's
+--     existence so this script stays runnable before 0003 is applied.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'checker_usage_events'
+      AND column_name = 'subject_ref'
+  ) THEN
+    -- 14a: a valid 0.2.0-draft event is accepted
+    INSERT INTO public.checker_usage_events
+      (event_id, contract_version, event_type, occurred_at, taxonomy_version,
+       category_id, analysis_status, analysis_mode, subject_ref)
+    VALUES ('verify-evt-ok', '0.2.0-draft', 'm4.check_outcome', now(), '0.1.0-draft',
+            'phishing', 'completed', 'rules_and_ai', 'verify-evt-subject');
+
+    -- 14b: 0.2.0-draft with NO reference must be refused
+    BEGIN
+      INSERT INTO public.checker_usage_events
+        (event_id, contract_version, event_type, occurred_at, taxonomy_version,
+         category_id, analysis_status, analysis_mode, subject_ref)
+      VALUES ('verify-evt-null', '0.2.0-draft', 'm4.check_outcome', now(), '0.1.0-draft',
+              'phishing', 'completed', 'rules_and_ai', NULL);
+      RAISE EXCEPTION 'FAIL 14b: a 0.2.0-draft event without subject_ref must be refused';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- 14c: an email-shaped reference must be refused
+    BEGIN
+      INSERT INTO public.checker_usage_events
+        (event_id, contract_version, event_type, occurred_at, taxonomy_version,
+         category_id, analysis_status, analysis_mode, subject_ref)
+      VALUES ('verify-evt-bad', '0.2.0-draft', 'm4.check_outcome', now(), '0.1.0-draft',
+              'phishing', 'completed', 'rules_and_ai', 'someone@example.invalid');
+      RAISE EXCEPTION 'FAIL 14c: an email-shaped subject_ref must be refused';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+
+    -- 14d: a legacy 0.1.0-draft event is still accepted with no reference
+    INSERT INTO public.checker_usage_events
+      (event_id, contract_version, event_type, occurred_at, taxonomy_version,
+       category_id, analysis_status, analysis_mode)
+    VALUES ('verify-evt-legacy', '0.1.0-draft', 'm4.check_outcome', now(), '0.1.0-draft',
+            'phishing', 'completed', 'rules_and_ai');
+  ELSE
+    RAISE NOTICE 'blocks 14-15 skipped: migration 0003 (subject_ref) is not applied';
+  END IF;
+END $$;
+
+-- 15. Direction (c) now removes the subject's events too (migration 0003).
+DO $$
+DECLARE
+  r         jsonb;
+  left_over integer;
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'checker_usage_events'
+      AND column_name = 'subject_ref'
+  ) THEN
+    INSERT INTO public.checker_usage_events
+      (event_id, contract_version, event_type, occurred_at, taxonomy_version,
+       category_id, analysis_status, analysis_mode, subject_ref)
+    VALUES ('verify-evt-del', '0.2.0-draft', 'm4.check_outcome', now(), '0.1.0-draft',
+            'phishing', 'completed', 'rules_and_ai', '00000000-0000-0000-0000-0000000000e1');
+
+    r := public.m4_delete_subject('00000000-0000-0000-0000-0000000000e1', now());
+    IF (r->>'events')::int IS DISTINCT FROM 1 THEN
+      RAISE EXCEPTION 'FAIL 15a: deletion must report exactly 1 event (got %)', r->>'events';
+    END IF;
+
+    SELECT count(*) INTO left_over FROM public.checker_usage_events
+      WHERE subject_ref = '00000000-0000-0000-0000-0000000000e1';
+    IF left_over <> 0 THEN
+      RAISE EXCEPTION 'FAIL 15b: deletion left % event(s) behind', left_over;
+    END IF;
+  END IF;
+END $$;
+
 -- Cleanup: every artefact this script creates carries a verify-* key, so a run that
 -- commits still leaves nothing behind. The script ends in ROLLBACK, so in practice
 -- even this cleanup is undone — belt and braces for a shared project.
+DELETE FROM public.checker_usage_events WHERE event_id LIKE 'verify-evt-%';
 DELETE FROM public.checker_usage_reservations WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
 DELETE FROM public.checker_quota_buckets WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
 DELETE FROM public.checker_budget_buckets WHERE budget_key IN ('verify-budget', 'verify-budget-del', 'verify-budget-cap', 'verify-budget-bad', 'verify-budget-over', 'verify-budget-zero', 'verify-budget-ccy');
