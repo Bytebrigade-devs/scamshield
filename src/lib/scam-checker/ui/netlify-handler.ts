@@ -15,6 +15,7 @@ import { DEFAULT_LIMITS, TAXONOMY_VERSION } from '../boundary/check-boundary.ts'
 import { resolveM2Outcome, type M2SubscriptionDecision } from '../boundary/m2-entitlement-adapter.ts';
 import { createCheckService, liveConfigFromEnv } from './check-service.ts';
 import { resolveDemoDecision } from './demo-entitlement.ts';
+import { selectPersistence } from '../boundary/persistence-mode.ts';
 import type { CheckService } from './check-service.ts';
 
 const MAX_BODY_BYTES = 64 * 1024;
@@ -126,8 +127,13 @@ export function createNetlifyHandler(service: CheckService, options: NetlifyHand
 
 // Reuse the service within a warm instance. Its existing demo quotas are in memory,
 // shared by visitors to that instance, and reset when Netlify replaces the instance.
+// `selectPersistence` fails closed: a misconfigured M4_DURABLE_STORE throws at construction
+// instead of silently running in memory. Unset (this deployment) keeps the in-memory port.
 let handler: ReturnType<typeof createNetlifyHandler> | undefined;
 export default async function netlifyHandler(request: Request): Promise<Response> {
-  handler ??= createNetlifyHandler(createCheckService({ live: liveConfigFromEnv() }));
+  handler ??= createNetlifyHandler(createCheckService({
+    live: liveConfigFromEnv(),
+    persistence: selectPersistence(process.env).persistence,
+  }));
   return handler(request);
 }

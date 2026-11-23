@@ -20,6 +20,7 @@ import { DEFAULT_LIMITS, TAXONOMY_VERSION } from '../boundary/check-boundary.ts'
 import { createCheckService, DEMO_SUBJECT_KEY, liveConfigFromEnv } from './check-service.ts';
 import type { CheckService } from './check-service.ts';
 import { createFeedbackSupport } from './feedback-endpoint.ts';
+import { selectPersistence } from '../boundary/persistence-mode.ts';
 import type { FeedbackSupport } from './feedback-endpoint.ts';
 
 const DEFAULT_PUBLIC_DIR = fileURLToPath(new URL('./public/', import.meta.url));
@@ -212,7 +213,10 @@ export function createUiServer(options: UiServerOptions): Server {
         const result = await service.check(text, record.sender);
         // "Report a wrong result": the server generates an opaque check id and lists the
         // agreed reason codes; the browser may only echo them back (owner decision, 18 Nov 2026).
-        const feedbackOption = feedback.forOutcome(result.outcome);
+        // A durable write that failed omits the control entirely (owner decision, 24 Nov 2026).
+        const feedbackOption = result.persistenceFailure !== undefined
+          ? null
+          : feedback.forOutcome(result.outcome, undefined, result.persistedCheckId);
         sendJson(res, 200, {
           ...result,
           ...(feedbackOption ? { feedback: feedbackOption } : {}),
@@ -247,7 +251,7 @@ export function createUiServer(options: UiServerOptions): Server {
           sendJson(res, 400, { error: 'bad-request' });
           return;
         }
-        const outcome = feedback.report(body);
+        const outcome = await feedback.report(body);
         sendJson(res, outcome.status, outcome.body);
         return;
       }
@@ -285,9 +289,19 @@ function loadLocalEnv(): void {
 function start(): void {
   loadLocalEnv();
   const live = liveConfigFromEnv();
-  const service = createCheckService({ live });
+  // Store selection fails closed: `M4_DURABLE_STORE=1` without the URL/key throws here rather
+  // than quietly running in memory. Unset (every deployment today) keeps the in-memory port.
+  const selection = selectPersistence(process.env);
+  const service = createCheckService({ live, persistence: selection.persistence });
   const port = Number.parseInt(process.env.M4_UI_PORT ?? '4173', 10);
-  const server = createUiServer({ service });
+  const feedback = selection.mode === 'durable'
+    ? createFeedbackSupport({
+        subjectKey: DEMO_SUBJECT_KEY,
+        feedbackPort: selection.persistence.feedback,
+        readOwnedCheck: (checkId, subjectKey, now) => selection.persistence.checks.getOwned(checkId, subjectKey, now),
+      })
+    : undefined;
+  const server = createUiServer({ service, ...(feedback === undefined ? {} : { feedback }) });
   server.listen(Number.isFinite(port) ? port : 4173, '127.0.0.1', () => {
     const address = server.address();
     const boundPort = typeof address === 'object' && address !== null ? address.port : port;

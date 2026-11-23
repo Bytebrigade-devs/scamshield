@@ -3,7 +3,8 @@ import { TAXONOMY_VERSION } from '@/lib/scam-checker/boundary/taxonomy';
 import { createCheckService } from '@/lib/scam-checker/ui/check-service';
 import { getSubscriptionContext } from '@/lib/subscription-server';
 import { gateRequestAccess } from '@/lib/scam-checker/boundary/request-entitlement';
-import { feedback } from '../feedback-support';
+import { toEntitlementSnapshot } from '@/lib/scam-checker/boundary/m2-entitlement-adapter';
+import { feedback, selection } from '../feedback-support';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,7 +16,7 @@ export const runtime = 'nodejs';
  * selection, usage authority and credentials stay server-side; the request may carry only the
  * message text and an optional sender string.
  */
-const service = createCheckService({ live: null });
+const service = createCheckService({ live: null, persistence: selection.persistence });
 
 const NO_STORE = { 'cache-control': 'no-store' };
 
@@ -58,6 +59,8 @@ export async function POST(request: Request): Promise<Response> {
     // silently downgraded to demo; their resolved subject also keys the feedback report.
     const hasAuthorization = request.headers.get('authorization') !== null;
     let subjectKey: string | undefined;
+    /** Passed to the service so a completed analysis can be persisted under a verified user. */
+    let context: { subjectKey: string; planId: string; entitlementExpiresAt: number } | undefined;
     if (hasAuthorization) {
       let decision: Awaited<ReturnType<typeof getSubscriptionContext>> | null = null;
       try {
@@ -67,12 +70,24 @@ export async function POST(request: Request): Promise<Response> {
       }
       const gate = gateRequestAccess(decision, true, Date.now());
       if (gate.kind === 'rejected') return json(gate.status, { error: gate.error });
-      if (gate.kind === 'allowed') subjectKey = gate.subjectKey;
+      if (gate.kind === 'allowed') {
+        subjectKey = gate.subjectKey;
+        // The snapshot supplies plan + expiry for the durable row; without it no row is written.
+        const snapshot = decision !== null && decision.kind === 'verified'
+          ? toEntitlementSnapshot(decision.entitlement)
+          : null;
+        if (snapshot !== null) {
+          context = { subjectKey: gate.subjectKey, planId: snapshot.planId, entitlementExpiresAt: snapshot.expiresAt };
+        }
+      }
     }
-    const result = await service.check(record.text, record.sender);
+    const result = await service.check(record.text, record.sender, context);
     // "Report a wrong result": the server generates an opaque check id and lists the agreed
     // reason codes; the browser may only echo them back (owner decision, 18 November 2026).
-    const feedbackOption = feedback.forOutcome(result.outcome, subjectKey);
+    // A failed durable write omits the control entirely (owner decision, 24 November 2026).
+    const feedbackOption = result.persistenceFailure !== undefined
+      ? null
+      : feedback.forOutcome(result.outcome, subjectKey, result.persistedCheckId);
     return json(200, {
       ...result,
       ...(feedbackOption ? { feedback: feedbackOption } : {}),
