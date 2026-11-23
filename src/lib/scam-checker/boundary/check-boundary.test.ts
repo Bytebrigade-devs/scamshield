@@ -462,8 +462,24 @@ test('FR-M4-04: validateReply rejects non-objects, missing fields and bad types 
   });
 });
 
-// ---- FS-M4-06 / NFR-M4-10: one attempt; failures never count ----
+test('adjudication 24 Nov 2026: a cleared verdict never carries a scam category', () => {
+  const cleared = validateReply({
+    verdict: 'No obvious indicators',
+    category: 'prize_lottery_scam',
+    taxonomy_version: TAXONOMY_VERSION,
+    reason: 'Collection is free and no payment or credentials are requested.',
+  });
+  assert.equal(cleared?.verdictLabel, 'no obvious indicators');
+  assert.equal(cleared?.category, 'unknown_other', 'cleared + scam category is coerced to unknown_other');
 
+  const risky = validateReply({ verdict: 'High risk', category: 'phishing', taxonomy_version: TAXONOMY_VERSION });
+  assert.equal(risky?.category, 'phishing', 'a risk-raising verdict keeps the model category');
+
+  const undetermined = validateReply({ verdict: 'Undetermined', category: 'fake_invoice', taxonomy_version: TAXONOMY_VERSION });
+  assert.equal(undetermined?.category, 'fake_invoice', 'only the cleared label is coerced');
+});
+
+// ---- FS-M4-06 / NFR-M4-10: one attempt; failures never count ----
 test('review hardening: only draft assessment labels can complete, never free-text safety assurances', async () => {
   for (const verdict of ['suspicious', 'Potentially suspicious', 'No obvious indicators', 'High risk', 'Undetermined']) {
     assert.ok(validateReply({ ...VALID_REPLY, verdict }), verdict);
