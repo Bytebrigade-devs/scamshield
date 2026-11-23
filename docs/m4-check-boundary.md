@@ -69,3 +69,5 @@ Bounds that did not change:
 Also published in the same slice: the steward-aligned `persistence-port.ts` contract revision (`limitCount`, distinct-bucket enforcement, limit-enforcing reserve, `outcomeStatus`, `finalizeReconciliation`, direction-(c) deletion counts) and the async `durable-persistence.ts` **contract only** — it wraps an injected synchronous port in promises so the durable interface can be exercised today. It contains no Supabase client, no SQL, no table and no network, and nothing is applied to any database.
 
 Verified in this branch: **597/597** tests across 49 files, `tsc --noEmit` exit 0, `eslint` exit 0. No live provider call was made for this publication, and the model comparison remains synthetic-set evidence, not an accuracy claim.
+
+**Merged — 23 November 2026:** published as PR #54 and merged 23 Nov 13:31:51Z as `e35db9d`. Re-verified at the merged head: **605/605** tests across 49 files (two follow-up commits added the reserve/fallback-wiring tests), `tsc --noEmit`, `eslint` and `next build` exit 0, `sync-public.ts --check` clean (18 files). CI (`Shared app CI` + `M4 library tests`) success on the merged head.
