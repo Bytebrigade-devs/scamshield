@@ -45,8 +45,17 @@ import { DRAFT_VERDICT_LABELS, MAX_REASON_CHARS, TAXONOMY_VERSION } from './chec
  */
 export const DEFAULT_MODEL = 'gpt-6-luna';
 
-/** Draft provider deadline — the reviewed value is still open under OD-M4-04. */
-export const DEFAULT_DEADLINE_MS = 45_000;
+/**
+ * Per-attempt provider deadline — decision D3, closed 24 November 2026.
+ *
+ * 7 s is a portable default derived from the 80-message `gpt-6-luna` pilot
+ * (p50 4,115 / p90 5,328 / p95 5,479 / max 6,246 ms): it covers the slowest healthy
+ * response with margin, so only a genuine hang falls back. It is NOT tuned to any one
+ * host — Netlify is a temporary module demo and the app may move hosts. Each deployment
+ * overrides via `M4_UI_DEADLINE_MS` so that deadline + one fallback fits that host's
+ * function timeout. The previous 45 s default exceeded every serverless timeout.
+ */
+export const DEFAULT_DEADLINE_MS = 7_000;
 
 /** Draft per-attempt bounds, independent of the still-required aggregate budget gate. */
 export const MAX_OUTPUT_TOKENS = 4_096;
