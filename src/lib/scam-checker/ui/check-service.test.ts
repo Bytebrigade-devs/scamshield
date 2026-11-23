@@ -339,7 +339,7 @@ test('an analysed outcome emits one local 0.2.0-draft event with the demo subjec
   const service = createCheckService();
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
-  const events = service.listEvents();
+  const events = await service.listEvents();
   assert.equal(events.length, 1);
   const [event] = events;
   assert.equal(event.contract_version, '0.2.0-draft');
@@ -352,13 +352,13 @@ test('an analysed outcome emits one local 0.2.0-draft event with the demo subjec
 test('a completed AI outcome emits with its validated category; unavailable stays unknown_other', async () => {
   const completed = createCheckService({ live: LIVE, provider: completedProvider });
   assert.equal((await completed.check(FIXTURE)).outcome.kind, 'analysed');
-  const [event] = completed.listEvents();
+  const [event] = await completed.listEvents();
   assert.equal(event.analysis_status, 'completed');
   assert.equal(event.category_id, 'phishing');
 
   const unavailable = createCheckService({ live: LIVE, provider: { analyze: async () => ({ kind: 'failed', failure: 'timeout' }) } });
   assert.equal((await unavailable.check(FIXTURE)).outcome.kind, 'analysed');
-  const [failed] = unavailable.listEvents();
+  const [failed] = await unavailable.listEvents();
   assert.equal(failed.analysis_status, 'unavailable');
   assert.equal(failed.category_id, 'unknown_other');
 });
@@ -366,29 +366,29 @@ test('a completed AI outcome emits with its validated category; unavailable stay
 test('rejected outcomes emit no event; accepted checks get distinct ids', async () => {
   const service = createCheckService();
   assert.equal((await service.check('x'.repeat(2001))).outcome.kind, 'rejected');
-  assert.equal(service.listEvents().length, 0);
+  assert.equal((await service.listEvents()).length, 0);
   await service.check(FIXTURE);
   await service.check(FIXTURE);
-  const events = service.listEvents();
+  const events = await service.listEvents();
   assert.equal(events.length, 2);
   assert.notEqual(events[0].event_id, events[1].event_id);
 });
 
 test('an injected sink receives exactly one append per analysed check', async () => {
   const appended: unknown[] = [];
-  const service = createCheckService({ events: { append: (event) => { appended.push(event); return true; } } });
+  const service = createCheckService({ events: { append: async (event) => { appended.push(event); return true; } } });
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
   assert.equal(appended.length, 1);
   assert.equal((appended[0] as { subject_ref?: string }).subject_ref, 'local-ui-demo-subject');
-  assert.equal(service.listEvents().length, 0, 'an injected sink replaces the internal store');
+  assert.equal((await service.listEvents()).length, 0, 'an injected sink replaces the internal store');
 });
 
 test('events: null disables emission without affecting the check', async () => {
   const service = createCheckService({ events: null });
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
-  assert.equal(service.listEvents().length, 0);
+  assert.equal((await service.listEvents()).length, 0);
 });
 
 test('fallback model: configured via M4_UI_FALLBACK_MODEL and reported without the key', () => {

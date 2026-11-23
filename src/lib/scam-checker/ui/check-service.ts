@@ -20,7 +20,10 @@ import type {
 } from '../boundary/check-boundary.ts';
 import { createInMemoryUsageStore } from '../boundary/usage-store.ts';
 import { createInMemoryPersistence, type StoredUsageEvent } from '../boundary/persistence-port.ts';
+import { createAsyncPersistence, type DurablePersistence } from '../boundary/durable-persistence.ts';
 import { emitCheckOutcome, type EventSink } from '../boundary/event-emitter.ts';
+import { persistCompletedCheck } from './persisted-check.ts';
+import { randomUUID } from 'node:crypto';
 import { createOpenAIProvider, DEFAULT_DEADLINE_MS, DEFAULT_MODEL, MAX_OUTPUT_TOKENS } from '../boundary/openai-adapter.ts';
 import type { AiFailure } from '../boundary/openai-adapter.ts';
 import { createResponsesProvider } from './responses-adapter.ts';
@@ -139,10 +142,25 @@ export interface CheckServiceOptions {
   /** Separate, server-owned reviewed help catalog. Never read before admission. */
   guidanceDirectory?: readonly GuidanceRecord[];
   /**
-   * Server-construction injection for the local X-13 event sink (tests); `null` disables
-   * emission entirely. Never accepted from an HTTP request.
+   * Server-construction injection for the X-13 event sink (tests); `null` disables emission
+   * entirely. Never accepted from an HTTP request. Async since 24 Nov 2026.
    */
   events?: EventSink | null;
+  /**
+   * Server-construction store (owner decision 24 Nov 2026): defaults to the in-memory port
+   * wrapped async. Deployments pass `selectPersistence(process.env).persistence`, which is
+   * memory unless `M4_DURABLE_STORE` is configured. Never accepted from an HTTP request.
+   */
+  persistence?: DurablePersistence;
+}
+
+/** Server-derived identity for the durable write; absent means nothing is persisted. */
+export interface CheckSubjectContext {
+  /** Verified M2 user uuid rendered as text. Anything else persists only an event. */
+  subjectKey?: string;
+  planId?: string;
+  /** Entitlement expiry in epoch ms, from the resolved snapshot. */
+  entitlementExpiresAt?: number;
 }
 
 export interface CheckServiceResult {
@@ -155,6 +173,10 @@ export interface CheckServiceResult {
   linkInspection?: LinkInspection;
   guidanceResources?: GuidanceResources;
   aiFailure?: AiFailure;
+  /** The durable check id, present only when a completed check was actually stored. */
+  persistedCheckId?: string;
+  /** Why the durable write did not happen; the analysed result is still returned. */
+  persistenceFailure?: string;
 }
 
 export interface CheckService {
@@ -165,12 +187,16 @@ export interface CheckService {
   /** Transport style of the configured live provider (for honest UI labelling). */
   readonly api: 'chat' | 'responses' | null;
   /**
-   * Local in-memory X-13 event log (`0.2.0-draft`, nine fields). Per-process only — a restart
-   * forgets it, and nothing is ever delivered to a consumer. Reads the service-internal
-   * store; an injected test sink receives the emissions instead.
+   * X-13 event log (`0.2.0-draft`, nine fields) in the configured store. With the default
+   * in-memory port it is per-process; with `M4_DURABLE_STORE` it is the durable table.
    */
-  listEvents(): StoredUsageEvent[];
-  check(text: unknown, sender?: unknown): Promise<CheckServiceResult>;
+  listEvents(): Promise<StoredUsageEvent[]>;
+  /**
+   * Run one check. The optional context carries the verified identity after admission; when it
+   * holds a uuid subject a completed analysis is persisted (check + history), otherwise only the
+   * event is written. Never accept this context from a request body.
+   */
+  check(text: unknown, sender?: unknown, context?: CheckSubjectContext): Promise<CheckServiceResult>;
 }
 
 /** Fixed local demo subject. Identity is injected server-side, never read from the browser.
@@ -224,7 +250,9 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
   // X-13: one local 0.2.0-draft event per accepted analysed outcome (in-memory only; no
   // delivery to any consumer). The reference is the same server-derived demo subject the
   // feedback surfaces use — never a browser-supplied value.
-  const persistence = createInMemoryPersistence();
+  // Store (owner decision 24 Nov 2026): the async in-memory port by default, or the durable
+  // adapter when the construction site passes `selectPersistence(process.env).persistence`.
+  const persistence = options.persistence ?? createAsyncPersistence(createInMemoryPersistence());
   const events: EventSink | null = options.events === null ? null : options.events ?? persistence.events;
   let eventSeq = 0;
   // No credentials means rules only, never a fabricated AI reply. Test provider injection
@@ -284,7 +312,7 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
     fallbackModel: live === null || fallbackModel === live.model ? null : fallbackModel,
     api: live !== null ? (live.api ?? 'chat') : null,
     listEvents: () => persistence.events.listAll(),
-    async check(text: unknown, sender?: unknown): Promise<CheckServiceResult> {
+    async check(text: unknown, sender?: unknown, context?: CheckSubjectContext): Promise<CheckServiceResult> {
       if (sender !== undefined && (typeof sender !== 'string' || sender.length > 254)) {
         return { outcome: { kind: 'rejected', reason: 'invalid-input', message: 'Sender information must be text of at most 254 characters.' },
           providerMode: live === null ? 'live-unconfigured' : 'live' };
@@ -327,15 +355,46 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
       };
       const outcome = await runCheck({ text }, deps);
       if (outcome.kind === 'analysed' && outcome.analysisStatus === 'unavailable' && !aiFailure) aiFailure = { code: 'invalid-response' };
+
+      // The event names the verified subject when one was supplied, otherwise the demo subject.
+      const subjectRef = context?.subjectKey?.trim() || DEMO_SUBJECT_KEY;
       if (outcome.kind === 'analysed' && events) {
-        // Idempotent by event id; the boolean result is not a check-failure signal.
-        emitCheckOutcome(events, outcome, {
-          subjectRef: DEMO_SUBJECT_KEY,
-          eventId: `evt-${++eventSeq}`,
-          occurredAt: new Date(now()).toISOString(),
-        });
+        // Idempotent by event id; event loss is not a check failure, so a rejection is swallowed.
+        try {
+          await emitCheckOutcome(events, outcome, {
+            subjectRef,
+            eventId: `evt-${++eventSeq}`,
+            occurredAt: new Date(now()).toISOString(),
+          });
+        } catch {
+          // The analysed result stands; analytics loss never becomes a safety verdict or a failure.
+        }
       }
+
+      // Durable check + history: only a completed analysis under a verified uuid subject.
+      let persistedCheckId: string | undefined;
+      let persistenceFailure: string | undefined;
+      const subjectKey = context?.subjectKey?.trim();
+      if (outcome.kind === 'analysed' && outcome.analysisStatus === 'completed'
+          && subjectKey !== undefined && subjectKey.length > 0
+          && context?.planId !== undefined && Number.isFinite(context.entitlementExpiresAt)) {
+        const persisted = await persistCompletedCheck({
+          persistence,
+          checkId: randomUUID(),
+          subjectKey,
+          planId: context.planId,
+          entitlementExpiresAt: context.entitlementExpiresAt as number,
+          text: typeof text === 'string' ? text : '',
+          outcome,
+          now: now(),
+        });
+        if (persisted.ok) persistedCheckId = persisted.checkId;
+        else persistenceFailure = persisted.reason;
+      }
+
       return { outcome, providerMode: live === null ? 'live-unconfigured' : 'live',
+        ...(persistedCheckId === undefined ? {} : { persistedCheckId }),
+        ...(persistenceFailure === undefined ? {} : { persistenceFailure }),
         ...(outcome.kind === 'analysed' ? { organizationVerification, linkInspection, guidanceResources,
           ...(senderVerification ? { senderVerification } : {}),
           ...(outcome.analysisStatus === 'unavailable' && aiFailure ? { aiFailure } : {}) } : {}) };

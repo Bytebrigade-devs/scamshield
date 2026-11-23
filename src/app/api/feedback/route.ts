@@ -1,4 +1,5 @@
 import { feedback } from '../feedback-support';
+import { getSubscriptionContext } from '@/lib/subscription-server';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -38,6 +39,18 @@ export async function POST(request: Request): Promise<Response> {
     return json(400, { error: 'bad-request' });
   }
 
-  const result = feedback.report(body);
+  // A signed-in caller's own subject is what the durable store needs; without a token the
+  // in-memory demo path applies (it derives the subject from the id it issued).
+  let subjectKey: string | undefined;
+  if (request.headers.get('authorization') !== null) {
+    try {
+      const decision = await getSubscriptionContext(request);
+      if (decision.kind === 'verified' && typeof decision.user?.id === 'string') subjectKey = decision.user.id;
+    } catch {
+      subjectKey = undefined; // an unverifiable session never authorizes a durable write
+    }
+  }
+
+  const result = await feedback.report(body, subjectKey);
   return json(result.status, result.body);
 }
