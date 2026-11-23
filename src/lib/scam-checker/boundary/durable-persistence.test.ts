@@ -254,7 +254,7 @@ test('account deletion (direction c) removes user-linked quota/reservations, kee
   });
 
   const counts = await port.deleteSubject('subject-a');
-  assert.deepEqual(counts, { checks: 1, history: 1, feedback: 1, quotaBuckets: 2, reservations: 1 });
+  assert.deepEqual(counts, { checks: 1, history: 1, feedback: 1, quotaBuckets: 2, reservations: 1, events: 0 });
   assert.equal(await port.checks.getOwned('check-1', 'subject-a', NOW), null);
   assert.deepEqual(await port.history.listOwned('subject-a', NOW), []);
 
@@ -279,6 +279,7 @@ test('transaction function names match the recorded draft contract', () => {
     'm4_delete_subject',
     'm4_finalize_reconciliation',
     'm4_mark_reconciliation',
+    'm4_purge_events',
     'm4_purge_expired',
     'm4_reserve_check',
     'm4_save_check',

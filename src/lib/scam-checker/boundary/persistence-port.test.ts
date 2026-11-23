@@ -197,12 +197,18 @@ test('deleteSubject: direction (c) removes user-linked quota/reservations, keeps
   }));
   assert.ok(record);
 
+  // 0003: direction (c) also removes the subject's 0.2.0-draft events, but not another subject's.
+  port.events.append({ ...event({ event_id: 'evt-a' }), contract_version: '0.2.0-draft', subject_ref: 'subject-a' } as unknown as CheckOutcomeEvent);
+  port.events.append({ ...event({ event_id: 'evt-b' }), contract_version: '0.2.0-draft', subject_ref: 'subject-b' } as unknown as CheckOutcomeEvent);
+
   const deleted = port.deleteSubject('subject-a');
   assert.equal(deleted.checks, 2);
   assert.equal(deleted.history, 2);
   assert.equal(deleted.feedback, 1);
   assert.equal(deleted.reservations, 1);
   assert.equal(deleted.quotaBuckets, 2);
+  assert.equal(deleted.events, 1, 'the subject’s 0.2.0-draft event is removed');
+  assert.deepEqual(port.events.listAll().map(entry => entry.event_id), ['evt-b'], 'another subject’s event survives');
   assert.equal(port.history.listOwned('subject-a', NOW).length, 0);
 
   // User-linked quota buckets are gone; the outstanding charge was resolved into spend.

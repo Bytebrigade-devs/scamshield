@@ -334,11 +334,15 @@ function createFakeSupabase(): FakeSupabase {
     tables[M4_TABLES.quotaBuckets] = tables[M4_TABLES.quotaBuckets]!.filter((row) => row.subject_key !== subject);
     const beforeRes = tables[M4_TABLES.reservations]!.length;
     tables[M4_TABLES.reservations] = tables[M4_TABLES.reservations]!.filter((row) => row.subject_key !== subject);
+    // 0003: direction (c) also removes the subject's 0.2.0-draft events by subject_ref.
+    const beforeEvents = tables[M4_TABLES.events]!.length;
+    tables[M4_TABLES.events] = tables[M4_TABLES.events]!.filter((row) => row.subject_ref !== subject);
     // Budget totals are non-user-linked and survive a deletion.
     return {
       checks: removed.checks, history: removed.history, feedback: removed.feedback,
       quota_buckets: beforeQuota - tables[M4_TABLES.quotaBuckets]!.length,
       reservations: beforeRes - tables[M4_TABLES.reservations]!.length,
+      events: beforeEvents - tables[M4_TABLES.events]!.length,
     };
   }
 
@@ -353,6 +357,14 @@ function createFakeSupabase(): FakeSupabase {
     return ids.length;
   }
 
+  function purgeEvents(args: Row): number {
+    if (args.p_before === null || args.p_before === undefined) return 0;
+    const cutoff = Date.parse(String(args.p_before));
+    const before = tables[M4_TABLES.events]!.length;
+    tables[M4_TABLES.events] = tables[M4_TABLES.events]!.filter((row) => !(Date.parse(String(row.occurred_at)) < cutoff));
+    return before - tables[M4_TABLES.events]!.length;
+  }
+
   const rpcHandlers: Record<string, (args: Row) => unknown> = {
     [M4_TRANSACTION_FUNCTIONS.saveCheck]: saveCheck,
     [M4_TRANSACTION_FUNCTIONS.reserveCheck]: reserveCheck,
@@ -361,6 +373,7 @@ function createFakeSupabase(): FakeSupabase {
     [M4_TRANSACTION_FUNCTIONS.finalizeReconciliation]: finalizeReconciliation,
     [M4_TRANSACTION_FUNCTIONS.deleteSubject]: deleteSubject,
     [M4_TRANSACTION_FUNCTIONS.purgeExpired]: purgeExpired,
+    [M4_TRANSACTION_FUNCTIONS.purgeEvents]: purgeEvents,
   };
 
   const transport: PostgrestTransport = {
@@ -430,6 +443,7 @@ function readMigration(name: string): string {
 
 const sql0001 = readMigration('M4-checker-migration-0001-draft.sql');
 const sql0002 = readMigration('M4-checker-migration-0002-functions-draft.sql');
+const sql0003 = readMigration('M4-checker-migration-0003-events-v2-draft.sql');
 
 test('every table the adapter names exists in migration 0001', () => {
   for (const [key, name] of Object.entries(M4_TABLES)) {
@@ -437,10 +451,18 @@ test('every table the adapter names exists in migration 0001', () => {
   }
 });
 
-test('every function the adapter calls exists in migration 0002', () => {
+test('every 0002 transaction function the adapter calls exists in migration 0002', () => {
   for (const [key, name] of Object.entries(M4_TRANSACTION_FUNCTIONS)) {
+    if (key === 'purgeEvents') continue; // defined in 0003, asserted below
     assert.ok(sql0002.includes(`FUNCTION public.${name}(`), `0002 is missing ${key} (${name})`);
   }
+});
+
+test('the event purge function the adapter calls exists in migration 0003', () => {
+  assert.ok(
+    sql0003.includes(`FUNCTION public.${M4_TRANSACTION_FUNCTIONS.purgeEvents}(`),
+    `0003 is missing purgeEvents (${M4_TRANSACTION_FUNCTIONS.purgeEvents})`,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -691,9 +713,16 @@ test('deleteSubject removes the subject rows, keeps budget totals, and needs a u
   }));
   assert.ok(reservation);
 
+  await adapter.events.append({
+    contract_version: EVENT_CONTRACT_VERSION_V2, event_type: EVENT_TYPE, event_id: 'evt_del',
+    occurred_at: iso(NOW), taxonomy_version: TAXONOMY_VERSION, category_id: 'phishing',
+    analysis_status: 'completed', analysis_mode: 'rules_and_ai', subject_ref: SUBJECT,
+  });
+
   const counts = await adapter.deleteSubject(SUBJECT);
-  assert.deepEqual(counts, { checks: 1, history: 1, feedback: 1, quotaBuckets: 2, reservations: 1 });
+  assert.deepEqual(counts, { checks: 1, history: 1, feedback: 1, quotaBuckets: 2, reservations: 1, events: 1 });
   assert.equal(fake.tables[M4_TABLES.checks]!.length, 0);
+  assert.equal(fake.tables[M4_TABLES.events]!.length, 0, 'the subject’s 0.2.0-draft event is removed too');
   assert.equal(fake.tables[M4_TABLES.budgetBuckets]!.length, 1, 'non-user-linked spend totals are retained');
 
   await assert.rejects(() => adapter.deleteSubject('not-a-uuid'), /verified M2 user uuid/);
