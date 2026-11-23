@@ -6,9 +6,11 @@
 --   to the applied project (or a scratch one), **as the `service_role`**, not as `postgres`.
 --   Running it as `postgres` bypasses the privilege checks, so it would pass even
 --   when `service_role` lacks the table rights the functions need. Every block
---   raises on failure; the whole script is one transaction, so a failure rolls
---   back and leaves nothing behind. On success it prints nothing and commits a
---   cleanup.
+--   raises on failure, and the whole script is one transaction that ends in
+--   ROLLBACK: on success it reaches the end without raising and prints nothing,
+--   on failure it raises and stops — and either way the transaction is rolled
+--   back, so the fixtures and their cleanup never persist. "Passed" therefore
+--   means "no predicate raised", not "something was committed".
 --
 --   REVISION 2 — 22 November 2026: replaced every `<>` assertion with
 --   `IS DISTINCT FROM` and added an explicit NULL guard on the replay, because a
