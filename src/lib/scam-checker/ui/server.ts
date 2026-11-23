@@ -21,6 +21,7 @@ import { createCheckService, DEMO_SUBJECT_KEY, liveConfigFromEnv } from './check
 import type { CheckService } from './check-service.ts';
 import { createFeedbackSupport } from './feedback-endpoint.ts';
 import { selectPersistence } from '../boundary/persistence-mode.ts';
+import type { StoredHistoryEntry } from '../boundary/persistence-port.ts';
 import type { FeedbackSupport } from './feedback-endpoint.ts';
 
 const DEFAULT_PUBLIC_DIR = fileURLToPath(new URL('./public/', import.meta.url));
@@ -53,6 +54,8 @@ export interface UiServerOptions {
   feedback?: FeedbackSupport;
   /** Injected for tests; defaults to the real clock. */
   now?: () => number;
+  /** Injected for tests; defaults to an empty reader. The deployment wires the configured store. */
+  history?: { listOwned(subjectKey: string, now: number): Promise<StoredHistoryEntry[]> };
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -150,6 +153,8 @@ export function createUiServer(options: UiServerOptions): Server {
   const { service } = options;
   const publicDir = options.publicDir ?? DEFAULT_PUBLIC_DIR;
   const feedback = options.feedback ?? createFeedbackSupport({ subjectKey: DEMO_SUBJECT_KEY });
+  const now = options.now ?? Date.now;
+  const history = options.history ?? { listOwned: async (): Promise<StoredHistoryEntry[]> => [] };
 
   return createHttpServer(async (req, res) => {
     const method = req.method ?? 'GET';
@@ -179,6 +184,17 @@ export function createUiServer(options: UiServerOptions): Server {
           },
           taxonomyVersion: TAXONOMY_VERSION,
         });
+        return;
+      }
+
+      if (pathname === '/api/history') {
+        if (method !== 'GET') {
+          sendJson(res, 405, { error: 'method-not-allowed' });
+          return;
+        }
+        // The local keyless demo has no verified caller; it lists the demo subject's rows only.
+        const entries = await history.listOwned(DEMO_SUBJECT_KEY, now());
+        sendJson(res, 200, { access: 'full', entries });
         return;
       }
 
@@ -301,7 +317,11 @@ function start(): void {
         readOwnedCheck: (checkId, subjectKey, now) => selection.persistence.checks.getOwned(checkId, subjectKey, now),
       })
     : undefined;
-  const server = createUiServer({ service, ...(feedback === undefined ? {} : { feedback }) });
+  const server = createUiServer({
+    service,
+    history: selection.persistence.history,
+    ...(feedback === undefined ? {} : { feedback }),
+  });
   server.listen(Number.isFinite(port) ? port : 4173, '127.0.0.1', () => {
     const address = server.address();
     const boundPort = typeof address === 'object' && address !== null ? address.port : port;
