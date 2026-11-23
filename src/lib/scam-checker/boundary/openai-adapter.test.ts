@@ -191,8 +191,8 @@ test('output budgets use the approved default, accept bounded settings, and over
     assert.equal(JSON.parse(calls[0].init.body!).max_completion_tokens, expected);
   }
   assert.equal(MAX_OUTPUT_TOKENS, 4096);
-  assert.equal(DEFAULT_DEADLINE_MS, 45_000);
-  for (const value of [undefined, 0, -1, NaN, Infinity, 60_001]) assert.equal(providerDeadline(value), 45_000);
+  assert.equal(DEFAULT_DEADLINE_MS, 7_000);
+  for (const value of [undefined, 0, -1, NaN, Infinity, 60_001]) assert.equal(providerDeadline(value), 7_000);
   assert.equal(providerDeadline(60_000), 60_000);
 });
 
