@@ -1,9 +1,10 @@
 -- ============================================================================
--- M4 AI Scam Checker — durable persistence transaction functions (DRAFT 0002, revision 5)
+-- M4 AI Scam Checker — durable persistence transaction functions (0002, revision 5, APPLIED)
 -- ============================================================================
--- STATUS: DRAFT for independent review. NOT applied. Depends on migration 0001
---   revision 5 (design/M4-checker-migration-0001-draft.sql). No function here
---   exists in any database, and nothing in this file has been executed.
+-- STATUS: APPLIED — 23 November 2026, revision 5, to the same authoritative
+--   project (https://gcqfwynvtjjokndpturf.supabase.co), after 0001 revision 6.
+--   Creates the seven transaction functions below.
+--   DO NOT RE-RUN. Review: Prashni 21 Nov, Lahiru 22 Nov (both static).
 --
 -- REVISION 2 — 21 November 2026: implements the steward's review item 3 and her
 --   follow-up answers. Changes:

@@ -3,7 +3,7 @@
 -- ============================================================================
 -- PURPOSE: turn the steward's "successful testing" precondition into something
 --   checkable. Run this AFTER applying 0001 (revision 6) and 0002 (revision 5)
---   to a SCRATCH Supabase project, **as the `service_role`**, not as `postgres`.
+--   to the applied project (or a scratch one), **as the `service_role`**, not as `postgres`.
 --   Running it as `postgres` bypasses the privilege checks, so it would pass even
 --   when `service_role` lacks the table rights the functions need. Every block
 --   raises on failure; the whole script is one transaction, so a failure rolls
@@ -28,10 +28,14 @@
 --   (budget_key, period_start). Lahiru's 23 November carry-over noted that 0002
 --   enforces the rule (a different currency returns NULL, never a silent rewrite
 --   of stored spend) but nothing here asserted it. Also notes 0001 at revision 6
---   (a syntax fix, no semantic change).
+--   (a syntax fix, no semantic change), and switches the final COMMIT to
+--   ROLLBACK so the script is safe to run against the applied project.
 --
--- STATUS: NOT executed by M4. No database was contacted to produce this file.
---   It is a proposal for the steward to run; M4 cannot run it without access.
+-- STATUS: NOT YET EXECUTED. No run against any project exists as of 23 Nov 2026.
+--   The script ends in ROLLBACK (revision 5), so it can be run against the
+--   applied project without leaving anything behind — not even its cleanup.
+--   A green run and a red run both leave the project exactly as they found it;
+--   the assertions fire before the end of the transaction either way.
 --
 -- SCOPE: the quota / reservation / reconciliation / deletion accounting paths,
 --   which need no auth.users row. The m4_save_check / history-trigger / RLS
@@ -353,15 +357,21 @@ BEGIN
   END IF;
 END $$;
 
--- Cleanup: remove every verification artefact so the scratch project is left clean.
+-- Cleanup: every artefact this script creates carries a verify-* key, so a run that
+-- commits still leaves nothing behind. The script ends in ROLLBACK, so in practice
+-- even this cleanup is undone — belt and braces for a shared project.
 DELETE FROM public.checker_usage_reservations WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
 DELETE FROM public.checker_quota_buckets WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
 DELETE FROM public.checker_budget_buckets WHERE budget_key IN ('verify-budget', 'verify-budget-del', 'verify-budget-cap', 'verify-budget-bad', 'verify-budget-over', 'verify-budget-zero', 'verify-budget-ccy');
 
-COMMIT;
+-- ROLLBACK, not COMMIT (revision 5, 23 November 2026). The assertions all fire
+-- inside this transaction, so nothing is lost by undoing it — and running the
+-- script against the applied project then leaves the database exactly as it was
+-- found, which COMMIT could not promise for any pre-existing verify-* rows.
+ROLLBACK;
 
 -- ============================================================================
--- If this script commits without raising, the accounted paths above hold on the
--- applied schema. Report the result with a date. The save/history/RLS paths
+-- If this script reaches the end without raising, the accounted paths above hold
+-- on the applied schema. Report the result with a date. The save/history/RLS paths
 -- still need a provisioned test auth user and a separate check.
 -- ============================================================================

@@ -1,8 +1,14 @@
 -- ============================================================================
--- M4 AI Scam Checker — durable persistence migration 0001 (DRAFT, revision 5)
+-- M4 AI Scam Checker — durable persistence migration 0001 (revision 6, APPLIED)
 -- ============================================================================
--- STATUS: DRAFT for schema-steward review. NOT applied. No table, policy,
---   function or trigger here exists in any database.
+-- STATUS: APPLIED — 23 November 2026, revision 6, to the authoritative project
+--   https://gcqfwynvtjjokndpturf.supabase.co, after docs/m2-schema.sql.
+--   Creates 8 tables, 5 helper functions, 4 policies and 1 trigger.
+--   The first attempt (revision 5) failed with 42601 on the missing FUNCTION
+--   keyword and rolled back completely; see REVISION 6 below.
+--   DO NOT RE-RUN: this file is one-time and creates objects without IF NOT EXISTS.
+--   Review provenance: Prashni 21 Nov and Lahiru 22 Nov, both static; the apply
+--   added no semantic change, only the keyword fix.
 --
 -- REVISION 2 — 21 November 2026: incorporates the steward's review at commit
 --   74d0958 ("Changes are needed before approval"). Changes made:
