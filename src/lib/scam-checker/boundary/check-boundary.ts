@@ -372,6 +372,13 @@ export function validateReply(json: unknown): ValidatedReply | null {
     if (typeof reply.category !== 'string') return null;
     category = normaliseCategory(reply.category);
   }
+  // Cleared verdicts must not carry a scam category (adjudication, 24 Nov 2026).
+  // The 22 Nov pilot showed four messages labelled `no obvious indicators` while
+  // categorised `prize_lottery_scam`/`fake_invoice` — a contradictory pairing in the
+  // UI and in the stored event/history rows. A cleared verdict asserts no scam
+  // pattern, so the category is coerced deterministically here instead of trusting
+  // the prompt to comply.
+  if (verdictLabel === 'no obvious indicators') category = 'unknown_other';
   const reason = typeof reply.reason === 'string' ? reply.reason : null;
   const riskLevel: RiskLevel = reply.risk_level === 'low' || reply.risk_level === 'suspicious' || reply.risk_level === 'high'
     ? reply.risk_level : 'undetermined';
