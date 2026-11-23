@@ -41,14 +41,24 @@
 --   block 15 asserts direction-(c) deletion now removes the subject's events and
 --   reports the count. Cleanup covers the new verify-evt-* fixtures.
 --
--- STATUS: EXECUTED — 24 November 2026, revision 5 as merged (block 13 included),
---   twice against the applied project, completing without raising (320 ms / 314 ms)
---   with its own SET LOCAL ROLE service_role guard satisfied; the closing ROLLBACK
---   left all nine tables empty. Revision 6 has NOT been executed. The script ends
---   in ROLLBACK, so it can be run against the applied project without leaving
---   anything behind — not even its cleanup. A green run and a red run both leave
---   the project exactly as they found it; the assertions fire before the end of the
---   transaction either way.
+--   REVISION 7 — 24 November 2026: adds blocks 16–17 for the purge helpers (D4).
+--   Block 16 proves m4_purge_events (0003): a NULL cutoff removes nothing, a 30-day
+--   cutoff removes exactly the old event and keeps the recent one. Block 17 proves
+--   m4_purge_expired (0002) is executable by service_role and returns a non-negative
+--   count (0 on the empty applied project). Row-level checks cascade is covered by
+--   the doubles + Phase 4, not here (scam_checks needs an auth.users row). NOT yet
+--   executed; the schedule itself is migration 0004 and stays gated.
+--
+-- STATUS: EXECUTED — 24 November 2026. Revision 5 as merged (block 13 included)
+--   ran twice against the applied project, completing without raising (320 ms /
+--   314 ms) with its SET LOCAL ROLE service_role guard satisfied. Revision 6
+--   (blocks 14–15 for 0003) then ran with those blocks LIVE — no skip notice —
+--   completing without raising (361 ms); the closing ROLLBACK left all nine tables
+--   empty (*/0). Revision 7 (blocks 16–17, the purge helpers) is drafted but NOT yet
+--   executed. The script ends in ROLLBACK, so it can be run against the applied
+--   project without leaving anything behind — not even its cleanup. A green run and
+--   a red run both leave the project exactly as they found it; the assertions fire
+--   before the end of the transaction either way.
 --
 -- SCOPE: the quota / reservation / reconciliation / deletion accounting paths,
 --   which need no auth.users row. The m4_save_check / history-trigger / RLS
@@ -447,6 +457,70 @@ BEGIN
     IF left_over <> 0 THEN
       RAISE EXCEPTION 'FAIL 15b: deletion left % event(s) behind', left_over;
     END IF;
+  END IF;
+END $$;
+
+-- 16. Event purge helper (migration 0003, decision D4): m4_purge_events(p_before)
+--     removes events strictly older than the cutoff and reports the count; a NULL
+--     cutoff deletes nothing. Guarded on the function's existence so this stays
+--     runnable before 0003. This proves the HELPER, not the schedule — the 30-day
+--     TTL is still provisional (M5 + M1) and scheduling is gated (migration 0004).
+DO $$
+DECLARE
+  removed   integer;
+  left_over integer;
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'm4_purge_events' AND pronamespace = 'public'::regnamespace) THEN
+    -- 16a: a NULL cutoff is a no-op
+    removed := public.m4_purge_events(NULL);
+    IF removed IS DISTINCT FROM 0 THEN
+      RAISE EXCEPTION 'FAIL 16a: a NULL cutoff must remove nothing (got %)', removed;
+    END IF;
+
+    INSERT INTO public.checker_usage_events
+      (event_id, contract_version, event_type, occurred_at, taxonomy_version,
+       category_id, analysis_status, analysis_mode, subject_ref)
+    VALUES ('verify-evt-purge-old', '0.2.0-draft', 'm4.check_outcome', now() - interval '40 days', '0.1.0-draft',
+            'phishing', 'completed', 'rules_and_ai', 'verify-evt-purge-subject'),
+           ('verify-evt-purge-new', '0.2.0-draft', 'm4.check_outcome', now(), '0.1.0-draft',
+            'phishing', 'completed', 'rules_and_ai', 'verify-evt-purge-subject');
+
+    -- 16b: a 30-day cutoff removes exactly the one old event
+    removed := public.m4_purge_events(now() - interval '30 days');
+    IF removed IS DISTINCT FROM 1 THEN
+      RAISE EXCEPTION 'FAIL 16b: purge must remove exactly the 1 old event (got %)', removed;
+    END IF;
+
+    SELECT count(*) INTO left_over FROM public.checker_usage_events WHERE event_id = 'verify-evt-purge-old';
+    IF left_over <> 0 THEN
+      RAISE EXCEPTION 'FAIL 16c: the old event survived the purge';
+    END IF;
+    SELECT count(*) INTO left_over FROM public.checker_usage_events WHERE event_id = 'verify-evt-purge-new';
+    IF left_over <> 1 THEN
+      RAISE EXCEPTION 'FAIL 16d: the recent event must survive the purge';
+    END IF;
+  ELSE
+    RAISE NOTICE 'block 16 skipped: migration 0003 (m4_purge_events) is not applied';
+  END IF;
+END $$;
+
+-- 17. Checks purge helper (migration 0002, decision D4): m4_purge_expired(p_now)
+--     must be executable by service_role and return a non-negative count. On the
+--     applied project every table is empty, so it returns 0 here. Row-level
+--     deletion + dependent cascade is proven by the adapter/in-memory doubles and
+--     Phase 4's live save/history run (a real auth user); seeding scam_checks here
+--     would need an auth.users row, which this script's accounting scope avoids.
+DO $$
+DECLARE
+  removed integer;
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'm4_purge_expired' AND pronamespace = 'public'::regnamespace) THEN
+    removed := public.m4_purge_expired(now());
+    IF removed IS NULL OR removed < 0 THEN
+      RAISE EXCEPTION 'FAIL 17a: m4_purge_expired must return a non-negative count (got %)', removed;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'FAIL 17b: m4_purge_expired must exist (migration 0002 applied)';
   END IF;
 END $$;
 
