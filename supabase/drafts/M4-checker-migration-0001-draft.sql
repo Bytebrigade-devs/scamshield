@@ -49,6 +49,20 @@
 --     SET LOCAL ROLE path does not depend on Supabase's implicit default;
 --   * a one-time-apply note (below); no table, column or policy behaviour changed.
 --
+-- REVISION 6 — 23 November 2026: SYNTAX FIX FOUND AT APPLY TIME. The first real
+--   execution of this file failed with
+--     ERROR 42601 syntax error at or near "("  (line 551)
+--   because five privilege statements said `REVOKE ALL ON public.<fn>(args)`
+--   without the required `FUNCTION` keyword. Fixed in place:
+--     * `REVOKE ALL ON public.m4_*` → `REVOKE ALL ON FUNCTION public.m4_*`
+--       (five statements: m4_utf16_units, m4_valid_highlights,
+--       m4_valid_limitations, m4_valid_opaque_id, m4_history_matches_parent).
+--   NOTHING SEMANTIC CHANGED: the same five functions, the same argument lists,
+--   the same target role. The file was already wrapped in BEGIN…COMMIT, so the
+--   failed apply rolled back completely and no object was left behind.
+--   Static review (Prashni 21 Nov, Lahiru 22 Nov) did not catch this: a
+--   keyword-level syntax defect is only visible to a parser or a real run.
+--
 -- DECISIONS RECORDED 21 NOV (steward answers; see the review/answer records):
 --   * account deletion follows direction (c): the subject's user-linked quota
 --     buckets and reservations are removed after outstanding reservations and
@@ -548,11 +562,11 @@ GRANT SELECT ON public.scam_findings    TO authenticated;
 GRANT SELECT ON public.checker_history  TO authenticated;
 GRANT SELECT ON public.checker_feedback TO authenticated;
 
-REVOKE ALL ON public.m4_utf16_units(text)        FROM PUBLIC;
-REVOKE ALL ON public.m4_valid_highlights(jsonb)  FROM PUBLIC;
-REVOKE ALL ON public.m4_valid_limitations(jsonb) FROM PUBLIC;
-REVOKE ALL ON public.m4_valid_opaque_id(text, integer) FROM PUBLIC;
-REVOKE ALL ON public.m4_history_matches_parent() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_utf16_units(text)        FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_valid_highlights(jsonb)  FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_valid_limitations(jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_valid_opaque_id(text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.m4_history_matches_parent() FROM PUBLIC;
 
 -- CHECK constraints and triggers evaluate as the inserting role, so the
 -- server-only writer needs EXECUTE on the helpers it indirectly invokes.

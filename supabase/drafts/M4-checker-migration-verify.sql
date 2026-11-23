@@ -2,7 +2,7 @@
 -- M4 AI Scam Checker — migration verification script (for the schema steward)
 -- ============================================================================
 -- PURPOSE: turn the steward's "successful testing" precondition into something
---   checkable. Run this AFTER applying 0001 (revision 5) and 0002 (revision 5)
+--   checkable. Run this AFTER applying 0001 (revision 6) and 0002 (revision 5)
 --   to a SCRATCH Supabase project, **as the `service_role`**, not as `postgres`.
 --   Running it as `postgres` bypasses the privilege checks, so it would pass even
 --   when `service_role` lacks the table rights the functions need. Every block
@@ -23,6 +23,12 @@
 --   for the four items in Lahiru's static re-check: cumulative budget spend,
 --   budget-exceeded refusal, different-subject replay, malformed budget, and
 --   limit_count refresh after a downgrade. Each block goes red without its fix.
+--
+--   REVISION 5 — 23 November 2026: adds block 13, currency immutability per
+--   (budget_key, period_start). Lahiru's 23 November carry-over noted that 0002
+--   enforces the rule (a different currency returns NULL, never a silent rewrite
+--   of stored spend) but nothing here asserted it. Also notes 0001 at revision 6
+--   (a syntax fix, no semantic change).
 --
 -- STATUS: NOT executed by M4. No database was contacted to produce this file.
 --   It is a proposal for the steward to run; M4 cannot run it without access.
@@ -314,10 +320,43 @@ BEGIN
   END IF;
 END $$;
 
+-- 13. Currency is immutable per (budget_key, period_start): a different currency
+--     refuses admission, and the stored currency is never rewritten. 0002 enforces
+--     this; without this block the rule had no assertion (Lahiru, 23 Nov 2026).
+DO $$
+DECLARE
+  r   jsonb;
+  ccy text;
+BEGIN
+  r := public.m4_reserve_check('verify-s-currency', 'v-currency-1', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 10,
+    jsonb_build_object('budget_key', 'verify-budget-ccy',
+      'period_start', date_trunc('month', now()),
+      'period_end', date_trunc('month', now()) + interval '1 month',
+      'currency', 'USD', 'limit_amount', 10, 'reserved_amount', 0.01));
+  IF r IS NULL THEN RAISE EXCEPTION 'FAIL 13a: the first reservation with a currency must be admitted'; END IF;
+
+  r := public.m4_reserve_check('verify-s-currency', 'v-currency-2', now(), 60000,
+    date_trunc('day', now()), date_trunc('day', now()) + interval '1 day', 5,
+    'monthly', date_trunc('month', now()), date_trunc('month', now()) + interval '1 month', 10,
+    jsonb_build_object('budget_key', 'verify-budget-ccy',
+      'period_start', date_trunc('month', now()),
+      'period_end', date_trunc('month', now()) + interval '1 month',
+      'currency', 'LKR', 'limit_amount', 10, 'reserved_amount', 0.01));
+  IF r IS NOT NULL THEN RAISE EXCEPTION 'FAIL 13b: a different currency must refuse admission'; END IF;
+
+  SELECT currency INTO ccy FROM public.checker_budget_buckets
+    WHERE budget_key = 'verify-budget-ccy' AND period_start = date_trunc('month', now());
+  IF ccy IS DISTINCT FROM 'USD' THEN
+    RAISE EXCEPTION 'FAIL 13c: the stored currency must stay USD (got %)', ccy;
+  END IF;
+END $$;
+
 -- Cleanup: remove every verification artefact so the scratch project is left clean.
 DELETE FROM public.checker_usage_reservations WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
 DELETE FROM public.checker_quota_buckets WHERE subject_key LIKE 'verify-s-%' OR subject_key = '00000000-0000-0000-0000-0000000000d1';
-DELETE FROM public.checker_budget_buckets WHERE budget_key IN ('verify-budget', 'verify-budget-del', 'verify-budget-cap', 'verify-budget-bad', 'verify-budget-over', 'verify-budget-zero');
+DELETE FROM public.checker_budget_buckets WHERE budget_key IN ('verify-budget', 'verify-budget-del', 'verify-budget-cap', 'verify-budget-bad', 'verify-budget-over', 'verify-budget-zero', 'verify-budget-ccy');
 
 COMMIT;
 

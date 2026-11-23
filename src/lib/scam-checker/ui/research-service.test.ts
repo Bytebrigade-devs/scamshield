@@ -38,9 +38,9 @@ test('local and hosted endpoints ignore forged research and do not expose provid
     const service=createCheckService();const server=hosted?undefined:createUiServer({service});
     if(server)await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
     const address=server?.address();const base=hosted?'https://demo.netlify.app':`http://127.0.0.1:${typeof address==='object'&&address?address.port:0}`;
-    const handler=hosted?createNetlifyHandler(service):(request:Request)=>fetch(request);
+    const handler=hosted?createNetlifyHandler(service,{resolveDecision:async()=>({kind:'verified',user:{id:'test-user'},entitlement:{canRunCheck:true,planId:'sentinel',status:'trialing',expiresAt:'2099-01-01T00:00:00.000Z'}})}):(request:Request)=>fetch(request);
     try {const config=await (await handler(new Request(`${base}/api/config`))).json();assert.equal('domainResearchProvider' in config,false);
-      const response=await handler(new Request(`${base}/api/check`,{method:'POST',headers:{'content-type':'application/json',origin:base},body:JSON.stringify({text:TEXT,sender:'help@boc.lk',domainResearch:{status:'supported'}})}));
+      const response=await handler(new Request(`${base}/api/check`,{method:'POST',headers:{'content-type':'application/json',origin:base,authorization:'Bearer test-token'},body:JSON.stringify({text:TEXT,sender:'help@boc.lk',domainResearch:{status:'supported'}})}));
       const result=await response.json();assert.equal('domainResearch' in result,false);assert.equal(result.senderVerification.value,'help@boc.lk');
     } finally {if(server)await new Promise<void>(resolve=>server.close(()=>resolve()));}
   }

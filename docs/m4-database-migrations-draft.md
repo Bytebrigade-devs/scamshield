@@ -55,8 +55,9 @@ The verifier is still a proposal; no SQL has been executed and no database has b
 
 - **Steward:** **Svishwa (M4 owner / project manager)** — reassigned 22 Nov 2026 (manager decision; Prashni remains the design author). Applies the reviewed migrations.
 - **Reviewer:** **Lahiru (M2)** — independent schema review requested 22 Nov 2026, because the author and the steward are now the same person. Review scope: naming, limits, lock order, `outcome_status`, and the direction-(c) deletion logic.
-- **Access / project:** Lahiru (M2) arranges a **fresh Supabase project** (owner decision, 22 Nov 2026) and invites the steward's account with SQL rights. On a fresh project the M2 base schema must be applied before these drafts.
-- **Target:** 22 November 2026 was conditional and has **slipped**; review, access and testing were still open on that date.
+- **Access / project — CHANGED 23 Nov 2026 (supersedes the fresh-project decision below):** the owner applies on the **existing** `scamshield-shared-dev` project. The 22 Nov "fresh Supabase project" decision was taken before the 23 Nov Vercel deployment, and no provisioning or invitation is owed. Order: `docs/m2-schema.sql` → `supabase/drafts/M4-checker-migration-0001-draft.sql` (revision 6) → `…-0002-functions-draft.sql` → the verify script, each by exact filename. **The project reference is deliberately not written here** — it is recorded in the M4 workspace apply record; the repository holds no ref, and `xegqsshpvteizvsfzkiz` and `gcqfwynvtjjokndpturf` have both been in circulation (Lahiru, 23 Nov 2026).
+- **Target:** 22 November 2026 was conditional and **slipped**; review and access were still open on that date. **Applied 23 November 2026** by the owner/steward; see the M4 workspace apply record for the verified outcome.
+- **Review status:** Prashni's 21 Nov review and Lahiru's 22 Nov re-check were **static** readings. Lahiru's 23 Nov carry-overs: the verify script had **never been executed** anywhere, and the currency-immutability rule had **no assertion** — both addressed by verify-script revision 5 (block 13).
 - **M4's next dependency:** once the reviewed migrations are applied, M4 implements the Supabase adapter behind the existing `persistence-port` and runs the live end-to-end entitlement/history test.
 
 ## Sources (authoritative, in the owner workspace)
