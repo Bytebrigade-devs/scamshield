@@ -1,16 +1,17 @@
 import { DEFAULT_LIMITS } from '@/lib/scam-checker/boundary/check-boundary';
 import { TAXONOMY_VERSION } from '@/lib/scam-checker/boundary/taxonomy';
-import { createCheckService } from '@/lib/scam-checker/ui/check-service';
+import { createCheckService, liveConfigFromEnv } from '@/lib/scam-checker/ui/check-service';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /**
- * The demo service is built with **no provider** on purpose: the mounted checker runs local
- * pattern checks only, so a public route can never spend money or call an external model.
- * Live AI stays gated behind the X-09 closure and a deliberate server-side configuration.
+ * The config service reads the same server-side provider environment as `/api/check`
+ * (`liveConfigFromEnv`), so `liveConfigured`/`model`/`api` honestly reflect whether a provider is
+ * configured. With no `OPENAI_API_KEY` it reports rules-only. This route never calls the provider
+ * and never returns the key — booleans and limits only.
  */
-const service = createCheckService({ live: null });
+const service = createCheckService({ live: liveConfigFromEnv() });
 
 /** `/api/config` — booleans and limits only. Never the key, never provider internals. */
 export function GET(): Response {
