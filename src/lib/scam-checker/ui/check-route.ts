@@ -87,8 +87,10 @@ export function createCheckApiRoute(options: CheckRouteOptions): (request: Reque
         if (gate.kind === 'allowed') {
           subjectKey = gate.subjectKey;
           // The snapshot supplies plan + expiry for the durable row; without it no row is written.
+          // Pass the FULL decision: toEntitlementSnapshot reads kind/user/entitlement off it, so
+          // handing it only decision.entitlement always returned null and silently dropped history.
           const snapshot =
-            decision !== null && decision.kind === 'verified' ? toEntitlementSnapshot(decision.entitlement) : null;
+            decision !== null && decision.kind === 'verified' ? toEntitlementSnapshot(decision) : null;
           if (snapshot !== null) {
             context = {
               subjectKey: gate.subjectKey,
