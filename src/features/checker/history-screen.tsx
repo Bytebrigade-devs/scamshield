@@ -17,18 +17,24 @@ import { PageHeading, useHeadingFocus } from "./ui";
 
 export function HistoryScreen() {
   useHeadingFocus();
-  const { history, clearHistory, showInput } = useChecker();
+  const { history, clearHistory, showInput, signedIn } = useChecker();
 
   return (
     <>
       <PageHeading
         eyebrow="Recent checks"
         title="Your check history"
-        subtitle="Up to 20 checks from this tab’s session. This history is not synced with an account."
+        subtitle={
+          signedIn
+            ? "Checks saved to your account, retained per your plan. Read-only — retention removes them automatically, not from here."
+            : "Up to 20 checks from this tab’s session. This history is not synced with an account."
+        }
       />
 
       <section className="card">
-        <h2 className="card__title">{history.length ? "Checks in this tab" : "No checks yet"}</h2>
+        <h2 className="card__title">
+          {history.length ? (signedIn ? "Checks saved to your account" : "Checks in this tab") : "No checks yet"}
+        </h2>
         {history.length === 0 ? (
           <p className="card__body card__body--muted">
             Check a message to see its result and a short excerpt here.
@@ -51,12 +57,14 @@ export function HistoryScreen() {
                 </article>
               ))}
             </div>
-            <div className="card__actions">
-              <p className="actions-note">Clears this list only. It does not delete provider records.</p>
-              <button className="btn btn--ghost" type="button" id="clear-history" onClick={clearHistory}>
-                Clear history
-              </button>
-            </div>
+            {!signedIn && (
+              <div className="card__actions">
+                <p className="actions-note">Clears this list only. It does not delete provider records.</p>
+                <button className="btn btn--ghost" type="button" id="clear-history" onClick={clearHistory}>
+                  Clear history
+                </button>
+              </div>
+            )}
           </>
         )}
       </section>

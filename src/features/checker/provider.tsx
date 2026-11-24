@@ -13,12 +13,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { createSummaryModel } from "@/lib/scam-checker/ui/public/summary.js";
 
-import { loadConfig as fetchConfig, postCheck } from "./http";
+import { loadConfig as fetchConfig, loadHistory, postCheck } from "./http";
 import type { ConfigResult } from "./http";
+import { accessToken } from "./session";
 import {
   HISTORY_LIMIT,
   SENDER_MAX,
   historyEntryFor,
+  historyEntryFromServer,
   inputCap,
   isAnalysedOutcome,
   readHistory,
@@ -64,6 +66,8 @@ interface CheckerContextValue {
   showInput: (options?: InputOptions) => void;
   showHistory: () => void;
   clearHistory: () => void;
+  /** Whether a verified session is present (server history) vs the tab-session list. */
+  signedIn: boolean;
   /** Cap in force right now (configured value, or the documented fallback). */
   cap: number;
 }
@@ -84,6 +88,9 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
   // an empty list and the first client render renders the input screen, so the initializer cannot
   // cause a hydration mismatch.
   const [history, setHistory] = useState<HistoryEntry[]>(readHistory);
+  // Signed-in callers read their retained server history; anonymous callers keep the tab-session
+  // list. Resolved in an effect so the first client render matches the server render.
+  const [signedIn, setSignedIn] = useState(false);
   const [check, setCheck] = useState<SubmittedCheck | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [senderError, setSenderError] = useState<string | null>(null);
@@ -118,6 +125,26 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
     });
     return () => controller.abort();
   }, [applyConfig]);
+
+  /** Replace the displayed list with the signed-in caller's retained server history. */
+  const refreshServerHistory = useCallback(async () => {
+    const result = await loadHistory();
+    if (result.ok) setHistory(result.entries.map(historyEntryFromServer).slice(0, HISTORY_LIMIT));
+  }, []);
+
+  // Resolve the session once on mount: signed-in → server history; anonymous → tab-session list.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const token = await accessToken();
+      if (cancelled) return;
+      setSignedIn(token !== null);
+      if (token !== null) await refreshServerHistory();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshServerHistory]);
 
   const showInput = useCallback(
     (options: InputOptions = {}) => {
@@ -207,15 +234,21 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
         payload,
         summary: createSummaryModel(payload, submittedText, summaryInstantFor(payload)),
       };
-      const entry = historyEntryFor(payload, submittedText, Date.now());
-      setHistory((previous) => writeHistory([entry, ...previous].slice(0, HISTORY_LIMIT)));
+      if (signedIn) {
+        // The server persisted the completed check under the verified subject; show the retained
+        // account history rather than a local copy.
+        void refreshServerHistory();
+      } else {
+        const entry = historyEntryFor(payload, submittedText, Date.now());
+        setHistory((previous) => writeHistory([entry, ...previous].slice(0, HISTORY_LIMIT)));
+      }
       setCheck(submitted);
       setBusy(false);
       setView("result");
       setPrintSummary("");
       requestFocus("heading");
     });
-  }, [busy, cap, config, requestFocus, sender, showInput, text]);
+  }, [busy, cap, config, refreshServerHistory, requestFocus, sender, showInput, signedIn, text]);
 
   const retryConfig = useCallback(() => {
     setFieldError(null);
@@ -239,6 +272,7 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
       busy,
       view,
       history,
+      signedIn,
       check,
       fieldError,
       senderError,
@@ -270,6 +304,7 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
       focus,
       formError,
       history,
+      signedIn,
       printSummary,
       retryConfig,
       sender,

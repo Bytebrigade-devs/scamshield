@@ -11,6 +11,8 @@
  * directly under `<body>` (which it does, because the root layout renders children inline).
  */
 
+import Link from "next/link";
+
 import { useChecker } from "./provider";
 
 const DEMO_NOTICE_STYLE: React.CSSProperties = {
@@ -23,15 +25,18 @@ const DEMO_NOTICE_STYLE: React.CSSProperties = {
 };
 
 export function CheckerShell({ children }: { children: React.ReactNode }) {
-  const { busy, view, printSummary, showInput, showHistory } = useChecker();
+  const { busy, view, printSummary, showInput, showHistory, config, signedIn } = useChecker();
   const historyCurrent = view === "history";
 
   return (
     <>
       <div className="checker">
         <p role="note" style={DEMO_NOTICE_STYLE}>
-          Demo build — local pattern checks only. No sign-in, no saved history on the server, and no AI
-          analysis is configured.
+          {config?.liveConfigured
+            ? signedIn
+              ? "AI analysis is on and your checks are saved to your account."
+              : "AI analysis is on. Sign in to save your checks to your account."
+            : "Local pattern checks only — no AI analysis is configured."}
         </p>
 
         <header className="site-header">
@@ -77,6 +82,15 @@ export function CheckerShell({ children }: { children: React.ReactNode }) {
             >
               History
             </button>
+            {signedIn ? (
+              <Link href="/account/subscription" className="nav-link">
+                Account
+              </Link>
+            ) : (
+              <Link href="/login" className="nav-link">
+                Sign in
+              </Link>
+            )}
           </nav>
           <div id="check-progress" className="progress-track" hidden={!busy} aria-hidden="true">
             <span className="progress-track__bar" />
