@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:browser": "playwright test",
+    "test:checker": "node --experimental-strip-types --test tests/checker-model.test.ts tests/checker-css-isolation.test.ts",
     "test:subscription": "node --test scripts/test-subscription.cjs",
     "test:vault": "node --experimental-strip-types --test tests/vault-model.test.ts"
   },

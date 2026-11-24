@@ -1,10 +1,136 @@
 # ScamShield — local scam checker
 
+## Retired UI, surviving library — 24 November 2026 (later)
+
+**The browser screen and its HTTP server are gone; the library is not.** The mounted checker is a
+React page in the app (`src/app/checker/page.tsx` + `src/features/checker/**`), so this folder no
+longer ships a front end:
+
+- **Deleted:** `server.ts`, `netlify-handler.ts`, `public/app.js`, `public/guidance-cards.js`,
+  `public/summary-card.js`, `public/index.html`, `NETLIFY.md`, and the tests that exercised those
+  renderers (`server.test.ts`, `netlify-handler.test.ts`, `guidance-client.test.ts`,
+  `summary-card.test.ts`). The workspace `netlify/` folder and `netlify.toml` went with them, so the
+  Netlify demo is retired in favour of the Vercel deployment of the app.
+- **Added:** `check-route.ts` — the framework-neutral `Request → Response` handler
+  (`createCheckRoute`) carrying the transport rules the two deleted servers used to duplicate.
+  `src/app/api/check/route.ts` is now a thin wrapper over it, and `guidance-service` /
+  `organization-service` / `research-service` test it directly instead of standing up two servers.
+- **Kept unchanged:** the nine pure view models in `public/` (`assessment`, `evidence`, `guidance`,
+  `summary`, `render-safe`, `link-banner`, `feedback`, `organization-card`, `provenance-cards`) and
+  `styles.css`. The React screen imports them as-is — they are the library's framework-neutral core,
+  which is why the port cost days rather than weeks.
+- **`notice-approval.test.ts` is repo-only** now: it guards the M1-approved notice wording by
+  reading `src/features/checker/input-screen.tsx`, which does not exist in this workspace.
+
+The commands below that start a local server no longer apply; use the app (`pnpm dev`, `/checker`).
+
+## Current state — 24 November 2026
+
+- **Provider deadline is 7 s by default** (`DEFAULT_DEADLINE_MS`, decision D3): the 80-message pilot's slowest healthy response was 6.25 s, so 7 s covers it with margin and only a genuine hang falls back. It was 45 s — longer than any serverless timeout. Each deployment sets `M4_UI_DEADLINE_MS` so that *deadline + one fallback* fits its function timeout (Netlify keeps 8 s; the host is temporary).
+- **The durable store is wired and usable**: `check-service` accepts a `DurablePersistence`, `EventSink.append` is async, and `persisted-check.ts` writes check + findings + history in one call. Feedback has a durable path whose ownership proof is the `checker_feedback → scam_checks` foreign key. **Unset `M4_DURABLE_STORE` means in-memory — true in every deployment.**
+- **The demo requires a verified caller**: no `Authorization` header → 401, no entitlement → 403, unverifiable → 503, and a refusal never reaches the provider.
+- **Cleared results never carry a scam category** (adjudication, 24 Nov): `validateReply` coerces the category to `unknown_other` when the verdict is `no obvious indicators`.
+- Counts: workspace **649/649**, repository **664/664**, sweep **103/103**.
+- Still unmeasured: Sinhala/Tamil on `gpt-6-luna` (the 500-message run is authorized, meter-check first).
+
+## Primary model changed to `gpt-6-luna` — 22 November 2026
+
+Owner decision: **`gpt-6-luna` is now the primary model** (`DEFAULT_MODEL` in `code/boundary/openai-adapter.ts`; `M4_UI_MODEL` in the local-only `.env.local`), replacing `gpt-5.6-luna`. **`gpt-5.6-luna` is the single fallback** (`M4_UI_FALLBACK_MODEL`), used for exactly one extra attempt and only on a transport failure (`timeout`/`network`/`http-error`) — never after invalid or refused output, never retried for a more confident answer (`code/boundary/fallback-provider.ts`). Basis: the 40-pair / 80-message comparison — 80/80 completed, **39/39 intended scams flagged (unchanged)**, **40/40 legitimate near-matches cleared (vs 29/40)**, 0 clear scams labelled safe, latency +4% mean (4,143 vs 3,980 ms) — [record](../../evidence/M4-pilot-live-80-gpt6luna-20261122.md). `/api/config` now reports `fallbackModel`, and a failed fallback still ends in a labelled unavailable state. The Netlify environment variables are updated to match (`M4_UI_MODEL=gpt-6-luna`, `M4_UI_FALLBACK_MODEL=gpt-5.6-luna`); see `NETLIFY.md`. Still unmeasured: Sinhala/Tamil behaviour, an approved latency threshold, and grounded-span adjudication. Local verification after the change: workspace suite **561/561** plus the new fallback tests, and a live smoke **3/3 completed** on `gpt-6-luna`.
+
 ## Live provider and prompt baseline — 19 November 2026
 
-The configured **testing** provider is now the owner's **OpenCode Go** subscription — gateway `https://opencode.ai/inference/go` (OpenAI-compatible Responses API), the recorded primary model **`gpt-5.6-luna`**, the same listed rates, and the Go usage allowance (Extra Usage off) as the hard stop. The Responses adapter sends the Go-required `user-agent` and a stable `x-opencode-session` header; the key stays local-only in the gitignored `code/ui/.env.local`. **X-09 is closed owner-self-certified** (key accepted, single smoke 3/3 completed), and the live work is recorded: the **40-pair pilot (80/80)** and the **500-message detector run (500/500; scam 350/350 flagged)**. The amended OD-M4-04 prompt instruction is **accepted as the draft baseline** (28/32 control overflags cleared, 20-message scam canary 20/20, sweep 103/103). Native OpenAI remains the recorded production target. [Amendment](../../evidence/M4-x09-opencode-go-provider-amendment-20261119.md) · [Closure](../../evidence/M4-x09-closure-20261119.md) · [Pilot](../../evidence/M4-pilot-live-80-20261119.md) · [500-message run](../../evidence/M4-500-live-run-20261119.md) · [OD-M4-04 acceptance](../../evidence/M4-od-m4-04-acceptance-and-adjudication-20261119.md).
+The configured **testing** provider is now the owner's **OpenCode Go** subscription — gateway `https://opencode.ai/inference/go` (OpenAI-compatible Responses API), the recorded primary model **`gpt-5.6-luna`** (superseded 22 November 2026 — see above), the same listed rates, and the Go usage allowance (Extra Usage off) as the hard stop. The Responses adapter sends the Go-required `user-agent` and a stable `x-opencode-session` header; the key stays local-only in the gitignored `code/ui/.env.local`. **X-09 is closed owner-self-certified** (key accepted, single smoke 3/3 completed), and the live work is recorded: the **40-pair pilot (80/80)** and the **500-message detector run (500/500; scam 350/350 flagged)**. The amended OD-M4-04 prompt instruction is **accepted as the draft baseline** (28/32 control overflags cleared, 20-message scam canary 20/20, sweep 103/103). Native OpenAI remains the recorded production target. [Amendment](../../evidence/M4-x09-opencode-go-provider-amendment-20261119.md) · [Closure](../../evidence/M4-x09-closure-20261119.md) · [Pilot](../../evidence/M4-pilot-live-80-20261119.md) · [500-message run](../../evidence/M4-500-live-run-20261119.md) · [OD-M4-04 acceptance](../../evidence/M4-od-m4-04-acceptance-and-adjudication-20261119.md).
 
 Verification at this boundary: workspace suite **500/500**, strict sweep **103/103**; repository `main` = **`c946e13`** with **495/495** library tests (PR #44). The Netlify demo is unchanged by this round; no accuracy, real-world-coverage or deployment claim follows.
+
+## Reviewed directory expansion — 13 → 28 organizations, 20 November 2026
+
+The reviewed offline directory grew by **15 verified organizations** across the three approved tiers:
+National Savings Bank, Seylan Bank (call centre published), Dialog (1777 hotline published), SLT-Mobitel
+(one record — slt.lk operates under the SLTMobitel brand), CEB, LECO, the Inland Revenue Department, the
+Department of Posts, the Department of Immigration and Emigration, Daraz, Kapruka, WhatsApp (Meta),
+Telegram, Western Union and Wise. Every fact was confirmed on the organization's own page before entry
+(reviewedAt 2026-11-20); the reviewed-source-host allowlist, the rule-engine brand projection and two
+guidance resources (Seylan security notice, NSB contact) followed. New kinds `government`/`commerce` were
+added to the schema. **Omitted as unverifiable from the review machine** (open items, never guessed): NDB,
+DFCC, the National Water Board, Takas, UPS, Aramex, SriLankan Airlines, and the CBSL register (the new
+banks are verified via their own sites instead). Both offline fixture clocks moved to 2026-11-20 so the
+new facts are not future-dated in evidence.
+
+Verified: Node **541/541**, sweep **103/103** (new spelling references shifted no expectations), browser
+matrices **479 + 996 + 436 + 196 = 2,107 assertions, zero browser errors** (the organization matrix grew
+by four new cases: Dialog, Daraz, WhatsApp, IRD). Deployed (production `6b006886…`); live checks confirm a
+Dialog message matching name-and-domain with the 1777 hotline and an IRD fake-penalty message matching
+with a `suspicious` AI verdict. Re-read each new source within the 90-day window (by 18 February 2027).
+[Change and deployment record](../../evidence/M4-directory-expansion-20261120.md).
+
+## Visual polish — background depth, header mark, honest loading motion, 20 November 2026
+
+The page no longer reads as an empty canvas: a quiet teal radial wash sits over the slate base, the header
+is sticky/translucent with a shield-check wordmark, and the verdict card carries stronger elevation plus a
+3–4% risk-coloured tint (existing tokens only, no new design tokens). The verdict heading is now 26 px
+desktop / 24 px phone. Loading is visible: an animated spinner inside the Check button and a 3 px
+indeterminate bar on the header edge (no percentage or invented steps), hidden once the result renders.
+Cards rise in with a short stagger and opened disclosures fade; all of it is disabled under
+`prefers-reduced-motion` (the ordering bug that let the entrance animation survive reduced motion was
+caught by a probe and fixed before deploy).
+
+Verified: Node **541/541**, sweep **103/103**, browser matrices **479 + 996 + 356 + 196 = 2,027
+assertions, zero browser errors**; contrast 5.02–17.85, no overflow at 320/390/768/1440. Heights: mobile
+2,060 px, desktop 1,843 px. Deployed (production `6b0056e2…`) with hosted AI live.
+[Change and deployment record](../../evidence/M4-visual-polish-20261120.md).
+
+## Simplified checks and official-support layouts — 20 November 2026
+
+The two evidence disclosures were de-duplicated so users can scan them: contact rows are one line
+(`Phone number: …` + status) with "Listed for …" kept but per-match citation blocks removed; every
+reviewed source now appears **once per record** in a compact "Reviewed sources" list instead of being
+repeated under each contact; unconfirmed contacts share one honesty line per record; each official
+resource is **one muted meta line** (purpose · organization · region · scope) with sources consolidated
+at card level; outdated provenance stays inert in the consolidated list; and the duplicated
+trusted-channel sentence was removed from the link card (it remains once, in the resources card). All
+statuses, `data-*` attributes, inert-URL behaviour and approved source-link rules are unchanged.
+
+Verified: Node **541/541**, sweep **103/103**, browser matrices **479 + 996 + 356 + 196 = 2,027
+assertions, zero browser errors**. Deployed (production `6b004eda…`), hosted AI still live.
+[Change and deployment record](../../evidence/M4-checks-resources-simplification-20261120.md).
+
+## Instructions-only steps, button-first export, message at top — 20 November 2026
+
+Three owner-requested changes on top of the simplification round:
+
+- **Top = instructions only.** The tick checkboxes are gone; the step list is driven by the bottom
+  "What happened?" answers (unanswered → general steps; shared/paid → urgent bank step; clicked/shared →
+  device/account steps). Ticks were removed from the exported summary too — it now lists each visible step
+  once, with no `[x]` marks.
+- **Export is a button card.** "Export this check" no longer shows the summary text: it shows
+  Copy / Download TXT / Print, with the text behind an opt-in "Review summary text" details. Print,
+  clipboard, TXT bytes and the canonical string are unchanged.
+- **"The message you checked" is visible at the top**, directly under the verdict, and removed from the
+  disclosure group (now three disclosures). Trade-off recorded: the message text and submitted URLs are
+  now readable on the results page without opening anything; links stay inert.
+
+Measured: mobile **2,021 px**, desktop **1,839 px** (the message card adds ~287 px; hiding the export
+preview returns ~50 px). Verified: Node **541/541**, sweep **103/103**, browser matrices **479 + 996 + 356
++ 196 = 2,027 assertions, zero browser errors**. Deployed (production `6b004128…`) with hosted AI live
+(`gpt-5.6-luna`). [Change and deployment record](../../evidence/M4-result-instructions-export-message-20261120.md).
+
+## Result page simplified — one-screen verdict, checklist actions, 20 November 2026
+
+Owner feedback: the result page was "too complicated and lot to scroll." The page now leads with the
+verdict as the page `h1` (the old eyebrow + "Your message assessment" block is gone), and each next step
+is a **one-line action** instead of a paragraph — the full approved sentence stays in a single closed
+"Full guidance for each step" panel, and the priority-0 money action keeps its full text expanded. The
+optional "What happened?" helper and tick-honesty sentence moved into a "How answers and ticks are used"
+details; chips render 2-up at phone width. Pattern quotes now carry one muted reason line, the AI reason
+clamps at 4 lines on phones / 6 on desktop with the existing Read-full control, and disclosure rows are
+44 px with tighter gaps. Exports still emit the full approved action sentences.
+
+Measured: mobile completed **2,451 → 1,772 px (−28 %)**, desktop **2,029 → 1,702 px**; live site with a
+real AI reason is 1,810 px mobile with the first step at 603 px (first screen). Verified: Node 538/538,
+sweep 103/103, browser matrices 479 + 1019 + 356 + 196 (**2,050 assertions, zero browser errors**).
+Deployed to Netlify (production `6b003955…`) with hosted AI still live (`gpt-5.6-luna`, `responses`).
+[Change, measurements and deployment record](../../evidence/M4-result-page-simplification-20261120.md).
 
 ## Result-page refinement + feature-harness repair — 20 November 2026
 

@@ -3,6 +3,20 @@
 **Published:** 18 November 2026 (workspace sync; **mounted** the same day by PR #39) · **Scope:** the M4 checker's serving layer and browser assets, now inside `src/lib/scam-checker/ui/`, plus the live `/checker` page and API routes.
 **Not in scope:** no real entitlement (demo rules-only mode), no live provider call, no deployment, no accuracy claim.
 
+## Current state — 24 November 2026 (supersedes the serving details below)
+
+`/checker` is now a **React page**, not a Route Handler: `src/app/checker/page.tsx` + `src/app/checker/layout.tsx` + `src/features/checker/**`, on Next.js 16 App Router / React 19. The screen imports the pure view models from `ui/public/*.js` (`assessment`, `evidence`, `guidance`, `summary`, `render-safe`, plus `linkWarningModel`, `feedbackModel`, `reviewedSource`, `aiFailureMessage`) and `ui/public/styles.css`; it does not load any script from `/checker/*`.
+
+Consequences for the statements on this page:
+
+- **`src/app/checker/shell.generated.ts` no longer exists** and `src/app/checker/route.ts` was deleted. The HTML shell is not generated anywhere.
+- **`public/checker/` now holds only `favicon.svg`.** The 14 browser modules are no longer copied there; they would be dead assets.
+- **`ui/scripts/sync-public.ts` produces 3 files, not 18** — the two woff2 fonts and the favicon — because those are the only things a stylesheet or the route metadata must fetch by absolute URL. `public-mirror.test.ts` asserts the new set.
+- **`ui/public/app.js`, `guidance-cards.js`, `summary-card.js` and `index.html` are no longer imported by the app.** They remain the workspace's frozen vanilla demo (see `code/ui/` in the owner workspace) and still run the Netlify demo deployment; they are not part of the Next.js page.
+- **`ui/server.ts` and `ui/netlify-handler.ts` were deleted (24 November 2026, later that day)** along with the workspace `netlify/` + `netlify.toml` that served them. Their transport logic survives as the framework-neutral `ui/check-route.ts` (`createCheckRoute`), which `src/app/api/check/route.ts` now wraps and which the service tests call directly — the same admission rules, one implementation, no second server. The Netlify demo deployment is retired in favour of the Vercel deployment of this app.
+
+Every dated paragraph below keeps its original meaning as a snapshot of that day. [Port record: `evidence/M4-checker-react-port-20261124.md` in the owner workspace.]
+
 ## Why this exists
 
 Until this sync the repository carried M4's libraries (boundary, rules, preprocessing, taxonomy, history/feedback stores, link-warning view model) but not the layer that turns them into a working check: provider transport, guidance and organization data, link inspection, summary rendering, and the static screens. The workspace build had all of it; the repository did not. This slice closes that gap so the app can mount it.

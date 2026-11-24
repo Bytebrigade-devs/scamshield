@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCheckService, liveConfigFromEnv } from './check-service.ts';
-import { createUiServer } from './server.ts';
-import { createNetlifyHandler } from './netlify-handler.ts';
+import { createCheckRoute } from './check-route.ts';
+import { createCheckService, DEMO_SUBJECT_KEY, liveConfigFromEnv } from './check-service.ts';
+import { createFeedbackSupport } from './feedback-endpoint.ts';
 const LIVE = { apiKey: 'synthetic-key', baseUrl: 'https://provider.invalid/v1', model: 'test' };
 const TEXT = 'BOC information at https://unreviewed.example.com/path';
 const REPLY = { verdict: 'undetermined', category: 'unknown_other', taxonomy_version: '0.1.0-draft', reason: 'The message needs independent verification.', risk_level: 'undetermined', reason_highlights: ['independent verification'] };
@@ -33,15 +33,25 @@ test('AI failures preserve directory and sender evidence with one attempt', asyn
   assert.equal(calls,1);assert.equal(result.aiFailure?.code,'rate-limited');assert.ok(result.organizationVerification?.organizations.length);
   assert.equal(result.senderVerification?.status,'matched');assert.equal(JSON.stringify(result).includes('private provider body'),false);
 });
-test('local and hosted endpoints ignore forged research and do not expose provider metadata', async () => {
-  for(const hosted of [false,true]){
-    const service=createCheckService();const server=hosted?undefined:createUiServer({service});
-    if(server)await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
-    const address=server?.address();const base=hosted?'https://demo.netlify.app':`http://127.0.0.1:${typeof address==='object'&&address?address.port:0}`;
-    const handler=hosted?createNetlifyHandler(service,{resolveDecision:async()=>({kind:'verified',user:{id:'test-user'},entitlement:{canRunCheck:true,planId:'sentinel',status:'trialing',expiresAt:'2099-01-01T00:00:00.000Z'}})}):(request:Request)=>fetch(request);
-    try {const config=await (await handler(new Request(`${base}/api/config`))).json();assert.equal('domainResearchProvider' in config,false);
-      const response=await handler(new Request(`${base}/api/check`,{method:'POST',headers:{'content-type':'application/json',origin:base,authorization:'Bearer test-token'},body:JSON.stringify({text:TEXT,sender:'help@boc.lk',domainResearch:{status:'supported'}})}));
-      const result=await response.json();assert.equal('domainResearch' in result,false);assert.equal(result.senderVerification.value,'help@boc.lk');
-    } finally {if(server)await new Promise<void>(resolve=>server.close(()=>resolve()));}
-  }
+test('the check API ignores forged research and never exposes provider metadata', async () => {
+  const service = createCheckService();
+  const handler = createCheckRoute({
+    service,
+    feedback: createFeedbackSupport({ subjectKey: DEMO_SUBJECT_KEY }),
+    resolveContext: async () => ({ kind: 'verified', user: { id: 'test-user' },
+      entitlement: { canRunCheck: true, planId: 'sentinel', status: 'trialing', expiresAt: '2099-01-01T00:00:00.000Z' } }),
+  });
+  const base = 'https://demo.netlify.app';
+  const response = await handler(new Request(`${base}/api/check`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: base, host: 'demo.netlify.app', authorization: 'Bearer test-token' },
+    body: JSON.stringify({ text: TEXT, sender: 'help@boc.lk', domainResearch: { status: 'supported' } }),
+  }));
+  const result = await response.json();
+  assert.equal('domainResearch' in result, false);
+  assert.equal(result.senderVerification.value, 'help@boc.lk');
+  // Nothing about the model, its endpoint or its key may reach a browser.
+  const serialised = JSON.stringify(result);
+  assert.equal(serialised.includes('provider.invalid'), false);
+  assert.equal(serialised.includes('apiKey'), false);
 });
