@@ -46,7 +46,7 @@ function isSameOrigin(request: Request): boolean {
   }
 }
 
-export function createCheckRoute(options: CheckRouteOptions): (request: Request) => Promise<Response> {
+export function createCheckApiRoute(options: CheckRouteOptions): (request: Request) => Promise<Response> {
   const { service, feedback, resolveContext } = options;
   const now = options.now ?? Date.now;
 

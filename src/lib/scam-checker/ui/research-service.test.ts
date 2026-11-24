@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCheckRoute } from './check-route.ts';
+import { createCheckApiRoute } from './check-route.ts';
 import { createCheckService, DEMO_SUBJECT_KEY, liveConfigFromEnv } from './check-service.ts';
 import { createFeedbackSupport } from './feedback-endpoint.ts';
 const LIVE = { apiKey: 'synthetic-key', baseUrl: 'https://provider.invalid/v1', model: 'test' };
@@ -35,7 +35,7 @@ test('AI failures preserve directory and sender evidence with one attempt', asyn
 });
 test('the check API ignores forged research and never exposes provider metadata', async () => {
   const service = createCheckService();
-  const handler = createCheckRoute({
+  const handler = createCheckApiRoute({
     service,
     feedback: createFeedbackSupport({ subjectKey: DEMO_SUBJECT_KEY }),
     resolveContext: async () => ({ kind: 'verified', user: { id: 'test-user' },

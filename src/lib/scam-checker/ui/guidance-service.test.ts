@@ -1,7 +1,7 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import dns from 'node:dns';
-import { createCheckRoute } from './check-route.ts';
+import { createCheckApiRoute } from './check-route.ts';
 import { createCheckService, DEMO_SUBJECT_KEY } from './check-service.ts';
 import { createFeedbackSupport } from './feedback-endpoint.ts';
 import { ORGANIZATION_DIRECTORY } from './organization-directory.ts';
@@ -153,7 +153,7 @@ test('unconfigured service performs no submitted-link HTTP or DNS requests', asy
 
 test('POST preserves {text,sender?} and ignores forged findings, guidance, exposure and authority', async () => {
   const service = createCheckService({ now: () => NOW });
-  const handler = createCheckRoute({
+  const handler = createCheckApiRoute({
     service,
     feedback: createFeedbackSupport({ subjectKey: DEMO_SUBJECT_KEY }),
     resolveContext: async () => ENTITLED_TEST_DECISION,

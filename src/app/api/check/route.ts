@@ -1,4 +1,4 @@
-import { createCheckRoute } from '@/lib/scam-checker/ui/check-route';
+import { createCheckApiRoute } from '@/lib/scam-checker/ui/check-route';
 import { createCheckService } from '@/lib/scam-checker/ui/check-service';
 import { getSubscriptionContext } from '@/lib/subscription-server';
 import { feedback, selection } from '../feedback-support';
@@ -20,7 +20,7 @@ export const runtime = 'nodejs';
  */
 const service = createCheckService({ live: null, persistence: selection.persistence });
 
-export const POST = createCheckRoute({
+export const POST = createCheckApiRoute({
   service,
   feedback,
   resolveContext: (request) => getSubscriptionContext(request),

@@ -120,6 +120,16 @@ test("the checker stylesheet applies on its own route", async ({ page }) => {
   expect(height).toBe("48px");
 });
 
+test("the history API exists and fails closed without a session", async ({ request }) => {
+  // `GET /api/history` used to exist only in the retired Netlify handler. It now lives in the app,
+  // and its whole point is that the subject comes from a verified session — so an anonymous caller
+  // must be refused rather than handed an empty or someone else's list.
+  const response = await request.get("/api/history");
+  expect(response.status()).toBe(401);
+  const body = await response.json();
+  expect(JSON.stringify(body)).not.toContain("entries");
+});
+
 test("the checker has no horizontal overflow on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/checker");

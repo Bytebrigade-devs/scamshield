@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCheckRoute } from './check-route.ts';
+import { createCheckApiRoute } from './check-route.ts';
 import { createCheckService, DEMO_SUBJECT_KEY } from './check-service.ts';
 import { createFeedbackSupport } from './feedback-endpoint.ts';
 import { ORGANIZATION_DIRECTORY } from './organization-directory.ts';
@@ -23,7 +23,7 @@ const entitled = async (): Promise<{ kind: string; user: { id: string }; entitle
 
 /** The app's `/api/check` transport, exercised without a bundler or a live host. */
 const route = (service: ReturnType<typeof createCheckService>) =>
-  createCheckRoute({ service, feedback: createFeedbackSupport({ subjectKey: DEMO_SUBJECT_KEY }), resolveContext: entitled });
+  createCheckApiRoute({ service, feedback: createFeedbackSupport({ subjectKey: DEMO_SUBJECT_KEY }), resolveContext: entitled });
 
 /** A same-origin, JSON, entitled POST — the shape a real browser sends. */
 const post = (url: string, body: unknown): Request =>
