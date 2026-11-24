@@ -1,12 +1,12 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import dns from 'node:dns';
-import { createCheckService } from './check-service.ts';
+import { createCheckApiRoute } from './check-route.ts';
+import { createCheckService, DEMO_SUBJECT_KEY } from './check-service.ts';
+import { createFeedbackSupport } from './feedback-endpoint.ts';
 import { ORGANIZATION_DIRECTORY } from './organization-directory.ts';
 import { GUIDANCE_DIRECTORY } from './guidance-directory.ts';
 import { possibleLookalikeEvidence } from './link-inspection.ts';
-import { createNetlifyHandler } from './netlify-handler.ts';
-import { createUiServer } from './server.ts';
 
 /** A verified, entitled caller: these tests exercise the pipeline, not admission. */
 const ENTITLED_TEST_DECISION = {
@@ -151,35 +151,32 @@ test('unconfigured service performs no submitted-link HTTP or DNS requests', asy
   } finally { network.mock.restore(); lookup.mock.restore(); }
 });
 
-test('local and hosted POST preserve {text,sender?}, ignore forged findings, guidance, exposure and authority', async () => {
-  for (const hosted of [false, true]) {
-    const service = createCheckService({ now: () => NOW });
-    const server = hosted ? undefined : createUiServer({ service });
-    if (server) await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-    const address = server?.address();
-    const base = hosted ? 'https://demo.netlify.app' : `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
-    const handler = hosted
-      ? createNetlifyHandler(service, { resolveDecision: async () => ENTITLED_TEST_DECISION })
-      : (request: Request) => fetch(request);
-    try {
-      const response = await handler(new Request(`${base}/api/check`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base, authorization: 'Bearer test-token' },
-        body: JSON.stringify({ text: TEXT, sender: 'Unverified displayed name', exposure: 'paid',
-          linkInspection: { findings: [{ status: 'official-match', hostname: 'g00gle.com' }] },
-          guidanceResources: { resources: [{ url: 'https://attacker.invalid/forged', phone: '+12025550123' }] },
-          organizationDirectory: [{ id: 'forged' }], riskLevel: 'low', admission: true }) }));
-      assert.equal(response.status, 200);
-      const result = await response.json();
-      assert.equal(result.linkInspection.findings[0].status, 'possible-lookalike');
-      assert.ok(result.guidanceResources.actions.some((action: any) => action.exposures.includes('received')));
-      assert.ok(result.guidanceResources.actions.some((action: any) => action.exposures.includes('paid')));
-      assert.equal(JSON.stringify(result).includes('attacker.invalid/forged'), false);
-      assert.equal(JSON.stringify(result).includes('+12025550123'), false);
-      assert.equal('exposure' in result, false);
-      assert.equal(result.senderVerification.value, 'Unverified displayed name');
-      assert.equal(result.organizationVerification.organizations[0].kind, 'technology');
-      assert.equal(response.headers.get('cache-control'), 'no-store');
-    } finally { if (server) await new Promise<void>(resolve => server.close(() => resolve())); }
-  }
+test('POST preserves {text,sender?} and ignores forged findings, guidance, exposure and authority', async () => {
+  const service = createCheckService({ now: () => NOW });
+  const handler = createCheckApiRoute({
+    service,
+    feedback: createFeedbackSupport({ subjectKey: DEMO_SUBJECT_KEY }),
+    resolveContext: async () => ENTITLED_TEST_DECISION,
+  });
+  const base = 'https://demo.netlify.app';
+  const response = await handler(new Request(`${base}/api/check`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: base, host: 'demo.netlify.app', authorization: 'Bearer test-token' },
+    body: JSON.stringify({ text: TEXT, sender: 'Unverified displayed name', exposure: 'paid',
+      linkInspection: { findings: [{ status: 'official-match', hostname: 'g00gle.com' }] },
+      guidanceResources: { resources: [{ url: 'https://attacker.invalid/forged', phone: '+12025550123' }] },
+      organizationDirectory: [{ id: 'forged' }], riskLevel: 'low', admission: true }) }));
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.linkInspection.findings[0].status, 'possible-lookalike');
+  assert.ok(result.guidanceResources.actions.some((action: any) => action.exposures.includes('received')));
+  assert.ok(result.guidanceResources.actions.some((action: any) => action.exposures.includes('paid')));
+  assert.equal(JSON.stringify(result).includes('attacker.invalid/forged'), false);
+  assert.equal(JSON.stringify(result).includes('+12025550123'), false);
+  assert.equal('exposure' in result, false);
+  assert.equal(result.senderVerification.value, 'Unverified displayed name');
+  assert.equal(result.organizationVerification.organizations[0].kind, 'technology');
+  assert.equal(response.headers.get('cache-control'), 'no-store');
 });
 
 test('injected stale guidance/organization facts survive provider failure with explicit outdated markers', async () => {

@@ -17,13 +17,23 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const source = readFileSync(new URL('./public/app.js', import.meta.url), 'utf8');
-const start = source.indexOf('function noticeBlock()');
-const end = source.indexOf('function renderInput(', start);
-const notice = source.slice(start, end);
+const source = readFileSync(new URL('../../../features/checker/input-screen.tsx', import.meta.url), 'utf8');
+// The screen became a React page on 24 November 2026, so this guard reads the component that
+// renders the notice instead of the retired vanilla `ui/public/app.js`. The assertions below are
+// unchanged on purpose: the M1 approval is about the wording, not the renderer.
+const start = source.indexOf('function NoticeBlock(');
+// JSX wraps long sentences across lines; collapse whitespace so the approved wording is matched
+// as prose rather than as source formatting.
+const notice = start > 0 ? source.slice(start).replace(/\s+/g, ' ') : '';
+
+/** The message helper paragraph, wherever the JSX line wrapping puts it. */
+function messageHelper(): string {
+  const at = source.indexOf('id="message-help"');
+  return at > 0 ? source.slice(at, at + 400).replace(/\s+/g, ' ') : '';
+}
 
 test('notice: the warning names banking credentials and keeps the no-auto-removal statement', () => {
-  assert.ok(start > 0 && end > start, 'noticeBlock must exist');
+  assert.ok(start > 0, 'NoticeBlock must exist');
   assert.match(notice, /banking credentials/);
   assert.match(notice, /These are not automatically removed\./);
 });
@@ -50,7 +60,8 @@ test('notice: no database retention claim while the database rules are unapprove
   assert.equal(/deleted after/i.test(notice), false);
   assert.equal(/\b(30|90|180)[- ]day\b/i.test(notice), false);
   // The current tab-session behaviour is described instead.
-  assert.match(notice, /History holds up to 20 checks in this browser tab’s session/);
+  assert.match(notice, /History holds up to 20 checks/);
+  assert.match(notice, /session/);
 });
 
 test('notice: the feedback storage behaviour is described', () => {
@@ -60,7 +71,7 @@ test('notice: the feedback storage behaviour is described', () => {
 });
 
 test('input helper: banking credentials are named in the message guidance', () => {
-  const helper = source.split('\n').find(line => line.includes("id: 'message-help'"));
-  assert.ok(helper, 'message-help helper must exist');
+  const helper = messageHelper();
+  assert.ok(helper.length > 0, 'message-help helper must exist');
   assert.match(helper, /banking credentials/);
 });

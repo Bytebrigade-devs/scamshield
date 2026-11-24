@@ -4,10 +4,10 @@
 src/lib/scam-checker/** -text
 src/lib/testing/** -text
 
-# Generated from the files above by ui/scripts/sync-public.ts, and compared byte-for-byte
-# by the mirror test — so it must check out verbatim too.
-public/checker/** -text
-src/app/checker/shell.generated.ts -text
+# Static assets still copied out of the byte-pinned library by ui/scripts/sync-public.ts and
+# compared byte-for-byte by the mirror test — they must check out verbatim too.
+public/checker/favicon.svg -text
+public/fonts/*.woff2 -text
 
 # Draft SQL for the steward's review: byte-identical to the owner workspace drafts.
 supabase/drafts/** -text
