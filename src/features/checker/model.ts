@@ -198,6 +198,31 @@ export function historyEntryFor(payload: CheckPayload, text: string, at: number)
   };
 }
 
+/** One retained server history row as served by `GET /api/history`. */
+export interface ServerHistoryRow {
+  createdAt: number;
+  snippet: string;
+  verdictLabel: string;
+  category: string;
+}
+
+/**
+ * Project a server history row into the UI shape. Only `completed` (AI) analyses are persisted
+ * server-side, so the mode is `rules_and_ai`. The snippet is already caller-minimised; it is
+ * collapsed and capped like the tab-session excerpt. Untrusted category falls back to unknown.
+ */
+export function historyEntryFromServer(row: ServerHistoryRow): HistoryEntry {
+  const collapsed = row.snippet.replace(/\s+/g, " ").trim();
+  const category = hasOwn(CATEGORY_LABELS, row.category) ? row.category : "unknown_other";
+  return {
+    at: row.createdAt,
+    excerpt: collapsed.length > 120 ? `${collapsed.slice(0, 120)}…` : collapsed,
+    category,
+    assessment: row.verdictLabel,
+    mode: "rules_and_ai",
+  };
+}
+
 /**
  * The instant the summary is stamped with. Prefers the freshest review timestamp the server
  * supplied so the export matches the evidence it lists, and falls back to "now".

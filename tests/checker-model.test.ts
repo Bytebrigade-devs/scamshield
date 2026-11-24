@@ -14,6 +14,7 @@ import {
   HISTORY_LIMIT,
   FALLBACK_CAP,
   historyEntryFor,
+  historyEntryFromServer,
   inputCap,
   isAnalysedOutcome,
   summaryInstantFor,
@@ -139,4 +140,32 @@ test("summaryInstantFor prefers the freshest review timestamp the server supplie
 
 test("the history limit is the documented 20", () => {
   assert.equal(HISTORY_LIMIT, 20);
+});
+
+test("a server history row maps to a valid UI entry (completed AI mode, capped excerpt)", () => {
+  const row = {
+    createdAt: Date.parse("2026-11-24T10:00:00.000Z"),
+    snippet: "  Verify   your password  " + "x".repeat(200),
+    verdictLabel: "high risk",
+    category: "phishing",
+  };
+  const entry = historyEntryFromServer(row);
+  assert.ok(validHistoryEntry(entry), "mapped server row must pass the UI history validation");
+  assert.equal(entry.at, row.createdAt);
+  assert.equal(entry.mode, "rules_and_ai");
+  assert.equal(entry.category, "phishing");
+  assert.equal(entry.assessment, "high risk");
+  assert.ok(entry.excerpt.length <= 121, "excerpt is capped like the tab-session excerpt");
+  assert.ok(!entry.excerpt.includes("  "), "whitespace is collapsed");
+});
+
+test("an unknown server category falls back to unknown_other", () => {
+  const entry = historyEntryFromServer({
+    createdAt: 1_700_000_000_000,
+    snippet: "hello",
+    verdictLabel: "suspicious",
+    category: "not-a-category",
+  });
+  assert.equal(entry.category, "unknown_other");
+  assert.ok(validHistoryEntry(entry));
 });
