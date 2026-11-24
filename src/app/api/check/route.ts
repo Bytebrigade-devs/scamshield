@@ -1,5 +1,5 @@
 import { createCheckApiRoute } from '@/lib/scam-checker/ui/check-route';
-import { createCheckService } from '@/lib/scam-checker/ui/check-service';
+import { createCheckService, liveConfigFromEnv } from '@/lib/scam-checker/ui/check-service';
 import { getSubscriptionContext } from '@/lib/subscription-server';
 import { feedback, selection } from '../feedback-support';
 
@@ -14,11 +14,11 @@ export const runtime = 'nodejs';
  * library and are covered by `node --test`; this file supplies only the app's own wiring: the
  * service instance, the shared feedback support and the M2 entitlement resolver.
  *
- * The service is constructed with **no provider**: local pattern checks only. Provider selection,
- * usage authority and credentials stay server-side; the request may carry only the message text and
- * an optional sender string.
+ * The provider comes from server-side environment only (`liveConfigFromEnv`): with no
+ * `OPENAI_API_KEY` the service is rules-only; with a key it runs the configured gateway. Credentials
+ * never reach the browser; the request may carry only the message text and an optional sender string.
  */
-const service = createCheckService({ live: null, persistence: selection.persistence });
+const service = createCheckService({ live: liveConfigFromEnv(), persistence: selection.persistence });
 
 export const POST = createCheckApiRoute({
   service,
