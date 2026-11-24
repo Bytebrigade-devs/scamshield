@@ -1,7 +1,12 @@
 -- ============================================================================
--- M4 AI Scam Checker — migration 0003: nine-field 0.2.0-draft events (DRAFT, revision 1)
+-- M4 AI Scam Checker — migration 0003: nine-field 0.2.0-draft events (revision 1, APPLIED)
 -- ============================================================================
--- STATUS: DRAFT for review. NOT applied. Builds on the applied 0001 (rev 6) and
+-- STATUS: APPLIED — 24 November 2026, once (302 ms, no raise), to the main project
+--   https://gcqfwynvtjjokndpturf.supabase.co. Schema confirmed by direct query
+--   (subject_ref text nullable; version CHECK accepts both drafts; both constraints
+--   and the partial index present; m4_valid_subject_ref / m4_purge_events present).
+--   Verify rev 6 then ran with blocks 14–15 live (361 ms) and passed; all tables */0.
+--   DO NOT RE-RUN this file on that project. Builds on the applied 0001 (rev 6) and
 --   0002 (rev 5); it adds no table and changes no existing column type.
 --
 -- PURPOSE (closes the three gaps 0001 could not): 
@@ -24,9 +29,11 @@
 --   `ADD COLUMN` (no IF NOT EXISTS), so a run that FAILS rolls back and may be
 --   retried, but a run that SUCCEEDS must never be repeated.
 --
--- HONESTY BOUNDARY: nothing here has been executed. It is a proposal for the
---   schema steward (the M4 owner) to dry-run and for Lahiru's static/dry-run
---   review, exactly as 0001/0002 were.
+-- HONESTY BOUNDARY: applied and verified on the main project (see STATUS). The
+--   runtime v2 refusal has been flipped — the durable adapter now accepts
+--   0.2.0-draft events and reads/writes subject_ref. The 30-day event TTL remains
+--   PROVISIONAL (M5 read-window + M1 privacy ratification still owed); scheduling
+--   m4_purge_events is gated on that decision and on enabling pg_cron (see 0004).
 -- ============================================================================
 
 BEGIN;
@@ -200,9 +207,10 @@ COMMIT;
 
 -- ============================================================================
 -- NOT here (still gated):
---   * scheduling m4_purge_events / m4_purge_expired (decision D4 — needs
---     pg_cron enabled and the 30-day TTL ratified by M5 + M1);
---   * flipping the runtime's v2 refusal (code/boundary/durable-adapter.ts
---     refuses 0.2.0-draft until this migration is APPLIED and VERIFIED);
+--   * scheduling m4_purge_events (the 30-day event TTL is provisional — needs M5
+--     read-window + M1 privacy ratification, and pg_cron enabled). The checks
+--     purge m4_purge_expired is scheduled separately in migration 0004 (D4 split);
 --   * wiring M5's per-user dashboard read.
+-- DONE since the apply: the runtime v2 refusal was flipped — durable-adapter.ts
+--   now accepts 0.2.0-draft and reads/writes subject_ref (24 November 2026).
 -- ============================================================================

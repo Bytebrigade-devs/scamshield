@@ -6,10 +6,11 @@ import assert from 'node:assert/strict';
 import { createConnection } from 'node:net';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { createCheckService } from './check-service.ts';
+import { createCheckService, DEMO_SUBJECT_KEY } from './check-service.ts';
 import type { CheckService } from './check-service.ts';
 import { createUiServer } from './server.ts';
 import { EMPTY_INPUT_MESSAGE } from '../boundary/check-boundary.ts';
+import type { StoredHistoryEntry } from '../boundary/persistence-port.ts';
 
 const FIXTURE = 'Your bank account will be suspended in 30 minutes. Verify your password at https://account-verify.example/restore to keep access.';
 const SENTINEL_KEY = 'sk-test-SENTINEL-MUST-NEVER-LEAK';
@@ -305,4 +306,32 @@ test('feedback: a completed check carries an opaque id; a report stores bounded 
   assert.equal(crossOrigin.status, 403);
   const wrongMethod = await fetch(`${harness.baseUrl}/api/feedback`);
   assert.equal(wrongMethod.status, 405);
+});
+
+test('GET /api/history lists the demo subject rows and refuses non-GET', async () => {
+  const entries: StoredHistoryEntry[] = [{
+    id: 'history-1', checkId: 'chk-1', subjectKey: DEMO_SUBJECT_KEY, planId: 'trial',
+    createdAt: 1_700_000_000_000, expiresAt: 4_000_000_000_000, snippet: 'Verify your password',
+    verdictLabel: 'suspicious', category: 'phishing',
+  }];
+  const asked: string[] = [];
+  const server = createUiServer({
+    service: createCheckService(),
+    history: { listOwned: async (subjectKey) => { asked.push(subjectKey); return entries; } },
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  running.push(server);
+  const address = server.address() as AddressInfo;
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+
+  const response = await fetch(`${baseUrl}/api/history`);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('cache-control') ?? '', /no-store/);
+  const body = await response.json();
+  assert.equal(body.access, 'full');
+  assert.deepEqual(body.entries, entries);
+  assert.deepEqual(asked, [DEMO_SUBJECT_KEY], 'the local demo reads only the demo subject');
+
+  const post = await fetch(`${baseUrl}/api/history`, { method: 'POST' });
+  assert.equal(post.status, 405);
 });

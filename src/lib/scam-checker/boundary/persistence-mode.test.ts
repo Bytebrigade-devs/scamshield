@@ -185,7 +185,7 @@ test('durable mode passes the caller-supplied clock through to deleteSubject', a
   const transport: PostgrestTransport = {
     async request(request) {
       requests.push(request);
-      return { status: 200, body: { checks: 0, history: 0, feedback: 0, quota_buckets: 0, reservations: 0 } };
+      return { status: 200, body: { checks: 0, history: 0, feedback: 0, quota_buckets: 0, reservations: 0, events: 0 } };
     },
   };
   const selection = selectPersistence(
@@ -198,7 +198,7 @@ test('durable mode passes the caller-supplied clock through to deleteSubject', a
   );
 
   const counts = await selection.persistence.deleteSubject(SUBJECT);
-  assert.deepEqual(counts, { checks: 0, history: 0, feedback: 0, quotaBuckets: 0, reservations: 0 });
+  assert.deepEqual(counts, { checks: 0, history: 0, feedback: 0, quotaBuckets: 0, reservations: 0, events: 0 });
   const call = requests.find((request) => request.path === '/rpc/m4_delete_subject');
   assert.ok(call, 'deleteSubject must call the reviewed transaction function');
   assert.deepEqual(call!.body, { p_user: SUBJECT, p_now: new Date(NOW).toISOString() });

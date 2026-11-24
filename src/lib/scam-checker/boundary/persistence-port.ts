@@ -183,6 +183,8 @@ export interface DeleteCounts {
   quotaBuckets: number;
   /** Direction (c): the subject's reservations removed after resolution. */
   reservations: number;
+  /** Direction (c): the subject's 0.2.0-draft events removed (migration 0003). */
+  events: number;
 }
 
 /** A stored dashboard event: the 0.1.0-draft eight-field shape or the agreed 0.2.0-draft nine-field shape. */
@@ -768,7 +770,7 @@ export function createInMemoryPersistence(): PersistencePort {
 
   function deleteSubject(subjectKey: string): DeleteCounts {
     const key = subjectKey?.trim();
-    const empty: DeleteCounts = { checks: 0, history: 0, feedback: 0, quotaBuckets: 0, reservations: 0 };
+    const empty: DeleteCounts = { checks: 0, history: 0, feedback: 0, quotaBuckets: 0, reservations: 0, events: 0 };
     if (!isText(key, 128)) return empty;
     let checkCount = 0;
     let historyCount = 0;
@@ -836,9 +838,18 @@ export function createInMemoryPersistence(): PersistencePort {
         feedbackCount += 1;
       }
     }
+    // Direction (c) since 0003: remove the subject's 0.2.0-draft events by their reference.
+    // Legacy 0.1.0-draft rows carry no subject_ref and are not user-linked, so they stay.
+    let eventCount = 0;
+    for (const [eventId, event] of events) {
+      if (event.contract_version === EVENT_CONTRACT_VERSION_V2 && (event as CheckOutcomeEventV2).subject_ref === key) {
+        events.delete(eventId);
+        eventCount += 1;
+      }
+    }
     return {
       checks: checkCount, history: historyCount, feedback: feedbackCount,
-      quotaBuckets: bucketCount, reservations: reservationCount,
+      quotaBuckets: bucketCount, reservations: reservationCount, events: eventCount,
     };
   }
 

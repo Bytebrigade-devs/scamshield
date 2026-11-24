@@ -88,9 +88,10 @@ export interface DurablePersistence {
 }
 
 /**
- * Transaction functions the live adapter must call (draft migration 0002). Recorded here so
- * the interface and the SQL drafts share one name list; nothing is executed or verified by
- * this constant — the SQL drafts are reviewed and merged (#52) but not applied.
+ * Transaction functions the live adapter must call. Recorded here so the interface and the SQL
+ * drafts share one name list; nothing is executed or verified by this constant. The first seven
+ * live in migration 0002; `purgeEvents` (`m4_purge_events`) was added by migration 0003. The
+ * drift-guard test resolves each name against the migration that defines it.
  */
 export const M4_TRANSACTION_FUNCTIONS = Object.freeze({
   saveCheck: 'm4_save_check',
@@ -100,6 +101,7 @@ export const M4_TRANSACTION_FUNCTIONS = Object.freeze({
   finalizeReconciliation: 'm4_finalize_reconciliation',
   deleteSubject: 'm4_delete_subject',
   purgeExpired: 'm4_purge_expired',
+  purgeEvents: 'm4_purge_events',
 });
 
 /**

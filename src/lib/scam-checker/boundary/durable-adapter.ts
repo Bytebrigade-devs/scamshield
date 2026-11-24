@@ -28,7 +28,7 @@ import {
   M4_TRANSACTION_FUNCTIONS, type DurablePersistence,
 } from './durable-persistence.ts';
 import type {
-  BudgetBucket, BudgetBucketKey, DeleteCounts, QuotaBucket, QuotaBucketKey,
+  BudgetBucket, DeleteCounts, QuotaBucket,
   QuotaReservationInput, ReservationRecord, SettleResult, StoredCheck, StoredCheckInput,
   StoredHistoryEntry, StoredUsageEvent,
 } from './persistence-port.ts';
@@ -550,13 +550,9 @@ export function createDurableAdapter(
 
       async purgeBefore(epochMs) {
         if (!Number.isFinite(epochMs)) return 0;
-        const response = await transport.request({
-          method: 'DELETE',
-          path: `/${M4_TABLES.events}`,
-          query: { occurred_at: `lt.${toIso(epochMs)}` },
-          prefer: ['return=representation'],
-        });
-        return Array.isArray(response.body) ? response.body.length : 0;
+        // 0003's m4_purge_events(p_before) returns the number removed; NULL cutoff deletes nothing.
+        const removed = await rpc(M4_TRANSACTION_FUNCTIONS.purgeEvents, { p_before: toIso(epochMs) });
+        return asNumber(removed);
       },
     },
 
@@ -693,6 +689,7 @@ export function createDurableAdapter(
         feedback: asNumber(record.feedback),
         quotaBuckets: asNumber(record.quota_buckets),
         reservations: asNumber(record.reservations),
+        events: asNumber(record.events),
       } satisfies DeleteCounts;
     },
   };
