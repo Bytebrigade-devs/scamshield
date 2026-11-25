@@ -157,6 +157,55 @@ test('R-M4-23: a generic descriptor beside a real link is not a brand claim (25 
   }
 });
 
+// ---- Ambiguous aliases are ordinary words too (review E#59) ----
+//
+// Measured on 25 November 2026: with the case-insensitive alias pattern and a 160-char sentence
+// window, ALL FIVE single-word proper-noun aliases fired R-M4-23 on ordinary prose with an unrelated
+// link beside it. These are those exact sentences.
+
+test('ambiguous single-word aliases stay inert when the message spells them as ordinary words', () => {
+  for (const text of [
+    'Be wise with your money — pay the bill at https://www.ceb.lk/bill',
+    'It is wise to check the account first https://www.ceb.lk/bill',
+    'See the meta note on the portal, then settle at https://www.ceb.lk/bill',
+    'Read the meta summary before paying at https://www.ceb.lk/bill',
+    'Close the dialog box, then open https://www.ceb.lk/bill to pay',
+    'A dialog opened and then the page at https://www.ceb.lk/bill',
+    'The apple harvest was good this year and the bill is at https://www.ceb.lk/bill',
+    'Add one apple to the basket at https://www.ceb.lk/bill',
+    'The Amazon river is long, and the bill is at https://www.ceb.lk/bill',
+  ]) {
+    assert.deepEqual(ids(text).filter(id => id === 'R-M4-23'), [], text);
+  }
+});
+
+test('the homograph guard does not disarm a real brand mention beside a look-alike link', () => {
+  // Each case pairs a genuine brand use (capitalised, ALL CAPS, or determiner + product noun) with a
+  // host that is not the brand's reviewed host. Every one must still produce exactly one finding.
+  for (const [text, organizationId] of [
+    ['Sign in to Apple support at https://apple-support-verify.example.com/x', 'apple'],
+    ['AMAZON refund pending, claim at https://amazon-refund-claim.example.com/x', 'amazon'],
+    ['The Amazon order you did not place — cancel at https://amazon-cancel-order.example.com/x', 'amazon'],
+    ['Apple ID locked, restore it at https://apple-id-restore.example.com/x', 'apple'],
+    ['Wise transfer on hold, confirm at https://wise-transfer-check.example.com/x', 'wise'],
+    ['Dialog recharge failed, retry at https://dialog-recharge-pay.example.com/x', 'dialog-axiata'],
+    ['Meta account review required at https://meta-account-review.example.com/x', 'whatsapp'],
+    ['Confirm your Amazon Pay details at https://amazonpay-secure.example.com/x', 'amazon'],
+  ] as const) {
+    const found = matchesOf(text, 'R-M4-23');
+    assert.equal(found.length, 1, text);
+    assert.equal(found[0].contextNote, `link-host-not-reviewed-for:${organizationId}`);
+  }
+});
+
+test('documented limitation: a capitalised homograph with no lexicon continuation still fires', () => {
+  // Accepted, not fixed. "crossed the Amazon" is prose, but nothing lexical separates it from
+  // "the Amazon order" — both are determiner + capitalised word + lowercase noun. The guard is a
+  // small lexicon, not a semantic model; R-M4-23 remains evidence for review, never a verdict.
+  const found = matchesOf('We crossed the Amazon last year and paid at https://www.ceb.lk/bill', 'R-M4-23');
+  assert.equal(found.length, 1);
+});
+
 // ---- Shape parsing must not invent hosts from ordinary text ----
 
 test('shape rules never treat times, versions, abbreviations, emails or file names as hosts', () => {
