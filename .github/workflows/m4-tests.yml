@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'src/lib/scam-checker/**'
+      - 'src/lib/testing/**'
       - '.github/workflows/m4-tests.yml'
   push:
     branches: [main]
     paths:
       - 'src/lib/scam-checker/**'
+      - 'src/lib/testing/**'
       - '.github/workflows/m4-tests.yml'
   workflow_dispatch:
 
