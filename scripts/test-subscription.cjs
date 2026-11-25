@@ -82,7 +82,8 @@ function routeHarness(current = null, signedIn = true, readFailure = false, fail
           if (failures.subscriptionFailure) return { data: null, error: failures.subscriptionFailure };
         }
       }
-      const value = { ...(latestSubscription ?? current), ...writes.at(-1).value };
+      const lastSubscriptionWrite = writes.filter(write => write.table === 'subscriptions').at(-1);
+      const value = { ...(latestSubscription ?? current), ...(lastSubscriptionWrite?.value ?? {}) };
       if (table === 'subscriptions' && options.statefulRead) latestSubscription = value;
       return { data: value, error: null };
     },
