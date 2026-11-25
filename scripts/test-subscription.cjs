@@ -60,10 +60,13 @@ test('only approved plans/cycles accepted, prices in LKR', () => {
   assert.equal(plans.PLANS.aegis.price.monthly, 1990);
 });
 
-function routeHarness(current = null, signedIn = true, readFailure = false, failures = {}) {
+function routeHarness(current = null, signedIn = true, readFailure = false, failures = {}, options = {}) {
   const writes = [];
   const readFilters = [];
-  const read = { select() { return this; }, eq(column, value) { readFilters.push([column, value]); return this; }, async maybeSingle() { return { data: current, error: readFailure ? new Error('offline') : null }; } };
+  // A real retry re-reads the row the first request committed. `statefulRead` models that: the
+  // entitlement read returns the latest subscriptions write instead of the fixed fixture.
+  let latestSubscription = current;
+  const read = { select() { return this; }, eq(column, value) { readFilters.push([column, value]); return this; }, async maybeSingle() { return { data: latestSubscription, error: readFailure ? new Error('offline') : null }; } };
   let subscriptionAttempts = 0;
   // Table-aware writer, so the ledger can fail on its own and the first subscriptions write can
   // report the billing columns as missing (exercising the route's degradation path).
@@ -79,7 +82,10 @@ function routeHarness(current = null, signedIn = true, readFailure = false, fail
           if (failures.subscriptionFailure) return { data: null, error: failures.subscriptionFailure };
         }
       }
-      return { data: { ...current, ...writes.at(-1).value }, error: null };
+      const lastSubscriptionWrite = writes.filter(write => write.table === 'subscriptions').at(-1);
+      const value = { ...(latestSubscription ?? current), ...(lastSubscriptionWrite?.value ?? {}) };
+      if (table === 'subscriptions' && options.statefulRead) latestSubscription = value;
+      return { data: value, error: null };
     },
     // The ledger insert is awaited directly, so the builder is thenable like a real query. It must
     // resolve to a plain object: resolving with `this` would re-enter `then` forever.
@@ -234,6 +240,48 @@ test('a genuine subscription write failure still returns 409 and records no char
   assert.equal(response.status, 409, 'only a missing schema degrades; a real conflict still fails');
   assert.equal(api.writes.filter(write => write.table === 'subscriptions').length, 1, 'a conflict is not retried');
   assert.equal(api.writes.filter(write => write.table === 'subscription_payments').length, 0);
+});
+
+test('a retried checkout after a lost response is refused and records exactly one charge', async () => {
+  // The idempotency mechanism is the guard at route.ts:86 plus the compare-and-set write, not a
+  // client key. This pins the invariant a reviewer needs: a retry cannot buy the plan twice or
+  // historise a second charge.
+  const api = routeHarness(null, true, false, {}, { statefulRead: true });
+  const body = { plan: 'guardian', billingCycle: 'monthly', scenario: 'success', paymentMethod: 'debit_card' };
+  const first = await api.request('POST', body);
+  assert.equal(first.status, 200, 'the purchase itself succeeds');
+  assert.equal(first.body.subscription.status, 'active');
+  const charge = api.writes.filter(write => write.table === 'subscription_payments');
+  assert.equal(charge.length, 1, 'a successful checkout historises one charge');
+  assert.equal(charge[0].value.amount_lkr, 990);
+  assert.equal(charge[0].value.simulated, true);
+
+  // The client never saw that response and retries the identical request.
+  const retry = await api.request('POST', body);
+  assert.equal(retry.status, 409);
+  assert.match(retry.body.error, /already valid/i);
+  assert.equal(api.writes.filter(write => write.table === 'subscriptions').length, 1, 'the retry must not write a second subscription row');
+  assert.equal(api.writes.filter(write => write.table === 'subscription_payments').length, 1, 'the retry must not record a second charge');
+  // Known limitation, recorded rather than fixed: the retry reports 409 even though the purchase
+  // succeeded. Acceptable against a simulated ledger; a GET is the only recovery. Any future change
+  // that "resolves" this must not reintroduce a second charge.
+});
+
+test('a retried trial start after a lost response is refused and never inserts twice', async () => {
+  // Same shape as the checkout retry, worse consequence: the trial row exists, but the retry is
+  // answered with "already allocated — choose a plan", so the client cannot distinguish a lost
+  // response from a spent trial and only a GET shows the trial is active.
+  const api = routeHarness(null, true, false, {}, { statefulRead: true });
+  const first = await api.request('PUT');
+  assert.equal(first.status, 200);
+  assert.equal(first.body.subscription.status, 'trialing');
+  assert.equal(first.body.subscription.billing_cycle, null, 'a trial carries no billing cycle');
+
+  const retry = await api.request('PUT');
+  assert.equal(retry.status, 409);
+  assert.match(retry.body.error, /already been allocated/i);
+  assert.equal(api.writes.filter(write => write.table === 'subscriptions').length, 1, 'one trial row, never two');
+  assert.equal(api.writes.filter(write => write.table === 'subscription_payments').length, 0, 'a trial is never charged');
 });
 
 test('invalid methods and declined card payments leave subscriptions unchanged', async () => {

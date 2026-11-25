@@ -1,5 +1,16 @@
 # M2 local validation
 
+## Retry idempotency tests — 25 November 2026
+
+Test-only round on the checkout/trial retry contract (PR #69, branch `test/m2-subscription-retry-idempotency`, authored by the M4 owner and merged under `GITHUB-GUIDE.md` §6 house rule 2). **No production code changed** — the route, SQL and schema are untouched.
+
+- `node --test scripts/test-subscription.cjs`: **34 passed, 0 failed** (was 32). Two new cases: a **retried checkout after a lost response** returns **409** `"An entitlement is already valid…"` with exactly one `subscription_payments` insert and one `subscriptions` write; a **retried trial start** returns **409** `"Your one-time trial has already been allocated…"`, never inserts a second row and never writes a charge.
+- Both retries re-read the row the first request committed; the harness gained a `statefulRead` option for this (a fixed fixture cannot model a retry). Its default behaviour is unchanged.
+- Red-to-green checked by short-circuiting each guard in turn — `route.ts:86` and `:69` — which made the retry return **200** and the new tests fail; each mutation was reverted with `git checkout --`.
+- `tsc --noEmit` and `eslint .`: exit 0. CI: `app-ci.yml` ubuntu + windows both **success** on the PR head.
+- **Not run:** any live Supabase write. The harness is a double, not PostgREST, so this proves the route's decision order, not database behaviour.
+- The 28-test (20 Nov) and 32-test (22 Nov) counts in the sections below are dated snapshots of their rounds and are not rewritten.
+
 ## PR #50 follow-up review — 22 November 2026
 
 Fixes for the second review on `feat/m2-billing-ledger`: the missing-column fallback was only exercised on the insert branch, and the PR description contradicted the code. Commands run from the repository root on local Node v24.19.0; CI pins 24.22.1.
