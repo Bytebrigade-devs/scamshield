@@ -138,6 +138,25 @@ test('R-M4-23: unrelated brand aliases in the reference stay inert on ordinary t
   ]) assert.deepEqual(ids(text).filter(id => id === 'R-M4-23'), []);
 });
 
+test('R-M4-23: a generic descriptor beside a real link is not a brand claim (25 Nov 2026 regression)', () => {
+  // A genuine CEB bill lists its own payment host and the post office as alternatives. "post
+  // office" used to be an sl-post alias, so R-M4-23 fired on the CEB link and the message was
+  // rated suspicious — a false alarm found by the owner's language review of the 500-message run.
+  const ceb = 'CEB: bill for account 00XXXXX is Rs. 4,320, due 4 November. Register with REG 00XXXXX '
+    + 'to 1987 for bill alerts. Payment is only at payment.ceb.lk or the post office.';
+  assert.deepEqual(ids(ceb).filter(id => id === 'R-M4-23'), []);
+  // Control: removing a generic alias must not disarm the rule for the real institution.
+  // Brand and link must share one sentence — a full stop between them is deliberately silent.
+  for (const post of [
+    'Sri Lanka Post: your parcel is held, pay Rs 850 at slpost-fee.com today.',
+    'Department of Posts warning: settle the fee at slpost-fee.com now.',
+  ]) {
+    const found = analyzeRules(post).matches.filter(match => match.ruleId === 'R-M4-23');
+    assert.equal(found.length, 1, post);
+    assert.equal(found[0].contextNote, 'link-host-not-reviewed-for:sl-post');
+  }
+});
+
 // ---- Shape parsing must not invent hosts from ordinary text ----
 
 test('shape rules never treat times, versions, abbreviations, emails or file names as hosts', () => {

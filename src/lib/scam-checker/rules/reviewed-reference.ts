@@ -156,7 +156,12 @@ export const REVIEWED_BRANDS: readonly ReviewedBrand[] = [
   },
   {
     organizationId: 'sl-post',
-    aliases: ['Department of Posts', 'Sri Lanka Post', 'SL Post', 'Post Office'],
+    // "Post Office" was removed on 25 Nov 2026: it is a generic descriptor, not a brand token, and
+    // it caused a real false positive. A genuine CEB bill reading "Payment is only at
+    // payment.ceb.lk or the post office" matched the phrase, and R-M4-23 then flagged the CEB
+    // payment link as "not a reviewed host for sl-post". The institutional names below are what a
+    // Sri Lanka Post message actually uses.
+    aliases: ['Department of Posts', 'Sri Lanka Post', 'SL Post'],
     officialHosts: ['slpost.gov.lk', 'www.slpost.gov.lk'],
     officialDomains: ['slpost.gov.lk'],
   },

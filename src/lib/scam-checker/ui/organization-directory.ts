@@ -400,7 +400,12 @@ export const ORGANIZATION_DIRECTORY: readonly OrganizationRecord[] = [
     id: 'sl-post',
     kind: 'government',
     name: 'Department of Posts',
-    aliases: ['Department of Posts', 'Sri Lanka Post', 'SL Post', 'Post Office'],
+    // "Post Office" removed on 25 Nov 2026 — a generic descriptor, not an institutional name. It
+    // caused a proven false positive: a genuine CEB bill listing "payment.ceb.lk or the post
+    // office" was identified as Sri Lanka Post and its CEB payment link was then flagged by
+    // R-M4-23 as a non-reviewed host. The projection in rules/reviewed-reference.ts mirrors this
+    // list exactly, so both must change together (a drift test enforces it).
+    aliases: ['Department of Posts', 'Sri Lanka Post', 'SL Post'],
     country: 'LK',
     identity: { description: 'Identified as the Sri Lanka Department of Posts by its official website.', source: POST_HOME },
     domains: hosts(['slpost.gov.lk', 'www.slpost.gov.lk'], POST_HOME),
