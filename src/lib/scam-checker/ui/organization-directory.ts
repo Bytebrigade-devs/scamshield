@@ -132,6 +132,10 @@ const CEB_HOME: EvidenceSource = {
   url: 'https://ceb.lk/', title: 'Ceylon Electricity Board — Official website', reviewedAt: '2026-11-20',
   context: 'Official Ceylon Electricity Board site. No customer-contact number was captured in this review.',
 };
+const CEB_BILLING: EvidenceSource = {
+  url: 'https://ceb.lk/', title: 'Ceylon Electricity Board — homepage billing links', reviewedAt: '2026-11-26',
+  context: 'The official homepage nav links "BILL PAYMENT" to payment.ceb.lk and "Register for e-Bill" to ebill.ceb.lk. Recorded as a link observation from the official site, not a live check of the payment page itself.',
+};
 const LECO_HOME: EvidenceSource = {
   url: 'https://www.leco.lk/', title: 'Lanka Electricity Company (LECO) — Official website', reviewedAt: '2026-11-20',
   context: 'Official LECO site. No customer-contact number was captured in this review.',
@@ -373,7 +377,17 @@ export const ORGANIZATION_DIRECTORY: readonly OrganizationRecord[] = [
     aliases: ['Ceylon Electricity Board', 'Ceylon Electricity', 'CEB'],
     country: 'LK',
     identity: { description: 'Identified as the Ceylon Electricity Board by its official website.', source: CEB_HOME },
-    domains: hosts(['ceb.lk', 'www.ceb.lk'], CEB_HOME),
+    // Billing hosts are linked from the official homepage nav ("BILL PAYMENT" → payment.ceb.lk,
+    // "Register for e-Bill" → ebill.ceb.lk), re-checked 26 Nov 2026. They are listed explicitly
+    // because `hosts()` sets includeSubdomains: false and a genuine CEB bill pays at payment.ceb.lk:
+    // without the entry, organization verification reported the host as unconfirmed and the model
+    // escalated a routine bill to "suspicious" in both English and Sinhala (language sign-off B2/B3).
+    // Kept on their own source so the existing hosts keep their 20 Nov review date: a fresher source
+    // would make them look future-dated under an older clock and lose a current match.
+    domains: [
+      ...hosts(['ceb.lk', 'www.ceb.lk'], CEB_HOME),
+      ...hosts(['payment.ceb.lk', 'ebill.ceb.lk'], CEB_BILLING),
+    ],
     phones: [],
   },
   {

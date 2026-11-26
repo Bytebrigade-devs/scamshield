@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { verifyOrganizationContacts } from './organization-verification.ts';
 import type { OrganizationRecord } from './organization-directory.ts';
+import { ORGANIZATION_DIRECTORY } from './organization-directory.ts';
 
 const NOW = Date.UTC(2026, 9, 26, 6);
 const source = { url: 'https://official.example/contact', title: 'Official contact directory', reviewedAt: '2026-10-26', context: 'Sri Lanka head office' };
@@ -184,4 +185,28 @@ test('whole-host tokenization preserves sentence punctuation, ordinary phone con
   const phone = verifyOrganizationContacts('Please call (011) 230-0260, or use sampath.lk.', DIRECTORY, NOW);
   assert.equal(phone.organizations[0]?.contacts.find(contact => contact.kind === 'phone')?.status, 'matched');
   assert.equal(phone.organizations[0]?.contacts.find(contact => contact.kind === 'website')?.status, 'matched');
+});
+
+// A genuine CEB bill pays at payment.ceb.lk, which CEB's own homepage links as "BILL PAYMENT".
+// While the host was unlisted the model escalated the same bill to "suspicious" in English and
+// Sinhala (language sign-off B2/B3), because verification honestly reported the host as
+// unconfirmed. These assertions pin the reviewed fact and, beside it, that a look-alike host
+// still is not confirmed.
+test('a genuine CEB bill confirms the official payment host, and only that host', () => {
+  const later = Date.UTC(2026, 10, 27, 6); // after the 26 Nov billing-link review
+  const bill = 'CEB: bill for account 00XXXXX is Rs. 4,320, due 4 November. Payment is only at payment.ceb.lk or the post office.';
+  const matched = verifyOrganizationContacts(bill, ORGANIZATION_DIRECTORY, later);
+  const ceb = matched.organizations.find(item => item.id === 'ceb');
+  if (!ceb) throw new Error('CEB must be identified in the bill');
+  const website = ceb.contacts.find(item => item.kind === 'website');
+  assert.equal(website?.status, 'matched');
+  assert.equal(website?.matches[0]?.organizationId, 'ceb');
+
+  const lookalike = verifyOrganizationContacts(
+    'CEB: pay at https://payment.ceb.lk.secure-pay.example/ and send the receipt.',
+    ORGANIZATION_DIRECTORY,
+    later,
+  );
+  const spoofed = lookalike.organizations.find(item => item.id === 'ceb');
+  assert.equal(spoofed?.contacts.find(item => item.kind === 'website')?.status, 'not-confirmed');
 });

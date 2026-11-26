@@ -139,7 +139,7 @@ export const REVIEWED_BRANDS: readonly ReviewedBrand[] = [
   {
     organizationId: 'ceb',
     aliases: ['Ceylon Electricity Board', 'Ceylon Electricity', 'CEB'],
-    officialHosts: ['ceb.lk', 'www.ceb.lk'],
+    officialHosts: ['ceb.lk', 'www.ceb.lk', 'payment.ceb.lk', 'ebill.ceb.lk'],
     officialDomains: ['ceb.lk'],
   },
   {
