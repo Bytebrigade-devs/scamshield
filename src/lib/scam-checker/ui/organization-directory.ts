@@ -136,6 +136,10 @@ const CEB_BILLING: EvidenceSource = {
   url: 'https://ceb.lk/', title: 'Ceylon Electricity Board — homepage billing links', reviewedAt: '2026-11-26',
   context: 'The official homepage nav links "BILL PAYMENT" to payment.ceb.lk and "Register for e-Bill" to ebill.ceb.lk. Recorded as a link observation from the official site, not a live check of the payment page itself.',
 };
+const CEB_CONTACT: EvidenceSource = {
+  url: 'https://ceb.lk/contactus/en', title: 'Ceylon Electricity Board — Contact Us', reviewedAt: '2026-11-26',
+  context: 'The official contact page lists "Call Center — 1987", available 24 hours, all 7 days. Recorded from the page; no call was placed to verify the line.',
+};
 const LECO_HOME: EvidenceSource = {
   url: 'https://www.leco.lk/', title: 'Lanka Electricity Company (LECO) — Official website', reviewedAt: '2026-11-20',
   context: 'Official LECO site. No customer-contact number was captured in this review.',
@@ -388,7 +392,11 @@ export const ORGANIZATION_DIRECTORY: readonly OrganizationRecord[] = [
       ...hosts(['ceb.lk', 'www.ceb.lk'], CEB_HOME),
       ...hosts(['payment.ceb.lk', 'ebill.ceb.lk'], CEB_BILLING),
     ],
-    phones: [],
+    // CEB's bill-alert registration tells customers to text REG to 1987; the contact page lists that
+    // number as the 24/7 call centre. Short codes only match when the message carries contact wording
+    // ("call 1987"), so this records the number's owner without turning any 4-digit sequence into a
+    // match. Both CEB cards previously said "1987 was not confirmed in the supplied records".
+    phones: [{ value: '1987', scope: 'Call centre, 24/7', source: CEB_CONTACT }],
   },
   {
     id: 'leco',
