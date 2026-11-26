@@ -185,7 +185,7 @@ for (const api of ['chat', 'responses'] as const) {
     const body = JSON.parse(String(calls[0].init.body));
     assert.equal(api === 'responses' ? body.input : body.messages.at(-1).content, FIXTURE);
     const instructions = api === 'responses' ? body.instructions : body.messages[0].content;
-    for (const phrase of ['risk_level', 'reason_highlights', '35%', 'domain suffix alone', 'untrusted evidence', 'no internet access']) {
+    for (const phrase of ['risk_level', 'reason_highlights', '35%', 'domain suffix alone', 'untrusted evidence', 'no internet access', 'Rate the message, not the phenomenon', 'risk_level must be low']) {
       assert.ok(instructions.includes(phrase), `${api} instructions include ${phrase}`);
     }
     assert.equal(outcome.kind, 'analysed');
