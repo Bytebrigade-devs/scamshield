@@ -20,6 +20,32 @@ export type RiskLevel = "low" | "suspicious" | "high" | "undetermined";
 export type AnalysisStatus = "completed" | "limited" | "unavailable";
 export type AnalysisMode = "rules_and_ai" | "rules_only" | "none";
 
+/**
+ * The cautious fallback for a no-verdict result.
+ *
+ * A provider failure returns `unavailable`: nothing was assessed and the risk meter is
+ * `undetermined`. Saying only "AI analysis failed" is honest but leaves the reader with nothing to
+ * do — and the 25 Nov language sign-off found that six of seven such messages had zero local rules,
+ * so the card was empty on exactly the shapes that matter. This returns an action, never a band: a
+ * verdict may come only from a validated reply, so a failure must not be labelled safe or suspicious.
+ */
+export interface NoVerdictActions {
+  title: string;
+  body: string;
+  action: string;
+}
+
+export function noVerdictActions(status: AnalysisStatus, ruleMatchCount: number): NoVerdictActions | null {
+  if (status !== "unavailable") return null;
+  return {
+    title: "We could not fully check this message",
+    body: ruleMatchCount > 0
+      ? "The AI check did not complete. The local patterns below are evidence to review, not a verdict."
+      : "The AI check did not complete and no local scam patterns matched. That is not a safety verdict — an ordinary-looking message can still be a scam.",
+    action: "Confirm through official channels first: call the organisation on a number you already have, and do not pay or share details because a message asked you to.",
+  };
+}
+
 /** A stage-2 rule match. `start`/`end` are UTF-16 offsets into the submitted text. */
 export interface RuleMatch {
   ruleId: string;

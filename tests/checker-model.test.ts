@@ -17,6 +17,7 @@ import {
   historyEntryFromServer,
   inputCap,
   isAnalysedOutcome,
+  noVerdictActions,
   summaryInstantFor,
   validHistoryEntry,
   type CheckPayload,
@@ -168,4 +169,32 @@ test("an unknown server category falls back to unknown_other", () => {
   });
   assert.equal(entry.category, "unknown_other");
   assert.ok(validHistoryEntry(entry));
+});
+
+test("a no-verdict result gives an action, never a band", () => {
+  // The 25 Nov language sign-off found seven messages returned "unavailable", six with zero local
+  // rules — an empty card on exactly the shapes that matter. The fallback carries the reviewer's
+  // position: same honesty, plus something to do.
+  const empty = noVerdictActions("unavailable", 0);
+  assert.ok(empty);
+  assert.match(empty.title, /could not fully check/i);
+  assert.match(empty.body, /not a safety verdict/i);
+  assert.match(empty.action, /official channels first/i);
+  assert.match(empty.action, /do not pay or share details/i);
+
+  // A rule match changes the sentence, not the promise: patterns are evidence to review.
+  const withRule = noVerdictActions("unavailable", 1);
+  assert.ok(withRule);
+  assert.match(withRule.body, /evidence to review, not a verdict/i);
+  assert.doesNotMatch(withRule.body, /no local scam patterns matched/i);
+
+  // No band language anywhere: a failure may never read as safe or suspicious.
+  for (const text of [empty.title, empty.body, empty.action, withRule.body]) {
+    assert.doesNotMatch(text, /\b(safe|suspicious|low risk|high risk|guaranteed)\b/i);
+  }
+
+  // Other statuses are not fallbacks: a completed result has a verdict, and "limited" is a
+  // separate promise (the check did run), deliberately not covered by this panel.
+  assert.equal(noVerdictActions("completed", 0), null);
+  assert.equal(noVerdictActions("limited", 0), null);
 });

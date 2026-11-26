@@ -348,6 +348,18 @@ textarea.message-input[aria-invalid="true"] {
 .sender-input:disabled { background: var(--color-background); color: var(--color-disabled-text); }
 .sender-input[aria-invalid="true"] { border-color: var(--color-danger); }
 .assessment__diagnostic { margin-top: var(--space-4); font-size: 14px; font-weight: 500; }
+/* No-verdict fallback: an action, never a band. Warning tint, not danger — nothing was assessed. */
+.assessment__fallback {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-left: 3px solid var(--color-warning);
+  border-radius: var(--radius-card);
+  background: var(--color-warning-subtle);
+}
+.assessment__fallback-title { font-weight: 600; color: var(--color-text); }
+.assessment__fallback-body { margin-top: var(--space-2); font-size: 14px; color: var(--color-text-muted); }
+.assessment__fallback-action { margin-top: var(--space-2); font-size: 14px; font-weight: 500; color: var(--color-text); }
 
 .field-meta {
   display: flex;
