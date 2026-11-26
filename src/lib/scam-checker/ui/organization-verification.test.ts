@@ -210,3 +210,31 @@ test('a genuine CEB bill confirms the official payment host, and only that host'
   const spoofed = lookalike.organizations.find(item => item.id === 'ceb');
   assert.equal(spoofed?.contacts.find(item => item.kind === 'website')?.status, 'not-confirmed');
 });
+
+// The bill-alert flow says "text REG ... to 1987"; the contact page lists 1987 as the 24/7 call
+// centre. Recording the number lets the directory state who owns it, while the short-code guard
+// still decides whether a given message's number counts as a contact match.
+test('CEB 1987 is a recorded contact, matched only with contact wording', () => {
+  const later = Date.UTC(2026, 10, 27, 6);
+  const call = verifyOrganizationContacts('CEB: call 1987 about your bill', ORGANIZATION_DIRECTORY, later);
+  const ceb = call.organizations.find(item => item.id === 'ceb');
+  if (!ceb) throw new Error('CEB must be identified');
+  assert.equal(ceb.contacts.find(item => item.kind === 'phone')?.status, 'matched');
+  assert.ok(ceb.officialContacts.some(item => item.value === '1987' && item.scope.includes('Call centre')));
+
+  // The guard is unchanged: a bare four-digit sequence in an OTP-style sentence is not a contact.
+  const otp = verifyOrganizationContacts('CEB: your OTP is 1987', ORGANIZATION_DIRECTORY, later);
+  const otpCeb = otp.organizations.find(item => item.id === 'ceb');
+  assert.equal(otpCeb?.contacts.find(item => item.kind === 'phone')?.status, 'not-provided');
+
+  // And the bill's own phrasing is honest about the limit: "to 1987" is not contact wording, so the
+  // record lists the number but the message's mention is not asserted as a match.
+  const bill = verifyOrganizationContacts(
+    'CEB: bill for account 00XXXXX is Rs. 4,320. Register with REG 00XXXXX to 1987 for bill alerts.',
+    ORGANIZATION_DIRECTORY,
+    later,
+  );
+  const billCeb = bill.organizations.find(item => item.id === 'ceb');
+  assert.equal(billCeb?.contacts.find(item => item.kind === 'phone')?.status, 'not-provided');
+  assert.ok(billCeb?.officialContacts.some(item => item.value === '1987'));
+});
