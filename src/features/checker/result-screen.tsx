@@ -31,6 +31,7 @@ import { FeedbackCard } from "./feedback-card";
 import { GuidanceCard, LinkInspectionCard, OfficialResourcesCard } from "./guidance-card";
 import { LinkWarningBanner } from "./link-banner";
 import type { AnalysedOutcome, CheckPayload, ReasonHighlight, RuleMatch } from "./model";
+import { noVerdictActions } from "./model";
 import { OrganizationCard } from "./organization-card";
 import { useChecker } from "./provider";
 import { SenderCard } from "./sender-card";
@@ -67,6 +68,8 @@ export function ResultScreen({ payload, text, summary }: { payload: CheckPayload
         ? "Local patterns can miss scams and can also flag legitimate messages."
         : "Your message was still scanned with local scam patterns — they are listed below. This is not a safety verdict.";
   const failure = status === "unavailable" ? (aiFailureMessage(payload.aiFailure) as string | null) : null;
+  // A no-verdict result gets an action, never a band (see model.noVerdictActions).
+  const noVerdict = noVerdictActions(status, matches.length);
   const resourceCount = (payload.guidanceResources as { resources?: unknown[] } | undefined)?.resources?.length ?? 0;
 
   return (
@@ -91,6 +94,14 @@ export function ResultScreen({ payload, text, summary }: { payload: CheckPayload
           <p className="assessment__diagnostic" role="status">
             {failure}
           </p>
+        ) : null}
+
+        {noVerdict ? (
+          <section className="assessment__fallback" aria-label="What to do now">
+            <p className="assessment__fallback-title">{noVerdict.title}</p>
+            <p className="assessment__fallback-body">{noVerdict.body}</p>
+            <p className="assessment__fallback-action">{noVerdict.action}</p>
+          </section>
         ) : null}
 
         <RiskMeter risk={risk} />
