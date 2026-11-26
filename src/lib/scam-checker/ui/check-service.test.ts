@@ -5,6 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCheckService, liveConfigFromEnv, normalizeEndpoint, normalizeResponsesEndpoint } from './check-service.ts';
+import type { LiveConfig } from './check-service.ts';
 import type { ProviderPort } from '../boundary/check-boundary.ts';
 import { RULES_ONLY_LIMITATION, UNAVAILABLE_LIMITATION, EMPTY_INPUT_MESSAGE } from '../boundary/check-boundary.ts';
 import { readFileSync } from 'node:fs';
@@ -191,6 +192,48 @@ for (const api of ['chat', 'responses'] as const) {
     assert.equal(outcome.kind, 'analysed');
     if (outcome.kind === 'analysed') assert.equal(outcome.analysisStatus, 'completed');
   });
+}
+
+// Owner measurement, 27 Nov 2026: the same message was banded differently on repeated runs, and the
+// checker sent no sampling control at all. The field is opt-in so shipped behaviour is unchanged
+// until the value is measured against the gateway.
+test('temperature: absent by default, so neither request shape changes', async () => {
+  for (const api of ['chat', 'responses'] as const) {
+    const payload = await capturedBody(api, { ...LIVE, api });
+    assert.equal('temperature' in payload, false, `${api} omits temperature when it is not configured`);
+  }
+});
+
+test('temperature: a configured value is sent verbatim in both request shapes', async () => {
+  for (const api of ['chat', 'responses'] as const) {
+    const payload = await capturedBody(api, { ...LIVE, api, temperature: 0 });
+    assert.equal(payload.temperature, 0, `${api} sends the configured temperature`);
+  }
+});
+
+test('temperature: parsed from M4_UI_TEMPERATURE, blank means omitted, malformed throws', () => {
+  const base = { OPENAI_API_KEY: 'synthetic-service-key', M4_UI_MODEL: 'primary-model' } as NodeJS.ProcessEnv;
+  assert.equal(liveConfigFromEnv(base)?.temperature, null);
+  for (const blank of ['', '   ']) {
+    assert.equal(liveConfigFromEnv({ ...base, M4_UI_TEMPERATURE: blank })?.temperature, null);
+  }
+  assert.equal(liveConfigFromEnv({ ...base, M4_UI_TEMPERATURE: '0' })?.temperature, 0);
+  assert.equal(liveConfigFromEnv({ ...base, M4_UI_TEMPERATURE: '0.2' })?.temperature, 0.2);
+  for (const bad of ['-1', '2.5', '3', 'hot', '0.005', '1e0']) {
+    assert.throws(() => liveConfigFromEnv({ ...base, M4_UI_TEMPERATURE: bad }), RangeError, `rejects ${bad}`);
+  }
+});
+
+async function capturedBody(api: 'chat' | 'responses', live: LiveConfig): Promise<Record<string, unknown>> {
+  const calls: Array<{ init: RequestInit }> = [];
+  const fetchImpl = (async (_url, init) => {
+    calls.push({ init: init ?? {} });
+    return Response.json(api === 'responses'
+      ? { output_text: JSON.stringify(REPLY) }
+      : { choices: [{ message: { content: JSON.stringify(REPLY) } }] });
+  }) as typeof fetch;
+  await createCheckService({ live, fetchImpl }).check(FIXTURE);
+  return JSON.parse(String(calls[0].init.body)) as Record<string, unknown>;
 }
 
 test('missing and blank credentials never invoke test injection or transport', async () => {
