@@ -239,6 +239,13 @@ export interface PersistencePort {
     finalizeReconciliation(reservationId: string, actualSpend: number, now: number): boolean;
     reservationByRequestKey(requestKey: string): ReservationRecord | null;
     getBucket(key: QuotaBucketKey): QuotaBucket | null;
+    /**
+     * The subject's most recent bucket of one period kind, whatever its period start.
+     * Needed to CONTINUE a first-use-anchored window (the trial) instead of restarting it: an
+     * anchored window's start is the subject's first use, which the caller cannot derive from
+     * the clock alone (added for the durable usage port, 27 Nov 2026).
+     */
+    latestBucket(key: { subjectKey: string; periodKind: QuotaPeriodKind }): QuotaBucket | null;
   };
   budget: {
     getBucket(key: BudgetBucketKey): BudgetBucket | null;
@@ -866,6 +873,14 @@ export function createInMemoryPersistence(): PersistencePort {
       finalizeReconciliation,
       reservationByRequestKey,
       getBucket: findQuotaBucket,
+      latestBucket: (key) => {
+        let latest: QuotaBucket | null = null;
+        for (const bucket of quotaBuckets.values()) {
+          if (bucket.subjectKey !== key.subjectKey || bucket.periodKind !== key.periodKind) continue;
+          if (latest === null || bucket.periodStart > latest.periodStart) latest = bucket;
+        }
+        return latest === null ? null : { ...latest };
+      },
     },
     budget: { getBucket: getBudgetBucket },
     deleteSubject,
