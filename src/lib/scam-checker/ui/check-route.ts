@@ -14,7 +14,7 @@
 import { DEFAULT_LIMITS, TAXONOMY_VERSION } from '../boundary/check-boundary.ts';
 import { toEntitlementSnapshot, type M2SubscriptionDecision } from '../boundary/m2-entitlement-adapter.ts';
 import { gateRequestAccess } from '../boundary/request-entitlement.ts';
-import type { CheckService } from './check-service.ts';
+import type { CheckService, CheckSubjectContext } from './check-service.ts';
 import type { FeedbackSupport } from './feedback-endpoint.ts';
 
 export interface CheckRouteOptions {
@@ -72,8 +72,8 @@ export function createCheckApiRoute(options: CheckRouteOptions): (request: Reque
       // gets real enforcement; their resolved subject also keys the feedback report.
       const hasAuthorization = request.headers.get('authorization') !== null;
       let subjectKey: string | undefined;
-      /** Passed to the service so a completed analysis can be persisted under a verified user. */
-      let context: { subjectKey: string; planId: string; entitlementExpiresAt: number } | undefined;
+      /** Passed to the service so a completed analysis is persisted AND quota-gated for the caller. */
+      let context: CheckSubjectContext | undefined;
 
       if (hasAuthorization) {
         let decision: M2SubscriptionDecision | null = null;
@@ -96,6 +96,9 @@ export function createCheckApiRoute(options: CheckRouteOptions): (request: Reque
               subjectKey: gate.subjectKey,
               planId: snapshot.planId,
               entitlementExpiresAt: snapshot.expiresAt,
+              // The quota gate uses the SAME verified snapshot the gate already accepted, so a
+              // signed-in caller is counted against their own plan and subject (27 Nov 2026).
+              entitlement: snapshot,
             };
           }
         }

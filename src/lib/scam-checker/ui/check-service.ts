@@ -17,6 +17,7 @@ import type {
   CheckDeps,
   CheckOutcome,
   EntitlementPort,
+  EntitlementSnapshot,
   ProviderPort,
   UsagePort,
 } from '../boundary/check-boundary.ts';
@@ -186,6 +187,34 @@ export interface CheckSubjectContext {
   planId?: string;
   /** Entitlement expiry in epoch ms, from the resolved snapshot. */
   entitlementExpiresAt?: number;
+  /**
+   * The M2-verified entitlement snapshot the request already passed the route gate with
+   * (27 Nov 2026). When present, THIS is what the quota gate uses, so a signed-in caller is
+   * counted against their own plan and their own subject instead of the demo trial.
+   * Server-supplied only: the route builds it from `getSubscriptionContext`, never from a
+   * request body. An absent value keeps the labelled demo trial, unchanged.
+   */
+  entitlement?: EntitlementSnapshot;
+}
+
+/** Session sentinel for the labelled demo subject; never a real user. */
+const DEMO_SESSION = Object.freeze({ kind: 'local-ui-demo' });
+/** Session sentinel for a supplied-but-unusable snapshot: resolves to null, so access is blocked. */
+const INVALID_SESSION = Object.freeze({ kind: 'invalid-entitlement' });
+const ENTITLEMENT_STATUSES = new Set(['active', 'trial', 'cancelled', 'suspended', 'past_due']);
+
+/**
+ * Structural check on a supplied snapshot. A malformed one must NOT fall back to the demo trial
+ * (that would hand a broken session a permissive allowance); it becomes an unverifiable session,
+ * which `resolveAccess` blocks.
+ */
+function isEntitlementSnapshot(value: unknown): value is EntitlementSnapshot {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.subjectKey === 'string' && candidate.subjectKey.trim().length > 0
+    && typeof candidate.planId === 'string'
+    && typeof candidate.status === 'string' && ENTITLEMENT_STATUSES.has(candidate.status)
+    && typeof candidate.expiresAt === 'number' && Number.isFinite(candidate.expiresAt);
 }
 
 export interface CheckServiceResult {
@@ -254,16 +283,21 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
   const guidanceDirectory = options.guidanceDirectory ?? GUIDANCE_DIRECTORY;
   const live = options.live && options.live.apiKey.trim().length > 0 ? options.live : null;
   const startedAt = now();
+  const demoEntitlement: EntitlementSnapshot = {
+    subjectKey: DEMO_SUBJECT_KEY,
+    planId: 'trial',
+    status: 'trial',
+    expiresAt: startedAt + TRIAL_WINDOW_MS,
+  };
 
   const entitlement: EntitlementPort = {
-    // The browser supplies no session identifier; this harness injects a single opaque
-    // server-side demo snapshot (trial). Expiry is verified by the real access mapping.
-    getEntitlement: () => ({
-      subjectKey: DEMO_SUBJECT_KEY,
-      planId: 'trial',
-      status: 'trial',
-      expiresAt: startedAt + TRIAL_WINDOW_MS,
-    }),
+    // No supplied snapshot means the labelled demo trial (unchanged behaviour). A supplied but
+    // structurally invalid snapshot resolves to null, which the access mapping BLOCKS: a broken
+    // session must never quietly receive the demo allowance.
+    getEntitlement: (session) => {
+      if (session === DEMO_SESSION) return demoEntitlement;
+      return isEntitlementSnapshot(session) ? session : null;
+    },
   };
 
   // X-09 is open in the product. Unless the construction site supplies a real gate, this is the
@@ -356,7 +390,9 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
         return organizationVerification;
       }, () => senderVerification, () => linkInspection, failure => { aiFailure = failure; });
       const deps: CheckDeps = {
-        session: { kind: 'local-ui-demo' },
+        session: context?.entitlement === undefined
+          ? DEMO_SESSION
+          : (isEntitlementSnapshot(context.entitlement) ? context.entitlement : INVALID_SESSION),
         extract: (admittedText) => {
           const candidates = extractCandidates(admittedText);
           const checkedAt = now();

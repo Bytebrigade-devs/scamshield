@@ -596,3 +596,94 @@ test('the default usage gate is still the in-memory store, so a check without in
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind === 'analysed' ? outcome.analysisStatus : null, 'completed');
 });
+
+// ---------------------------------------------------------------------------
+// Verified plan → quota subject (27 Nov 2026)
+// ---------------------------------------------------------------------------
+
+const USER_UUID = '5f0d9a4c-1c2b-4a3e-9d55-2b1f8c0a7e11';
+
+/** Records what the usage gate was asked to admit. */
+function capturingUsage() {
+  const admitted: Array<{ key: string; monthly: number; daily: number }> = [];
+  return {
+    admitted,
+    usage: {
+      async admitCheck(subject: { key: string; allowance: { monthly: number; daily: number } }) {
+        admitted.push({ key: subject.key, monthly: subject.allowance.monthly, daily: subject.allowance.daily });
+        return null;
+      },
+      async recordCompletion() {},
+      async releaseCheck() {},
+    },
+  };
+}
+
+test('a verified snapshot gates the check as THAT user and THAT plan (not the demo trial)', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  const { outcome } = await service.check(FIXTURE, undefined, {
+    subjectKey: USER_UUID,
+    planId: 'guardian',
+    entitlementExpiresAt: Date.now() + 86_400_000,
+    entitlement: {
+      subjectKey: USER_UUID,
+      planId: 'guardian',
+      status: 'active',
+      expiresAt: Date.now() + 86_400_000,
+    },
+  });
+
+  assert.equal(outcome.kind === 'analysed' ? outcome.analysisStatus : null, 'completed');
+  assert.deepEqual(admitted, [{ key: USER_UUID, monthly: 200, daily: 15 }], 'guardian allowance on the caller subject');
+});
+
+test('without a snapshot the labelled demo trial is unchanged', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  await service.check(FIXTURE);
+  assert.deepEqual(admitted, [{ key: 'local-ui-demo-subject', monthly: 15, daily: 15 }]);
+});
+
+test('a malformed snapshot is BLOCKED, never downgraded to the demo trial', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  const { outcome } = await service.check(FIXTURE, undefined, {
+    subjectKey: USER_UUID,
+    // Structurally invalid: negative status is not a status, expiry is not a number.
+    entitlement: { subjectKey: USER_UUID, planId: 'aegis', status: 'bogus', expiresAt: Number.NaN } as never,
+  });
+
+  assert.equal(outcome.kind, 'rejected');
+  assert.equal(outcome.kind === 'rejected' ? outcome.reason : null, 'access-blocked');
+  assert.deepEqual(admitted, [], 'the usage gate is never reached');
+});
+
+test('an expired verified snapshot is blocked, not treated as a valid plan', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  const { outcome } = await service.check(FIXTURE, undefined, {
+    subjectKey: USER_UUID,
+    entitlement: { subjectKey: USER_UUID, planId: 'guardian', status: 'active', expiresAt: Date.now() - 1_000 },
+  });
+
+  assert.equal(outcome.kind === 'rejected' ? outcome.reason : null, 'access-blocked');
+  assert.deepEqual(admitted, []);
+});
+
+test('an unknown plan id stays blocked even when the snapshot is structurally valid', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  const { outcome } = await service.check(FIXTURE, undefined, {
+    subjectKey: USER_UUID,
+    entitlement: { subjectKey: USER_UUID, planId: 'enterprise', status: 'active', expiresAt: Date.now() + 86_400_000 },
+  });
+
+  assert.equal(outcome.kind === 'rejected' ? outcome.reason : null, 'access-blocked', 'no invented quota for an unknown plan');
+  assert.deepEqual(admitted, []);
+});
