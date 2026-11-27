@@ -659,6 +659,20 @@ export function createDurableAdapter(
         });
         return rows[0] ? fromQuotaRow(rows[0]) : null;
       },
+
+      async latestBucket(key) {
+        // One row, newest period first: an anchored (first-use) window must be CONTINUED, not
+        // restarted, so the caller needs the stored period_start it cannot derive from the clock.
+        if (typeof key?.subjectKey !== 'string' || key.subjectKey.trim().length === 0) return null;
+        const rows = await selectRows(`/${M4_TABLES.quotaBuckets}`, {
+          subject_key: `eq.${key.subjectKey.trim()}`,
+          period_kind: `eq.${key.periodKind}`,
+          select: QUOTA_COLUMNS,
+          order: 'period_start.desc',
+          limit: '1',
+        });
+        return rows[0] ? fromQuotaRow(rows[0]) : null;
+      },
     },
 
     budget: {

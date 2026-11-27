@@ -71,3 +71,46 @@ Also published in the same slice: the steward-aligned `persistence-port.ts` cont
 Verified in this branch: **597/597** tests across 49 files, `tsc --noEmit` exit 0, `eslint` exit 0. No live provider call was made for this publication, and the model comparison remains synthetic-set evidence, not an accuracy claim.
 
 **Merged — 23 November 2026:** published as PR #54 and merged 23 Nov 13:31:51Z as `e35db9d`. Re-verified at the merged head: **605/605** tests across 49 files (two follow-up commits added the reserve/fallback-wiring tests), `tsc --noEmit`, `eslint` and `next build` exit 0, `sync-public.ts --check` clean (18 files). CI (`Shared app CI` + `M4 library tests`) success on the merged head.
+
+## Durable usage gate — 27 November 2026
+
+The quota gate can now count in the database instead of per process. Motivation, measured rather than
+assumed: on Vercel every function instance has its own memory, so `createInMemoryUsageStore()` enforced the
+monthly quota, the daily cap and the burst guard **per instance** and forgot them on a cold start
+(`evidence/M4-02-live-verification-20261127.md` in the module workspace). The tables and transaction
+functions were already applied and exercised; only the check path never used them.
+
+**What changed**
+
+- `UsagePort` may now answer asynchronously (`Awaitable<…>`) and `runCheck` awaits it. Synchronous stores are
+  unchanged — the in-memory store still satisfies the contract with plain return values.
+- `releaseCheck` optionally carries the terminal status (`limited` / `unavailable`) so a durable store can
+  record **which** non-completed outcome released the reservation. Nothing about counting changes: only a
+  completed analysis consumes quota (NFR-M4-10).
+- New `durable-usage-store.ts` implements the port over `m4_reserve_check` / `m4_settle_reservation`. It
+  reserves daily **and** allowance headroom before the provider call, converts exactly one reservation on
+  completion, and releases on every other exit.
+- The trial's first-use anchor is **continued, not restarted**: `quota.latestBucket(subject, kind)` returns
+  the newest bucket of that kind, so a trial spanning a calendar-month boundary cannot be granted a fresh
+  quota mid-window (review fix #7).
+- `app/api/check/route.ts` passes the durable gate only when `selectPersistence` selected the durable store,
+  so the memory path is unchanged when `M4_DURABLE_STORE` is unset.
+
+**Failure policy — fail closed.** If the counting layer cannot be reached, `admitCheck` denies with a new
+rejection reason `usage-unavailable` and the check does not run. Admitting without a count is how a spent
+quota silently becomes unlimited, and the provider call behind it costs money. The message says the usage
+could not be confirmed — it never pretends the quota was reached.
+
+**Not claimed or not included**
+
+- **Provider spend is still not reserved.** `m4_reserve_check` can hold budget capacity, but that needs an
+  approved per-check price and X-09's written funding/cap arrangement is still open; the store passes
+  `budget: null` on purpose and the service's budget port remains the labelled stub.
+- **The burst guard is still per process.** The functions have no burst concept and no count query exposes
+  one, so the sliding window stays in memory. It is the soft guard it always was; the monthly and daily caps
+  are the ones that now hold across instances.
+- **No live observation yet.** The repository suite (673 tests) and the in-memory Supabase double prove the
+  reservation and settlement call shapes. Whether production buckets actually move is an owner-run
+  observation: a few checks, then a read of `checker_quota_buckets` and `checker_usage_reservations`.
+- **The demo identity shares one quota.** Anonymous checks run as the labelled demo subject; with durable
+  counting they share its trial allowance instead of each instance having its own.

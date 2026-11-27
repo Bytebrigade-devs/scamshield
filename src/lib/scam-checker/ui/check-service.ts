@@ -13,10 +13,12 @@
  */
 import { DEFAULT_LIMITS, runCheck } from '../boundary/check-boundary.ts';
 import type {
+  BudgetPort,
   CheckDeps,
   CheckOutcome,
   EntitlementPort,
   ProviderPort,
+  UsagePort,
 } from '../boundary/check-boundary.ts';
 import { createInMemoryUsageStore } from '../boundary/usage-store.ts';
 import { createInMemoryPersistence, type StoredUsageEvent } from '../boundary/persistence-port.ts';
@@ -162,6 +164,19 @@ export interface CheckServiceOptions {
    * memory unless `M4_DURABLE_STORE` is configured. Never accepted from an HTTP request.
    */
   persistence?: DurablePersistence;
+  /**
+   * Server-construction usage gate (27 Nov 2026): defaults to the in-memory store, which counts
+   * per process. Deployments pass `createDurableUsageStore({ quota: selection.persistence.quota })`
+   * when the durable store is selected, so monthly/daily quota holds across instances. Never
+   * accepted from an HTTP request.
+   */
+  usage?: UsagePort;
+  /**
+   * Server-construction budget gate. Defaults to the labelled local-harness stub used for
+   * synthetic testing. X-09 (the written funding/cap arrangement) is still open in the product,
+   * so nothing here pretends to enforce a spend cap. Never accepted from an HTTP request.
+   */
+  budget?: BudgetPort;
 }
 
 /** Server-derived identity for the durable write; absent means nothing is persisted. */
@@ -251,12 +266,12 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
     }),
   };
 
-  // X-09 is open in the product. This local harness is explicitly owner-authorized for
-  // synthetic-message testing only, so the budget port permits the injected attempt;
-  // the real usage gates (burst + monthly/daily) still apply to every check.
-  const budget = { isProviderCallPermitted: () => ({ permitted: true as const }) };
+  // X-09 is open in the product. Unless the construction site supplies a real gate, this is the
+  // labelled harness stub: it permits the attempt and enforces no spend cap. The usage gate below
+  // is what actually limits checks; since 27 Nov 2026 a deployment can supply a durable one.
+  const budget: BudgetPort = options.budget ?? { isProviderCallPermitted: () => ({ permitted: true as const }) };
 
-  const usage = createInMemoryUsageStore();
+  const usage: UsagePort = options.usage ?? createInMemoryUsageStore();
   // X-13: one local 0.2.0-draft event per accepted analysed outcome (in-memory only; no
   // delivery to any consumer). The reference is the same server-derived demo subject the
   // feedback surfaces use — never a browser-supplied value.

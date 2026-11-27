@@ -537,3 +537,62 @@ test('fallback composite: bad-json on the primary never triggers the fallback', 
     assert.deepEqual(outcome.limitations, [UNAVAILABLE_LIMITATION]);
   }
 });
+
+// ---------------------------------------------------------------------------
+// M4-02 durability (27 Nov 2026): the construction site can supply the usage gate
+// ---------------------------------------------------------------------------
+
+test('an injected durable usage port is the gate the service actually uses', async () => {
+  const seen: string[] = [];
+  const service = createCheckService({
+    live: LIVE,
+    provider: completedProvider,
+    usage: {
+      async admitCheck() {
+        seen.push('admit');
+        return null;
+      },
+      async recordCompletion() {
+        seen.push('complete');
+      },
+      async releaseCheck() {
+        seen.push('release');
+      },
+    },
+  });
+
+  const { outcome } = await service.check(FIXTURE);
+  assert.equal(outcome.kind === 'analysed' ? outcome.analysisStatus : null, 'completed');
+  assert.deepEqual(seen, ['admit', 'complete'], 'the injected port replaces the in-memory store');
+});
+
+test('an injected usage port that denies refuses the check before any provider call', async () => {
+  let providerCalls = 0;
+  const service = createCheckService({
+    live: LIVE,
+    provider: {
+      analyze: async () => {
+        providerCalls += 1;
+        return { kind: 'ok', json: REPLY };
+      },
+    },
+    usage: {
+      async admitCheck() {
+        return { reason: 'usage-unavailable' as const, message: 'Usage could not be confirmed.' };
+      },
+      async recordCompletion() {},
+      async releaseCheck() {},
+    },
+  });
+
+  const { outcome } = await service.check(FIXTURE);
+  assert.equal(outcome.kind, 'rejected');
+  assert.equal(outcome.kind === 'rejected' ? outcome.reason : null, 'usage-unavailable');
+  assert.equal(providerCalls, 0);
+});
+
+test('the default usage gate is still the in-memory store, so a check without injection works', async () => {
+  const service = createCheckService({ live: LIVE, provider: completedProvider });
+  const { outcome } = await service.check(FIXTURE);
+  assert.equal(outcome.kind === 'analysed' ? outcome.analysisStatus : null, 'completed');
+});

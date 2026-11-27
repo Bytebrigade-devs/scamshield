@@ -23,8 +23,8 @@
  */
 import type {
   BudgetBucket, BudgetBucketKey, DeleteCounts, PersistencePort, QuotaBucket, QuotaBucketKey,
-  QuotaReservationInput, ReservationRecord, SettleResult, StoredCheck, StoredCheckInput,
-  StoredHistoryEntry, StoredUsageEvent,
+  QuotaPeriodKind, QuotaReservationInput, ReservationRecord, SettleResult, StoredCheck,
+  StoredCheckInput, StoredHistoryEntry, StoredUsageEvent,
 } from './persistence-port.ts';
 import type { AnalysisStatus } from './check-boundary.ts';
 import type { FeedbackEntry, FeedbackEntryInput } from './feedback-store.ts';
@@ -75,6 +75,8 @@ export interface DurablePersistence {
     finalizeReconciliation(reservationId: string, actualSpend: number, now: number): Promise<boolean>;
     reservationByRequestKey(requestKey: string): Promise<ReservationRecord | null>;
     getBucket(key: QuotaBucketKey): Promise<QuotaBucket | null>;
+    /** Continues a first-use-anchored window; see `PersistencePort.quota.latestBucket`. */
+    latestBucket(key: { subjectKey: string; periodKind: QuotaPeriodKind }): Promise<QuotaBucket | null>;
   };
   budget: {
     getBucket(key: BudgetBucketKey): Promise<BudgetBucket | null>;
@@ -142,6 +144,7 @@ export function createAsyncPersistence(port: PersistencePort): DurablePersistenc
         port.quota.finalizeReconciliation(reservationId, actualSpend, now),
       reservationByRequestKey: async requestKey => port.quota.reservationByRequestKey(requestKey),
       getBucket: async key => port.quota.getBucket(key),
+      latestBucket: async key => port.quota.latestBucket(key),
     },
     budget: {
       getBucket: async key => port.budget.getBucket(key),
