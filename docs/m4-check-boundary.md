@@ -114,3 +114,36 @@ could not be confirmed — it never pretends the quota was reached.
   observation: a few checks, then a read of `checker_quota_buckets` and `checker_usage_reservations`.
 - **The demo identity shares one quota.** Anonymous checks run as the labelled demo subject; with durable
   counting they share its trial allowance instead of each instance having its own.
+
+## The gate follows the verified plan — 27 November 2026
+
+One defect was found by asking a simple product question ("can I change my own plan to keep testing?") and
+reading the code instead of assuming: **the quota gate never looked at a plan.** `ui/check-service.ts` built
+the entitlement port from a hardcoded demo snapshot, so every check — signed in or not — was admitted as
+`local-ui-demo-subject` on the trial allowance. The route already resolved the real entitlement through M2
+(`getSubscriptionContext` → `toEntitlementSnapshot`), but that object only reached the usage **event** and the
+durable **row**, never the gate. Consequences, both real: a paid account spent the demo trial, and editing
+`subscriptions` changed nothing about checks.
+
+**What changed.** `CheckSubjectContext` carries the M2-verified `EntitlementSnapshot` the route gate already
+accepted, and `runCheck`'s entitlement port returns it for that request. Three session states are kept apart on
+purpose:
+
+| Context | Gate result |
+|---|---|
+| no `Authorization` header | demo trial, byte-for-byte unchanged |
+| verified snapshot | **that subject**, **that plan's allowance** |
+| supplied but structurally unusable | resolves to `null` → `access-blocked` |
+
+**The last row is the one that matters.** A malformed snapshot is never downgraded to the demo trial: a broken
+session must not receive a permissive allowance. The first implementation did downgrade, and the test caught it.
+Expired snapshots and unknown plan ids stay blocked through `resolveAccess`, which still invents no quota.
+
+**No new authority.** The snapshot is the same object `gateRequestAccess` already allowed on; a request body
+never reaches `context`, so a caller cannot claim a plan.
+
+**Verified in production:** a signed-in check created its own bucket pair keyed by the user uuid
+(`limit_count` 600 monthly / 40 daily), while the demo identity stayed at 15/15 — and a 24-run authenticated
+battery returned 24/24 completed and persisted. **Not covered:** provider spend is still unreserved (X-09 open)
+and the burst guard is still per process; both are listed as limitations in the module workspace's
+`M4-KNOWN-LIMITATIONS.md`.
