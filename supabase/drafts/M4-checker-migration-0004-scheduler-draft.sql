@@ -1,8 +1,15 @@
 -- ============================================================================
--- M4 AI Scam Checker — migration 0004: purge scheduler (DRAFT, revision 1)
+-- M4 AI Scam Checker — migration 0004: purge scheduler (revision 1, APPLIED)
 -- ============================================================================
--- STATUS: DRAFT for review. NOT applied. Builds on the applied 0001 (rev 6),
---   0002 (rev 5) and 0003 (rev 1). Decision D4 (24 Nov 2026) chose a DATABASE-SIDE
+-- STATUS: APPLIED — 24 November 2026, once, by the owner in the Supabase SQL editor
+--   (returned `Success. No rows returned`). pg_cron was enabled by this file, and the
+--   verify grid afterwards showed ONE job: `m4-purge-expired-checks` @ `0 3 * * *` →
+--   `SELECT public.m4_purge_expired(now())`, command byte-matching this file.
+--   DO NOT RE-RUN: a successful one-shot is never repeated.
+--   HEADER CORRECTED 27 November 2026 — revision 1 shipped saying "DRAFT … NOT applied",
+--   which stopped being true on 24 Nov. Only this header block changed.
+--   Builds on the applied 0001 (rev 6), 0002 (rev 5) and 0003 (rev 1). Decision D4 (24 Nov 2026)
+--   chose a DATABASE-SIDE
 --   scheduler (pg_cron) because it is host-independent and survives the planned
 --   host move (Netlify demo → Vercel shared app → possibly elsewhere); a host-side
 --   cron would have to be rebuilt on every move.
@@ -18,11 +25,14 @@
 --     needs M5's dashboard read-window + M1's privacy ratification. The schedule
 --     line is left commented below; enable it ONLY after that approval is recorded.
 --
--- GATES before this file may be applied (all stop gates, owner go-ahead required):
---   1. pg_cron must be enabled on the project (available 1.6.4, not enabled as of
---      24 Nov). `create extension if not exists pg_cron` below performs that.
---   2. The owner authorises the apply (a database change to the main project).
---   3. The event-purge schedule additionally needs the M5 + M1 TTL ratification.
+-- GATES — how each one was satisfied at the 24 Nov apply (kept as the record):
+--   1. pg_cron enabled on the project — SATISFIED: `create extension if not exists pg_cron`
+--      below ran in this file (available 1.6.4 beforehand, not enabled).
+--   2. Owner authorises the apply — SATISFIED: the paste was the authorisation.
+--   3. Event-purge schedule needed the M5 + M1 TTL ratification — NOT SATISFIED at this
+--      apply, which is why the EVENT purge was left commented out here. It was shipped
+--      separately as 0005 on 26 Nov 2026 once both replies were on file (M1 25 Nov,
+--      M5 25 Nov). Do not enable the commented block here; use 0005.
 --
 -- PRIVILEGES: m4_purge_expired / m4_purge_events are service_role-only. A pg_cron
 --   job runs as the role that scheduled it; applied by the owner as postgres (a
@@ -35,8 +45,9 @@
 --   guarded by jobname so an accidental re-run does not create duplicate jobs, but
 --   the convention stands: a successful apply is not repeated.
 --
--- HONESTY BOUNDARY: nothing here has been executed. pg_cron is not enabled on the
---   target yet; this is a proposal for the owner to dry-run and apply under go-ahead.
+-- HONESTY BOUNDARY: the checks job is OBSERVED in `cron.job` by direct query. Its first
+--   execution at 03:00 UTC has NOT been observed — `cron.job_run_details` has not been
+--   read — so no purge count is claimed anywhere in the records.
 -- ============================================================================
 
 BEGIN;
