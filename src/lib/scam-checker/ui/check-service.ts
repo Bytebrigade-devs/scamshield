@@ -178,6 +178,13 @@ export interface CheckServiceOptions {
    * so nothing here pretends to enforce a spend cap. Never accepted from an HTTP request.
    */
   budget?: BudgetPort;
+  /**
+   * Server-construction X-13 event-id generator (28 Nov 2026). Defaults to a fresh UUID per
+   * event. It is injectable so tests can pin ids; from 28 Nov 2026 the durable append is keyed
+   * by `event_id`, and L-08 proved that a per-instance counter collides across function
+   * instances and silently drops events. Never accepted from an HTTP request.
+   */
+  eventId?: () => string;
 }
 
 /** Server-derived identity for the durable write; absent means nothing is persisted. */
@@ -313,7 +320,11 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
   // adapter when the construction site passes `selectPersistence(process.env).persistence`.
   const persistence = options.persistence ?? createAsyncPersistence(createInMemoryPersistence());
   const events: EventSink | null = options.events === null ? null : options.events ?? persistence.events;
-  let eventSeq = 0;
+  // L-08 (fixed 28 Nov 2026): this used to be `let eventSeq = 0` with `evt-${++eventSeq}`. The
+  // counter lives inside ONE service instance, so every fresh process re-presented `evt-1`,
+  // `evt-2`, … — ids that already exist holding different events, which the idempotent append
+  // drops silently. Measured: ≥5 battery events lost on 27 Nov. Ids are now unique per event.
+  const nextEventId: () => string = options.eventId ?? (() => `evt-${randomUUID()}`);
   // No credentials means rules only, never a fabricated AI reply. Test provider injection
   // is available only when constructing the service, not through the public request body.
   const buildLiveProvider = (
@@ -425,7 +436,7 @@ export function createCheckService(options: CheckServiceOptions = {}): CheckServ
         try {
           await emitCheckOutcome(events, outcome, {
             subjectRef,
-            eventId: `evt-${++eventSeq}`,
+            eventId: nextEventId(),
             occurredAt: new Date(now()).toISOString(),
           });
         } catch {
