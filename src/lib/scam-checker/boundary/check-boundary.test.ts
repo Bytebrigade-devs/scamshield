@@ -462,8 +462,24 @@ test('FR-M4-04: validateReply rejects non-objects, missing fields and bad types 
   });
 });
 
-// ---- FS-M4-06 / NFR-M4-10: one attempt; failures never count ----
+test('adjudication 24 Nov 2026: a cleared verdict never carries a scam category', () => {
+  const cleared = validateReply({
+    verdict: 'No obvious indicators',
+    category: 'prize_lottery_scam',
+    taxonomy_version: TAXONOMY_VERSION,
+    reason: 'Collection is free and no payment or credentials are requested.',
+  });
+  assert.equal(cleared?.verdictLabel, 'no obvious indicators');
+  assert.equal(cleared?.category, 'unknown_other', 'cleared + scam category is coerced to unknown_other');
 
+  const risky = validateReply({ verdict: 'High risk', category: 'phishing', taxonomy_version: TAXONOMY_VERSION });
+  assert.equal(risky?.category, 'phishing', 'a risk-raising verdict keeps the model category');
+
+  const undetermined = validateReply({ verdict: 'Undetermined', category: 'fake_invoice', taxonomy_version: TAXONOMY_VERSION });
+  assert.equal(undetermined?.category, 'fake_invoice', 'only the cleared label is coerced');
+});
+
+// ---- FS-M4-06 / NFR-M4-10: one attempt; failures never count ----
 test('review hardening: only draft assessment labels can complete, never free-text safety assurances', async () => {
   for (const verdict of ['suspicious', 'Potentially suspicious', 'No obvious indicators', 'High risk', 'Undetermined']) {
     assert.ok(validateReply({ ...VALID_REPLY, verdict }), verdict);
@@ -621,4 +637,52 @@ test('NFR-M4-01 spirit: the boundary itself never performs network I/O', async (
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+// ---------------------------------------------------------------------------
+// M4-02 durability (27 Nov 2026): the usage port may answer asynchronously
+// ---------------------------------------------------------------------------
+
+test('an asynchronous usage port is awaited: reservation, completion and release all land', async () => {
+  const seen: string[] = [];
+  const asyncUsage = {
+    async admitCheck() {
+      await Promise.resolve();
+      seen.push('admit');
+      return null;
+    },
+    async recordCompletion() {
+      await Promise.resolve();
+      seen.push('complete');
+    },
+    async releaseCheck(_subject: { key: string }, status?: 'limited' | 'unavailable') {
+      await Promise.resolve();
+      seen.push(`release:${status ?? 'unset'}`);
+    },
+  };
+  const { deps } = makeDeps({ usage: asyncUsage });
+  const outcome = await runCheck({ text: VALID_TEXT }, deps);
+  assert.equal(outcome.kind, 'analysed');
+  assert.equal(outcome.kind === 'analysed' ? outcome.analysisStatus : null, 'completed');
+  assert.deepEqual(seen, ['admit', 'complete'], 'a completed check converts its reservation');
+
+  // A rules-only exit (no provider configured) releases instead, and says which outcome it was.
+  const limited = makeDeps({ usage: asyncUsage, providerAttempt: { kind: 'unconfigured' } });
+  const limitedOutcome = await runCheck({ text: VALID_TEXT }, limited.deps);
+  assert.equal(limitedOutcome.kind === 'analysed' ? limitedOutcome.analysisStatus : null, 'limited');
+  assert.deepEqual(seen.at(-1), 'release:limited', 'the releasing outcome is passed through');
+});
+
+test('a usage-unavailable denial is its own rejection reason, not a false quota claim', async () => {
+  const usage: UsagePort = {
+    admitCheck: async () => ({ reason: 'usage-unavailable', message: 'Usage could not be confirmed.' }),
+    recordCompletion: async () => {},
+    releaseCheck: async () => {},
+  };
+  const { deps, calls } = makeDeps({ usage });
+  const outcome = await runCheck({ text: VALID_TEXT }, deps);
+  assert.equal(outcome.kind, 'rejected');
+  assert.equal(outcome.kind === 'rejected' ? outcome.reason : null, 'usage-unavailable');
+  assert.equal(outcome.kind === 'rejected' ? outcome.message : null, 'Usage could not be confirmed.');
+  assert.deepEqual(calls, [], 'a refused check never reaches the provider');
 });

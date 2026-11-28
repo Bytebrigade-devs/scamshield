@@ -60,20 +60,46 @@ test('only approved plans/cycles accepted, prices in LKR', () => {
   assert.equal(plans.PLANS.aegis.price.monthly, 1990);
 });
 
-function routeHarness(current = null, signedIn = true, readFailure = false) {
+function routeHarness(current = null, signedIn = true, readFailure = false, failures = {}, options = {}) {
   const writes = [];
   const readFilters = [];
-  const read = { select() { return this; }, eq(column, value) { readFilters.push([column, value]); return this; }, async maybeSingle() { return { data: current, error: readFailure ? new Error('offline') : null }; } };
-  const write = {
-    insert(value) { writes.push({ operation: 'insert', value }); return this; },
-    update(value) { writes.push({ operation: 'update', value }); return this; },
+  // A real retry re-reads the row the first request committed. `statefulRead` models that: the
+  // entitlement read returns the latest subscriptions write instead of the fixed fixture.
+  let latestSubscription = current;
+  const read = { select() { return this; }, eq(column, value) { readFilters.push([column, value]); return this; }, async maybeSingle() { return { data: latestSubscription, error: readFailure ? new Error('offline') : null }; } };
+  let subscriptionAttempts = 0;
+  // Table-aware writer, so the ledger can fail on its own and the first subscriptions write can
+  // report the billing columns as missing (exercising the route's degradation path).
+  const writerFor = table => ({
+    insert(value) { writes.push({ table, operation: 'insert', value }); return this; },
+    update(value) { writes.push({ table, operation: 'update', value }); return this; },
     eq() { return this; }, is() { return this; }, select() { return this; },
-    async single() { return { data: { ...current, ...writes.at(-1).value }, error: null }; },
-  };
+    async single() {
+      if (table === 'subscriptions') {
+        subscriptionAttempts += 1;
+        if (subscriptionAttempts === 1) {
+          if (failures.missingBillingColumns) return { data: null, error: { code: '42703', message: 'column "price_lkr" of relation "subscriptions" does not exist' } };
+          if (failures.subscriptionFailure) return { data: null, error: failures.subscriptionFailure };
+        }
+      }
+      const lastSubscriptionWrite = writes.filter(write => write.table === 'subscriptions').at(-1);
+      const value = { ...(latestSubscription ?? current), ...(lastSubscriptionWrite?.value ?? {}) };
+      if (table === 'subscriptions' && options.statefulRead) latestSubscription = value;
+      return { data: value, error: null };
+    },
+    // The ledger insert is awaited directly, so the builder is thenable like a real query. It must
+    // resolve to a plain object: resolving with `this` would re-enter `then` forever.
+    then(resolve) {
+      if (table === 'subscription_payments' && failures.ledgerFailure) {
+        return resolve({ data: null, error: { code: '42P01', message: 'relation "public.subscription_payments" does not exist' } });
+      }
+      return resolve({ data: null, error: null });
+    },
+  });
   const server = load('src/lib/subscription-server.ts', {
     './entitlement': { evaluateEntitlement },
     '@supabase/supabase-js': {
-      createClient: (_url, key) => key === 'writer' ? { from: () => write } : {
+      createClient: (_url, key) => key === 'writer' ? { from: table => writerFor(table) } : {
         auth: { getUser: async token => token === 'valid-token'
           ? { data: { user: { id: 'server-user', created_at: new Date().toISOString() } }, error: null }
           : { data: { user: null }, error: new Error('invalid token') } },
@@ -132,16 +158,130 @@ test('checkout uses verified user and selected plan; forged identity/expiry igno
   assert.notEqual(api.writes[0].value.renews_at, '2099-01-01');
 });
 
-test('both card methods create mock entitlements without storing payment details', async () => {
+test('checkout records the price and a simulated charge without storing card details', async () => {
   for (const paymentMethod of ['debit_card', 'credit_card']) {
     const api = routeHarness();
     const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success', paymentMethod });
     assert.equal(response.status, 200);
     assert.equal(response.body.paymentMethod, paymentMethod);
+    assert.equal(response.body.priceLkr, 990);
     assert.equal(response.body.mocked, true);
-    assert.equal(api.writes.length, 1);
-    assert.equal('paymentMethod' in api.writes[0].value, false);
+    assert.equal(response.body.billingRecorded, true);
+    // 1) subscription row, 2) payment-history row
+    assert.equal(api.writes.length, 2);
+    const subscription = api.writes[0].value;
+    assert.equal('paymentMethod' in subscription, false);
+    assert.equal(subscription.payment_method, paymentMethod);
+    assert.equal(subscription.price_lkr, 990);
+    assert.equal(subscription.currency, 'LKR');
+    assert.equal(subscription.auto_renew, false);
+    const charge = api.writes[1].value;
+    assert.equal(charge.amount_lkr, 990);
+    assert.equal(charge.simulated, true);
+    assert.equal(charge.period_start, subscription.started_at);
+    assert.equal(charge.period_end, subscription.renews_at);
+    for (const key of ['card_number', 'cardNumber', 'expiry', 'cvv', 'security_code', 'securityCode'])
+      for (const write of api.writes) assert.equal(key in write.value, false);
   }
+});
+
+test('a ledger failure still grants access and reports paymentRecorded false', async () => {
+  const api = routeHarness(null, true, false, { ledgerFailure: true });
+  const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success', paymentMethod: 'credit_card' });
+  assert.equal(response.status, 200, 'the ledger must never be able to grant or revoke access');
+  assert.equal(response.body.paymentRecorded, false);
+  assert.equal(response.body.billingRecorded, true);
+  assert.equal(response.body.subscription.status, 'active');
+  assert.equal(response.body.subscription.plan, 'guardian');
+  assert.equal(api.writes.filter(write => write.table === 'subscriptions').length, 1);
+  for (const key of ['card_number', 'cardNumber', 'expiry', 'cvv', 'security_code', 'securityCode'])
+    for (const write of api.writes) assert.equal(key in write.value, false);
+});
+
+test('checkout still succeeds when the billing draft has not been applied', async () => {
+  const api = routeHarness(null, true, false, { missingBillingColumns: true });
+  const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success', paymentMethod: 'debit_card' });
+  assert.equal(response.status, 200, 'a missing migration must not 409 the checkout');
+  assert.equal(response.body.billingRecorded, false);
+  assert.equal(response.body.paymentRecorded, true);
+  assert.equal(response.body.subscription.status, 'active');
+  const subscriptionWrites = api.writes.filter(write => write.table === 'subscriptions');
+  assert.equal(subscriptionWrites.length, 2, 'one attempt with the billing columns, one without');
+  assert.equal(subscriptionWrites[0].value.price_lkr, 990);
+  assert.equal('price_lkr' in subscriptionWrites[1].value, false);
+  assert.equal('payment_method' in subscriptionWrites[1].value, false);
+  assert.equal(subscriptionWrites[1].value.billing_cycle, 'monthly', 'access itself is unaffected');
+});
+
+test('a returning subscriber still checks out when the billing draft has not been applied', async () => {
+  // writeSubscription() branches on `current`; the insert branch alone does not cover the path every
+  // returning user takes. The existing row is expired, so the plan guard allows the upgrade, and its
+  // renews_at is fixed in the past so the entitlement check never depends on when this runs.
+  const current = { ...row, status: 'active', billing_cycle: 'monthly', renews_at: '2020-01-01T00:00:00Z' };
+  const api = routeHarness(current, true, false, { missingBillingColumns: true });
+  const response = await api.request('POST', { plan: 'guardian', billingCycle: 'quarterly', scenario: 'success', paymentMethod: 'credit_card' });
+  assert.equal(response.status, 200, 'a missing migration must not 409 an existing subscriber');
+  assert.equal(response.body.billingRecorded, false);
+  const subscriptionWrites = api.writes.filter(write => write.table === 'subscriptions');
+  assert.equal(subscriptionWrites.length, 2, 'one attempt with the billing columns, one without');
+  for (const write of subscriptionWrites) assert.equal(write.operation, 'update', 'the existing row is updated, never re-inserted');
+  assert.equal(subscriptionWrites[0].value.price_lkr, 2670, 'the first attempt carries the billing columns');
+  assert.equal(subscriptionWrites[0].value.payment_method, 'credit_card');
+  const retried = subscriptionWrites[1].value;
+  for (const column of ['price_lkr', 'currency', 'payment_method', 'auto_renew']) assert.equal(column in retried, false);
+  assert.equal(retried.plan, 'guardian', 'access itself is unaffected');
+  assert.equal(retried.billing_cycle, 'quarterly', 'the newly selected cycle is still written');
+  assert.equal(response.body.subscription.billing_cycle, 'quarterly');
+});
+
+test('a genuine subscription write failure still returns 409 and records no charge', async () => {
+  const api = routeHarness(null, true, false, { subscriptionFailure: { code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned' } });
+  const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success' });
+  assert.equal(response.status, 409, 'only a missing schema degrades; a real conflict still fails');
+  assert.equal(api.writes.filter(write => write.table === 'subscriptions').length, 1, 'a conflict is not retried');
+  assert.equal(api.writes.filter(write => write.table === 'subscription_payments').length, 0);
+});
+
+test('a retried checkout after a lost response is refused and records exactly one charge', async () => {
+  // The idempotency mechanism is the guard at route.ts:86 plus the compare-and-set write, not a
+  // client key. This pins the invariant a reviewer needs: a retry cannot buy the plan twice or
+  // historise a second charge.
+  const api = routeHarness(null, true, false, {}, { statefulRead: true });
+  const body = { plan: 'guardian', billingCycle: 'monthly', scenario: 'success', paymentMethod: 'debit_card' };
+  const first = await api.request('POST', body);
+  assert.equal(first.status, 200, 'the purchase itself succeeds');
+  assert.equal(first.body.subscription.status, 'active');
+  const charge = api.writes.filter(write => write.table === 'subscription_payments');
+  assert.equal(charge.length, 1, 'a successful checkout historises one charge');
+  assert.equal(charge[0].value.amount_lkr, 990);
+  assert.equal(charge[0].value.simulated, true);
+
+  // The client never saw that response and retries the identical request.
+  const retry = await api.request('POST', body);
+  assert.equal(retry.status, 409);
+  assert.match(retry.body.error, /already valid/i);
+  assert.equal(api.writes.filter(write => write.table === 'subscriptions').length, 1, 'the retry must not write a second subscription row');
+  assert.equal(api.writes.filter(write => write.table === 'subscription_payments').length, 1, 'the retry must not record a second charge');
+  // Known limitation, recorded rather than fixed: the retry reports 409 even though the purchase
+  // succeeded. Acceptable against a simulated ledger; a GET is the only recovery. Any future change
+  // that "resolves" this must not reintroduce a second charge.
+});
+
+test('a retried trial start after a lost response is refused and never inserts twice', async () => {
+  // Same shape as the checkout retry, worse consequence: the trial row exists, but the retry is
+  // answered with "already allocated — choose a plan", so the client cannot distinguish a lost
+  // response from a spent trial and only a GET shows the trial is active.
+  const api = routeHarness(null, true, false, {}, { statefulRead: true });
+  const first = await api.request('PUT');
+  assert.equal(first.status, 200);
+  assert.equal(first.body.subscription.status, 'trialing');
+  assert.equal(first.body.subscription.billing_cycle, null, 'a trial carries no billing cycle');
+
+  const retry = await api.request('PUT');
+  assert.equal(retry.status, 409);
+  assert.match(retry.body.error, /already been allocated/i);
+  assert.equal(api.writes.filter(write => write.table === 'subscriptions').length, 1, 'one trial row, never two');
+  assert.equal(api.writes.filter(write => write.table === 'subscription_payments').length, 0, 'a trial is never charged');
 });
 
 test('invalid methods and declined card payments leave subscriptions unchanged', async () => {

@@ -4,7 +4,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCheckService, normalizeEndpoint, normalizeResponsesEndpoint } from './check-service.ts';
+import { createCheckService, liveConfigFromEnv, normalizeEndpoint, normalizeResponsesEndpoint } from './check-service.ts';
+import type { LiveConfig } from './check-service.ts';
 import type { ProviderPort } from '../boundary/check-boundary.ts';
 import { RULES_ONLY_LIMITATION, UNAVAILABLE_LIMITATION, EMPTY_INPUT_MESSAGE } from '../boundary/check-boundary.ts';
 import { readFileSync } from 'node:fs';
@@ -53,7 +54,7 @@ test('rules-only outcome: limited/rules_only with unknown_other and no reply', a
   assert.deepEqual(outcome.limitations, [RULES_ONLY_LIMITATION]);
 });
 
-test('configured provider failure is unavailable, without a fallback completion', async () => {
+test('configured provider failure with no fallback configured is unavailable, never a fabricated completion', async () => {
   const service = createCheckService({ live: LIVE, provider: { analyze: async () => ({ kind: 'failed', failure: 'http-error' }) } });
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
@@ -185,12 +186,54 @@ for (const api of ['chat', 'responses'] as const) {
     const body = JSON.parse(String(calls[0].init.body));
     assert.equal(api === 'responses' ? body.input : body.messages.at(-1).content, FIXTURE);
     const instructions = api === 'responses' ? body.instructions : body.messages[0].content;
-    for (const phrase of ['risk_level', 'reason_highlights', '35%', 'domain suffix alone', 'untrusted evidence', 'no internet access']) {
+    for (const phrase of ['risk_level', 'reason_highlights', '35%', 'domain suffix alone', 'untrusted evidence', 'no internet access', 'Rate the message, not the phenomenon', 'risk_level must be low']) {
       assert.ok(instructions.includes(phrase), `${api} instructions include ${phrase}`);
     }
     assert.equal(outcome.kind, 'analysed');
     if (outcome.kind === 'analysed') assert.equal(outcome.analysisStatus, 'completed');
   });
+}
+
+// Owner measurement, 27 Nov 2026: the same message was banded differently on repeated runs, and the
+// checker sent no sampling control at all. The field is opt-in so shipped behaviour is unchanged
+// until the value is measured against the gateway.
+test('temperature: absent by default, so neither request shape changes', async () => {
+  for (const api of ['chat', 'responses'] as const) {
+    const payload = await capturedBody(api, { ...LIVE, api });
+    assert.equal('temperature' in payload, false, `${api} omits temperature when it is not configured`);
+  }
+});
+
+test('temperature: a configured value is sent verbatim in both request shapes', async () => {
+  for (const api of ['chat', 'responses'] as const) {
+    const payload = await capturedBody(api, { ...LIVE, api, temperature: 0 });
+    assert.equal(payload.temperature, 0, `${api} sends the configured temperature`);
+  }
+});
+
+test('temperature: parsed from M4_UI_TEMPERATURE, blank means omitted, malformed throws', () => {
+  const base = { OPENAI_API_KEY: 'synthetic-service-key', M4_UI_MODEL: 'primary-model' } as NodeJS.ProcessEnv;
+  assert.equal(liveConfigFromEnv(base)?.temperature, null);
+  for (const blank of ['', '   ']) {
+    assert.equal(liveConfigFromEnv({ ...base, M4_UI_TEMPERATURE: blank })?.temperature, null);
+  }
+  assert.equal(liveConfigFromEnv({ ...base, M4_UI_TEMPERATURE: '0' })?.temperature, 0);
+  assert.equal(liveConfigFromEnv({ ...base, M4_UI_TEMPERATURE: '0.2' })?.temperature, 0.2);
+  for (const bad of ['-1', '2.5', '3', 'hot', '0.005', '1e0']) {
+    assert.throws(() => liveConfigFromEnv({ ...base, M4_UI_TEMPERATURE: bad }), RangeError, `rejects ${bad}`);
+  }
+});
+
+async function capturedBody(api: 'chat' | 'responses', live: LiveConfig): Promise<Record<string, unknown>> {
+  const calls: Array<{ init: RequestInit }> = [];
+  const fetchImpl = (async (_url, init) => {
+    calls.push({ init: init ?? {} });
+    return Response.json(api === 'responses'
+      ? { output_text: JSON.stringify(REPLY) }
+      : { choices: [{ message: { content: JSON.stringify(REPLY) } }] });
+  }) as typeof fetch;
+  await createCheckService({ live, fetchImpl }).check(FIXTURE);
+  return JSON.parse(String(calls[0].init.body)) as Record<string, unknown>;
 }
 
 test('missing and blank credentials never invoke test injection or transport', async () => {
@@ -265,7 +308,7 @@ test('invalid inputs never invoke the provider; exactly 2,000 characters remain 
 
 // ---- M4-15 edge cases and graceful fallback (10 November 2026 additions) ----
 
-test('M4-15/FS-M4-06: a configured provider timeout is unavailable at the UI layer — one attempt, no fallback', async () => {
+test('M4-15/FS-M4-06: a configured provider timeout with no fallback configured is unavailable at the UI layer — one attempt', async () => {
   let calls = 0;
   const service = createCheckService({ live: LIVE, provider: { analyze: async () => {
     calls += 1;
@@ -339,7 +382,7 @@ test('an analysed outcome emits one local 0.2.0-draft event with the demo subjec
   const service = createCheckService();
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
-  const events = service.listEvents();
+  const events = await service.listEvents();
   assert.equal(events.length, 1);
   const [event] = events;
   assert.equal(event.contract_version, '0.2.0-draft');
@@ -352,13 +395,13 @@ test('an analysed outcome emits one local 0.2.0-draft event with the demo subjec
 test('a completed AI outcome emits with its validated category; unavailable stays unknown_other', async () => {
   const completed = createCheckService({ live: LIVE, provider: completedProvider });
   assert.equal((await completed.check(FIXTURE)).outcome.kind, 'analysed');
-  const [event] = completed.listEvents();
+  const [event] = await completed.listEvents();
   assert.equal(event.analysis_status, 'completed');
   assert.equal(event.category_id, 'phishing');
 
   const unavailable = createCheckService({ live: LIVE, provider: { analyze: async () => ({ kind: 'failed', failure: 'timeout' }) } });
   assert.equal((await unavailable.check(FIXTURE)).outcome.kind, 'analysed');
-  const [failed] = unavailable.listEvents();
+  const [failed] = await unavailable.listEvents();
   assert.equal(failed.analysis_status, 'unavailable');
   assert.equal(failed.category_id, 'unknown_other');
 });
@@ -366,27 +409,308 @@ test('a completed AI outcome emits with its validated category; unavailable stay
 test('rejected outcomes emit no event; accepted checks get distinct ids', async () => {
   const service = createCheckService();
   assert.equal((await service.check('x'.repeat(2001))).outcome.kind, 'rejected');
-  assert.equal(service.listEvents().length, 0);
+  assert.equal((await service.listEvents()).length, 0);
   await service.check(FIXTURE);
   await service.check(FIXTURE);
-  const events = service.listEvents();
+  const events = await service.listEvents();
   assert.equal(events.length, 2);
   assert.notEqual(events[0].event_id, events[1].event_id);
 });
 
+// L-08 regression (28 November 2026): event ids came from a counter that lives inside one
+// service instance, so every fresh instance re-presented `evt-1`, `evt-2`, … Ids that already
+// exist are dropped by the idempotent append, silently. A per-process counter cannot survive
+// this test:
+test('two separate service instances cannot reuse an event id (L-08)', async () => {
+  const ids: string[] = [];
+  const sink = { append: async (event: { event_id: string }) => { ids.push(event.event_id); return true; } };
+  const first = createCheckService({ events: sink });
+  const second = createCheckService({ events: sink });
+  assert.equal((await first.check(FIXTURE)).outcome.kind, 'analysed');
+  assert.equal((await second.check(FIXTURE)).outcome.kind, 'analysed');
+  assert.equal(ids.length, 2);
+  assert.notEqual(ids[0], ids[1], 'a per-instance counter would emit the same id from both instances');
+});
+
+test('an injected event-id generator is used as-is and stays distinct per check', async () => {
+  let n = 0;
+  const ids: string[] = [];
+  const service = createCheckService({
+    eventId: () => `synthetic-${++n}`,
+    events: { append: async (event) => { ids.push(event.event_id); return true; } },
+  });
+  await service.check(FIXTURE);
+  await service.check(FIXTURE);
+  assert.deepEqual(ids, ['synthetic-1', 'synthetic-2']);
+});
+
 test('an injected sink receives exactly one append per analysed check', async () => {
   const appended: unknown[] = [];
-  const service = createCheckService({ events: { append: (event) => { appended.push(event); return true; } } });
+  const service = createCheckService({ events: { append: async (event) => { appended.push(event); return true; } } });
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
   assert.equal(appended.length, 1);
   assert.equal((appended[0] as { subject_ref?: string }).subject_ref, 'local-ui-demo-subject');
-  assert.equal(service.listEvents().length, 0, 'an injected sink replaces the internal store');
+  assert.equal((await service.listEvents()).length, 0, 'an injected sink replaces the internal store');
 });
 
 test('events: null disables emission without affecting the check', async () => {
   const service = createCheckService({ events: null });
   const { outcome } = await service.check(FIXTURE);
   assert.equal(outcome.kind, 'analysed');
-  assert.equal(service.listEvents().length, 0);
+  assert.equal((await service.listEvents()).length, 0);
+});
+
+test('fallback model: configured via M4_UI_FALLBACK_MODEL and reported without the key', () => {
+  const live = liveConfigFromEnv({
+    OPENAI_API_KEY: 'synthetic-service-key',
+    OPENAI_BASE_URL: 'https://provider.invalid/v1',
+    M4_UI_MODEL: 'primary-model',
+    M4_UI_FALLBACK_MODEL: 'fallback-model',
+  } as NodeJS.ProcessEnv);
+
+  assert.equal(live?.model, 'primary-model');
+  assert.equal(live?.fallbackModel, 'fallback-model');
+
+  const service = createCheckService({ live: live ?? undefined });
+  assert.equal(service.model, 'primary-model');
+  assert.equal(service.fallbackModel, 'fallback-model');
+});
+
+test('fallback model: absent or blank configuration means no fallback at all', () => {
+  for (const value of [undefined, '', '   ']) {
+    const live = liveConfigFromEnv({
+      OPENAI_API_KEY: 'synthetic-service-key',
+      M4_UI_MODEL: 'primary-model',
+      M4_UI_FALLBACK_MODEL: value,
+    } as NodeJS.ProcessEnv);
+    assert.equal(live?.fallbackModel, null);
+    const service = createCheckService({ live: live ?? undefined });
+    assert.equal(service.fallbackModel, null, 'no fallback is enabled unless it is explicitly configured');
+  }
+});
+
+test('fallback model: the same id as the primary is not a fallback', () => {
+  const live = liveConfigFromEnv({
+    OPENAI_API_KEY: 'synthetic-service-key',
+    M4_UI_MODEL: 'same-model',
+    M4_UI_FALLBACK_MODEL: 'same-model',
+  } as NodeJS.ProcessEnv);
+
+  const service = createCheckService({ live: live ?? undefined });
+  assert.equal(service.fallbackModel, null, 'a second call to the same model is not a fallback');
+});
+
+test('fallback model: an injected provider is never wrapped, so call counts stay exact', async () => {
+  let calls = 0;
+  const injected: ProviderPort = {
+    analyze: async () => {
+      calls += 1;
+      return { kind: 'failed', failure: 'timeout' };
+    },
+  };
+  const service = createCheckService({
+    live: { apiKey: 'synthetic-service-key', baseUrl: 'https://provider.invalid/v1', model: 'primary-model', fallbackModel: 'fallback-model' },
+    provider: injected,
+  });
+
+  const { outcome } = await service.check(FIXTURE);
+
+  assert.equal((outcome as { analysisStatus?: string }).analysisStatus, 'unavailable');
+  assert.equal(calls, 1, 'the injected provider is authoritative; the fallback does not double the call');
+});
+
+// ---- Composite fallback wiring: the real adapter path through check-service ----
+
+test('fallback composite: a primary transport failure completes on exactly one fallback fetch', async () => {
+  const calls: Array<{ url: string; body: string }> = [];
+  const fetchImpl = (async (url, init) => {
+    calls.push({ url: String(url), body: String(init?.body ?? '') });
+    if (calls.length === 1) return new Response(null, { status: 500 });
+    return Response.json({ choices: [{ message: { content: JSON.stringify(REPLY) } }] });
+  }) as typeof fetch;
+  const service = createCheckService({ live: { ...LIVE, fallbackModel: 'fallback-model' }, fetchImpl });
+
+  const { outcome, providerMode } = await service.check(FIXTURE);
+
+  assert.equal(providerMode, 'live');
+  assert.equal(calls.length, 2, 'exactly one primary attempt plus one fallback attempt');
+  assert.equal(JSON.parse(calls[0].body).model, LIVE.model, 'the first call uses the primary model');
+  assert.equal(JSON.parse(calls[1].body).model, 'fallback-model', 'the second call uses the fallback model');
+  assert.equal(outcome.kind, 'analysed');
+  if (outcome.kind === 'analysed') {
+    assert.equal(outcome.analysisStatus, 'completed', 'the fallback answer completes the check');
+    assert.equal(outcome.analysisMode, 'rules_and_ai');
+    assert.ok(outcome.reply);
+    assert.deepEqual(outcome.limitations, []);
+  }
+});
+
+test('fallback composite: bad-json on the primary never triggers the fallback', async () => {
+  let calls = 0;
+  const fetchImpl = (async () => {
+    calls += 1;
+    return Response.json({ choices: [{ message: { content: 'not-json' } }] });
+  }) as typeof fetch;
+  const service = createCheckService({ live: { ...LIVE, fallbackModel: 'fallback-model' }, fetchImpl });
+
+  const { outcome } = await service.check(FIXTURE);
+
+  assert.equal(calls, 1, 'an unparseable or refused answer must not be re-asked of another model');
+  assert.equal(outcome.kind, 'analysed');
+  if (outcome.kind === 'analysed') {
+    assert.equal(outcome.analysisStatus, 'unavailable');
+    assert.equal(outcome.analysisMode, 'none');
+    assert.deepEqual(outcome.limitations, [UNAVAILABLE_LIMITATION]);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// M4-02 durability (27 Nov 2026): the construction site can supply the usage gate
+// ---------------------------------------------------------------------------
+
+test('an injected durable usage port is the gate the service actually uses', async () => {
+  const seen: string[] = [];
+  const service = createCheckService({
+    live: LIVE,
+    provider: completedProvider,
+    usage: {
+      async admitCheck() {
+        seen.push('admit');
+        return null;
+      },
+      async recordCompletion() {
+        seen.push('complete');
+      },
+      async releaseCheck() {
+        seen.push('release');
+      },
+    },
+  });
+
+  const { outcome } = await service.check(FIXTURE);
+  assert.equal(outcome.kind === 'analysed' ? outcome.analysisStatus : null, 'completed');
+  assert.deepEqual(seen, ['admit', 'complete'], 'the injected port replaces the in-memory store');
+});
+
+test('an injected usage port that denies refuses the check before any provider call', async () => {
+  let providerCalls = 0;
+  const service = createCheckService({
+    live: LIVE,
+    provider: {
+      analyze: async () => {
+        providerCalls += 1;
+        return { kind: 'ok', json: REPLY };
+      },
+    },
+    usage: {
+      async admitCheck() {
+        return { reason: 'usage-unavailable' as const, message: 'Usage could not be confirmed.' };
+      },
+      async recordCompletion() {},
+      async releaseCheck() {},
+    },
+  });
+
+  const { outcome } = await service.check(FIXTURE);
+  assert.equal(outcome.kind, 'rejected');
+  assert.equal(outcome.kind === 'rejected' ? outcome.reason : null, 'usage-unavailable');
+  assert.equal(providerCalls, 0);
+});
+
+test('the default usage gate is still the in-memory store, so a check without injection works', async () => {
+  const service = createCheckService({ live: LIVE, provider: completedProvider });
+  const { outcome } = await service.check(FIXTURE);
+  assert.equal(outcome.kind === 'analysed' ? outcome.analysisStatus : null, 'completed');
+});
+
+// ---------------------------------------------------------------------------
+// Verified plan → quota subject (27 Nov 2026)
+// ---------------------------------------------------------------------------
+
+const USER_UUID = '5f0d9a4c-1c2b-4a3e-9d55-2b1f8c0a7e11';
+
+/** Records what the usage gate was asked to admit. */
+function capturingUsage() {
+  const admitted: Array<{ key: string; monthly: number; daily: number }> = [];
+  return {
+    admitted,
+    usage: {
+      async admitCheck(subject: { key: string; allowance: { monthly: number; daily: number } }) {
+        admitted.push({ key: subject.key, monthly: subject.allowance.monthly, daily: subject.allowance.daily });
+        return null;
+      },
+      async recordCompletion() {},
+      async releaseCheck() {},
+    },
+  };
+}
+
+test('a verified snapshot gates the check as THAT user and THAT plan (not the demo trial)', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  const { outcome } = await service.check(FIXTURE, undefined, {
+    subjectKey: USER_UUID,
+    planId: 'guardian',
+    entitlementExpiresAt: Date.now() + 86_400_000,
+    entitlement: {
+      subjectKey: USER_UUID,
+      planId: 'guardian',
+      status: 'active',
+      expiresAt: Date.now() + 86_400_000,
+    },
+  });
+
+  assert.equal(outcome.kind === 'analysed' ? outcome.analysisStatus : null, 'completed');
+  assert.deepEqual(admitted, [{ key: USER_UUID, monthly: 200, daily: 15 }], 'guardian allowance on the caller subject');
+});
+
+test('without a snapshot the labelled demo trial is unchanged', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  await service.check(FIXTURE);
+  assert.deepEqual(admitted, [{ key: 'local-ui-demo-subject', monthly: 15, daily: 15 }]);
+});
+
+test('a malformed snapshot is BLOCKED, never downgraded to the demo trial', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  const { outcome } = await service.check(FIXTURE, undefined, {
+    subjectKey: USER_UUID,
+    // Structurally invalid: negative status is not a status, expiry is not a number.
+    entitlement: { subjectKey: USER_UUID, planId: 'aegis', status: 'bogus', expiresAt: Number.NaN } as never,
+  });
+
+  assert.equal(outcome.kind, 'rejected');
+  assert.equal(outcome.kind === 'rejected' ? outcome.reason : null, 'access-blocked');
+  assert.deepEqual(admitted, [], 'the usage gate is never reached');
+});
+
+test('an expired verified snapshot is blocked, not treated as a valid plan', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  const { outcome } = await service.check(FIXTURE, undefined, {
+    subjectKey: USER_UUID,
+    entitlement: { subjectKey: USER_UUID, planId: 'guardian', status: 'active', expiresAt: Date.now() - 1_000 },
+  });
+
+  assert.equal(outcome.kind === 'rejected' ? outcome.reason : null, 'access-blocked');
+  assert.deepEqual(admitted, []);
+});
+
+test('an unknown plan id stays blocked even when the snapshot is structurally valid', async () => {
+  const { admitted, usage } = capturingUsage();
+  const service = createCheckService({ live: LIVE, provider: completedProvider, usage });
+
+  const { outcome } = await service.check(FIXTURE, undefined, {
+    subjectKey: USER_UUID,
+    entitlement: { subjectKey: USER_UUID, planId: 'enterprise', status: 'active', expiresAt: Date.now() + 86_400_000 },
+  });
+
+  assert.equal(outcome.kind === 'rejected' ? outcome.reason : null, 'access-blocked', 'no invented quota for an unknown plan');
+  assert.deepEqual(admitted, []);
 });

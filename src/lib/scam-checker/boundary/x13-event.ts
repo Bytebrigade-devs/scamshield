@@ -113,9 +113,9 @@ export function validateCheckOutcomeEvent(value: unknown): value is CheckOutcome
 
 // ---- 0.2.0-draft revision: nine fields (agreed 19 November 2026) ----
 // The reference field name `subject_ref` was confirmed by Vishmi (M5) + Lahiru (M2) on
-// 19 November 2026, and by Prashnidha (M3, schema steward) on 20 November 2026. The
-// SQL-side review of the columns is still PENDING (steward, 20 Nov) — this comment records
-// agreement on the NAME only. This is an additive revision: the 0.1.0-draft builder/validator
+// 19 November 2026, and by Prashnidha (M3, schema steward) on 20 November 2026. The SQL
+// columns were reviewed (Prashnidha 21 Nov; Lahiru independent 22 Nov) and merged in PR #52;
+// nothing is applied. This comment records agreement on the NAME only. This is an additive revision: the 0.1.0-draft builder/validator
 // above remain unchanged, so existing eight-field events stay valid. No emitter/delivery exists.
 
 export const EVENT_CONTRACT_VERSION_V2 = '0.2.0-draft';

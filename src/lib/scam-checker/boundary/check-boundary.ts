@@ -36,9 +36,11 @@
  * 4. Missing key (provider "unconfigured") or an unpermitted budget disables the live call
  *    and yields an explicitly LABELLED rules-only limited result (FS-M4-05) — never a
  *    fabricated or implied completed AI verdict and never a safety conclusion.
- * 5. Exactly one provider attempt on one model — no retry, no fallback model (owner decision
- *    19 Oct 2026); failure, timeout or invalid output ends in `unavailable` with category
- *    `unknown_other`, which is not a "safe" outcome.
+ * 5. Exactly one provider `analyze()` call per check. The provider implementation may perform at
+ *    most ONE bounded fallback attempt, and only on a transport failure (owner decision 22 Nov
+ *    2026 — see `fallback-provider.ts`); it must never retry for a more confident answer and must
+ *    never fall back after an invalid or refused response. Failure, timeout or invalid output
+ *    still ends in `unavailable` with category `unknown_other`, which is not a "safe" outcome.
  * 6. Only a completed analysis is counted (NFR-M4-10); rejected, denied and failed checks
  *    never consume quota. No duplicate/count policy is invented here (OD-M4-06 stays open).
  *
@@ -141,7 +143,7 @@ export interface EntitlementPort {
   getEntitlement(session: unknown): EntitlementSnapshot | null;
 }
 
-export type UsageDenialReason = 'quota-monthly' | 'quota-daily' | 'rate-burst';
+export type UsageDenialReason = 'quota-monthly' | 'quota-daily' | 'rate-burst' | 'usage-unavailable';
 
 export interface UsageDenial {
   reason: UsageDenialReason;
@@ -153,6 +155,9 @@ export interface UsageSubject {
   allowance: Allowance;
 }
 
+/** A port answer that a synchronous or a database-backed implementation may produce. */
+export type Awaitable<T> = T | Promise<T>;
+
 export interface UsagePort {
   /**
    * Gate plus burst recording, atomically: null = admitted. Review fix #3 (24 Oct 2026):
@@ -160,8 +165,14 @@ export interface UsagePort {
    * never push completions past the limit; the burst timestamp is recorded only when
    * admitted, and a denial records nothing. A denial must decline the provider call
    * entirely (FS-M4-08).
+   *
+   * M4-02 durability (27 Nov 2026): a durable implementation must reach a database, so every
+   * method here may return a promise. The boundary awaits, which leaves the existing
+   * synchronous stores valid unchanged. A store that cannot reach its own accounting must
+   * DENY with `usage-unavailable` rather than admit: admitting without a count is how a spent
+   * quota becomes unlimited.
    */
-  admitCheck(subject: UsageSubject, now: number): UsageDenial | null;
+  admitCheck(subject: UsageSubject, now: number): Awaitable<UsageDenial | null>;
   /**
    * Count one completed analysis (NFR-M4-10): converts one admission reservation into
    * counted usage — the ONLY entry point that consumes quota. This operation MUST be
@@ -169,13 +180,16 @@ export interface UsagePort {
    * for releaseCheck. A future persistent implementation must transact/reconcile internally;
    * it cannot throw after committing and leave the boundary guessing whether to release.
    */
-  recordCompletion(subject: { key: string }, now: number): void;
+  recordCompletion(subject: { key: string }, now: number): Awaitable<void>;
   /**
    * Review fix #3: return one admission reservation unused. The boundary calls this on
    * every non-completed exit (limited rules-only, unavailable), so admitted-but-failed
    * checks never consume monthly/daily quota.
+   *
+   * The optional `terminalStatus` lets a durable store record WHICH non-completed outcome
+   * released the reservation; the outcome never changes (only `completed` consumes quota).
    */
-  releaseCheck(subject: { key: string }): void;
+  releaseCheck(subject: { key: string }, terminalStatus?: 'limited' | 'unavailable', now?: number): Awaitable<void>;
 }
 
 export interface BudgetDecision {
@@ -199,7 +213,11 @@ export type ProviderAttempt =
   | { kind: 'failed'; failure: ProviderFailure };
 
 export interface ProviderPort {
-  /** Exactly one attempt on one model. No retry, no fallback model (owner decision 19 Oct 2026). */
+  /**
+   * One `analyze()` call per check. An implementation may attempt at most one bounded fallback on
+   * a transport failure (`timeout`/`network`/`http-error`) — never on invalid or refused output and
+   * never to obtain a more confident answer (owner decision 22 Nov 2026).
+   */
   analyze(text: string): Promise<ProviderAttempt>;
 }
 
@@ -222,7 +240,7 @@ export interface ReasonHighlight {
   excerpt: string;
 }
 
-export type RejectionReason = 'invalid-input' | 'access-blocked' | 'quota-denied' | 'rate-denied';
+export type RejectionReason = 'invalid-input' | 'access-blocked' | 'quota-denied' | 'rate-denied' | 'usage-unavailable';
 
 /** Draft transport labels, not a safety guarantee or an approved classification taxonomy. */
 export const DRAFT_VERDICT_LABELS = [
@@ -366,6 +384,13 @@ export function validateReply(json: unknown): ValidatedReply | null {
     if (typeof reply.category !== 'string') return null;
     category = normaliseCategory(reply.category);
   }
+  // Cleared verdicts must not carry a scam category (adjudication, 24 Nov 2026).
+  // The 22 Nov pilot showed four messages labelled `no obvious indicators` while
+  // categorised `prize_lottery_scam`/`fake_invoice` — a contradictory pairing in the
+  // UI and in the stored event/history rows. A cleared verdict asserts no scam
+  // pattern, so the category is coerced deterministically here instead of trusting
+  // the prompt to comply.
+  if (verdictLabel === 'no obvious indicators') category = 'unknown_other';
   const reason = typeof reply.reason === 'string' ? reply.reason : null;
   const riskLevel: RiskLevel = reply.risk_level === 'low' || reply.risk_level === 'suspicious' || reply.risk_level === 'high'
     ? reply.risk_level : 'undetermined';
@@ -434,12 +459,14 @@ export async function runCheck(request: CheckRequest, deps: CheckDeps): Promise<
 
   // 3) Usage gates (FS-M4-08): any denial declines the provider call entirely.
   const now = deps.clock.now();
-  const denial = deps.usage.admitCheck({ key: snapshot.subjectKey, allowance: access.allowance }, now);
+  const denial = await deps.usage.admitCheck({ key: snapshot.subjectKey, allowance: access.allowance }, now);
   if (denial !== null) {
-    return rejected(denial.reason === 'rate-burst' ? 'rate-denied' : 'quota-denied', denial.message);
+    if (denial.reason === 'rate-burst') return rejected('rate-denied', denial.message);
+    if (denial.reason === 'usage-unavailable') return rejected('usage-unavailable', denial.message);
+    return rejected('quota-denied', denial.message);
   }
 
-  let completed = false;
+  let terminalStatus: 'completed' | 'limited' | 'unavailable' = 'unavailable';
   try {
     // 4) Stages 1–2 always run on an accepted check: pure local analysis, no network.
     const candidates = deps.extract(text);
@@ -448,14 +475,17 @@ export async function runCheck(request: CheckRequest, deps: CheckDeps): Promise<
     // 5) Provider (FS-M4-05): an unpermitted budget or a missing key disables the live call —
     //    the user receives an explicitly labelled rules-only limited result instead.
     if (!deps.budget.isProviderCallPermitted().permitted) {
+      terminalStatus = 'limited';
       return analysed('limited', 'rules_only', 'unknown_other', candidates, rules, null, [RULES_ONLY_LIMITATION]);
     }
     const attempt = await deps.provider.analyze(text);
     if (attempt.kind === 'unconfigured') {
+      terminalStatus = 'limited';
       return analysed('limited', 'rules_only', 'unknown_other', candidates, rules, null, [RULES_ONLY_LIMITATION]);
     }
-    // 6) One attempt only (owner decision 19 Oct 2026): no retry, no fallback model —
-    //    failure, timeout or invalid output ends in the honest unavailable state.
+    // 6) One analyze() call per check. A transport failure may already have been answered by ONE
+    //    bounded fallback inside the provider (owner decision 22 Nov 2026); invalid or refused
+    //    output never was. Either way, a failure here ends in the honest unavailable state.
     if (attempt.kind === 'failed') {
       return analysed('unavailable', 'none', 'unknown_other', candidates, rules, null, [UNAVAILABLE_LIMITATION]);
     }
@@ -465,12 +495,14 @@ export async function runCheck(request: CheckRequest, deps: CheckDeps): Promise<
     }
 
     // 7) Only a completed analysis counts (NFR-M4-10); nothing above consumed quota.
-    deps.usage.recordCompletion({ key: snapshot.subjectKey }, deps.clock.now());
-    completed = true;
+    await deps.usage.recordCompletion({ key: snapshot.subjectKey }, deps.clock.now());
+    terminalStatus = 'completed';
     return analysed('completed', 'rules_and_ai', reply.category, candidates, rules, reply, []);
   } finally {
     // Release on normal partial results AND unexpected dependency exceptions. Exceptions
     // still propagate to the caller; a failed check must not strand its reserved slot.
-    if (!completed) deps.usage.releaseCheck({ key: snapshot.subjectKey });
+    if (terminalStatus !== 'completed') {
+      await deps.usage.releaseCheck({ key: snapshot.subjectKey }, terminalStatus, deps.clock.now());
+    }
   }
 }

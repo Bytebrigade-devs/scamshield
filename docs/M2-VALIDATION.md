@@ -91,6 +91,39 @@ Scope: registration verification uses Supabase's emailed confirmation link (`sig
 
 Honest limits: a 200 from `signUp` or from the recovery route means "accepted", and only the recovery route can now distinguish "not configured" (503) and "send failed" (502) from "sent". The rate limiter is in memory per process, so a restart clears it — stated in `src/lib/recovery-code.ts` rather than implied to be durable.
 
+## Retry idempotency tests — 25 November 2026
+
+Test-only round on the checkout/trial retry contract (PR #69, branch `test/m2-subscription-retry-idempotency`, authored by the M4 owner and merged under `GITHUB-GUIDE.md` §6 house rule 2). **No production code changed** — the route, SQL and schema are untouched.
+
+- `node --test scripts/test-subscription.cjs`: **34 passed, 0 failed** (was 32). Two new cases: a **retried checkout after a lost response** returns **409** `"An entitlement is already valid…"` with exactly one `subscription_payments` insert and one `subscriptions` write; a **retried trial start** returns **409** `"Your one-time trial has already been allocated…"`, never inserts a second row and never writes a charge.
+- Both retries re-read the row the first request committed; the harness gained a `statefulRead` option for this (a fixed fixture cannot model a retry). Its default behaviour is unchanged.
+- Red-to-green checked by short-circuiting each guard in turn — `route.ts:86` and `:69` — which made the retry return **200** and the new tests fail; each mutation was reverted with `git checkout --`.
+- `tsc --noEmit` and `eslint .`: exit 0. CI: `app-ci.yml` ubuntu + windows both **success** on the PR head.
+- **Not run:** any live Supabase write. The harness is a double, not PostgREST, so this proves the route's decision order, not database behaviour.
+- The 28-test (20 Nov) and 32-test (22 Nov) counts in the sections below are dated snapshots of their rounds and are not rewritten.
+
+## PR #50 follow-up review — 22 November 2026
+
+Fixes for the second review on `feat/m2-billing-ledger`: the missing-column fallback was only exercised on the insert branch, and the PR description contradicted the code. Commands run from the repository root on local Node v24.19.0; CI pins 24.22.1.
+
+- `node scripts/test-subscription.cjs`: **32 passed, 0 failed** (was 31). New case: an existing, expired subscription (`current` set) checks out while the billing columns are missing (`42703`) — 200, `billingRecorded: false`, exactly two `update` writes on `subscriptions` and never an insert, the retry still carrying `plan` and `billing_cycle` while `price_lkr`, `currency`, `payment_method` and `auto_renew` are absent.
+- `tsc --noEmit`: passed, no diagnostics. ESLint on `scripts/test-subscription.cjs`: clean.
+- CI evidence for the head this review names, `b53224f`: `app-ci.yml` ran `Node 24 / ubuntu-latest` and `Node 24 / windows-latest`, both **success** (workflow run 44928061366, jobs 136918424615 and 136918424419). This commit is covered by the same workflow and its path filter.
+- The PR description now states the degradation path (`billingRecorded: false`, access unaffected, `paymentRecorded` reported separately), says the draft may be applied before or after this code, and drops the claim that the write fails on unknown columns.
+
+Not run: any live Supabase write. `docs/m2-billing-schema-draft.sql` is still unapplied, so the degradation path is exercised by the harness only, not against a database.
+
+## PR #50 review round — 21 November 2026
+
+Fixes for the review on `feat/m2-billing-ledger` (items 1–4 plus the minors). Commands run from the repository root on local Node v24.19.0; CI pins 24.22.1.
+
+- `node scripts/test-subscription.cjs`: **31 passed, 0 failed** (was 28). New cases: a ledger failure still returns 200 with `paymentRecorded: false` and the subscription row intact and no card-data keys; checkout returns 200 with `billingRecorded: false` when the billing columns are missing (Postgres `42703`); a genuine write failure still returns 409, is not retried and records no charge.
+- `tsc --noEmit`: passed, no diagnostics. ESLint on `src/app/api/subscription/route.ts` and `scripts/test-subscription.cjs`: clean.
+- `next build --webpack`: compiled successfully, TypeScript check passed, 15 routes, empty stderr.
+- CI: `app-ci.yml` ran `Node 24 / ubuntu-latest` and `Node 24 / windows-latest` on both `5f974bc` and `b53224f`, all four **success**. That workflow's path filter includes `src/**`, `scripts/**` and `package.json`, so this PR is covered by CI; only `m4-tests.yml` is scoped to `src/lib/scam-checker/**`.
+
+Not run: any live Supabase write. `docs/m2-billing-schema-draft.sql` is still unapplied, so the degradation path is exercised by the harness only, not against a database.
+
 ## Current head validation — 20 November 2026
 
 - `pnpm test:subscription`: 28 passed, zero failed.

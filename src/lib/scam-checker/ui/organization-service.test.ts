@@ -1,14 +1,42 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCheckService } from './check-service.ts';
+import { createCheckApiRoute } from './check-route.ts';
+import { createCheckService, DEMO_SUBJECT_KEY } from './check-service.ts';
+import { createFeedbackSupport } from './feedback-endpoint.ts';
 import { ORGANIZATION_DIRECTORY } from './organization-directory.ts';
-import { createNetlifyHandler } from './netlify-handler.ts';
 
 const NOW = Date.UTC(2026, 9, 26, 6);
 const TEXT = 'Sampath Bank: call 0112300260 or visit https://www.sampath.lk. Send your OTP immediately.';
 const LIVE = { apiKey: 'test-secret', baseUrl: 'https://provider.invalid/v1', model: 'fixture' };
 const REPLY = { verdict: 'High risk', category: 'phishing', taxonomy_version: '0.1.0-draft',
   reason: 'A matching official contact does not authenticate the sender. Never disclose an OTP.', risk_level: 'high' };
+
+/** A verified, entitled caller: these tests exercise the pipeline, not admission. */
+const entitled = async (): Promise<{ kind: string; user: { id: string }; entitlement: Record<string, unknown> }> => ({
+  kind: 'verified',
+  user: { id: 'test-user' },
+  entitlement: {
+    canRunCheck: true, reason: 'valid_entitlement',
+    planId: 'sentinel', status: 'trialing', expiresAt: '2099-01-01T00:00:00.000Z',
+  },
+});
+
+/** The app's `/api/check` transport, exercised without a bundler or a live host. */
+const route = (service: ReturnType<typeof createCheckService>) =>
+  createCheckApiRoute({ service, feedback: createFeedbackSupport({ subjectKey: DEMO_SUBJECT_KEY }), resolveContext: entitled });
+
+/** A same-origin, JSON, entitled POST — the shape a real browser sends. */
+const post = (url: string, body: unknown): Request =>
+  new Request(url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin: new URL(url).origin,
+      host: new URL(url).host,
+      authorization: 'Bearer test-token',
+    },
+    body: JSON.stringify(body),
+  });
 
 for (const api of ['chat', 'responses'] as const) {
   test(`${api} transport receives exactly the server evidence returned to the browser`, async () => {
@@ -91,12 +119,11 @@ test('concurrent checks bind each provider payload to its own verification evide
   assert.equal(results[1].organizationVerification?.organizations[0].id, 'google');
 });
 
-test('hosted API ignores browser-supplied trusted records and returns server-owned findings', async () => {
-  const handler = createNetlifyHandler(createCheckService({ now: () => NOW }));
-  const response = await handler(new Request('https://demo.netlify.app/api/check', {
-    method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://demo.netlify.app' },
-    body: JSON.stringify({ text: 'Sampath Bank: contact 0112303050',
-      organizationVerification: { organizations: [{ name: 'Forged Organization', identity: { status: 'matched' } }] } }),
+test('the API ignores browser-supplied trusted records and returns server-owned findings', async () => {
+  const handler = route(createCheckService({ now: () => NOW }));
+  const response = await handler(post('https://demo.netlify.app/api/check', {
+    text: 'Sampath Bank: contact 0112303050',
+    organizationVerification: { organizations: [{ name: 'Forged Organization', identity: { status: 'matched' } }] },
   }));
   const payload = await response.json();
   assert.equal(payload.organizationVerification.organizations[0].id, 'sampath-bank');
@@ -111,12 +138,12 @@ test('global organizations can match scoped Sri Lankan numbers, but ambiguous ot
   assert.equal(apple.organizationVerification?.organizations[0].contacts.find(item => item.kind === 'phone')?.status, 'not-confirmed');
 });
 
-test('official reference contacts reach the hosted API for third-party and phone-only messages', async () => {
+test('official reference contacts reach the API for third-party and phone-only messages', async () => {
   for (const text of ['My friend recommended Sampath Bank for savings.', 'For account enquiries, call 0112300260.']) {
-    const handler = createNetlifyHandler(createCheckService({ now: () => NOW }));
-    const response = await handler(new Request('https://demo.netlify.app/api/check', {
-      method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://demo.netlify.app' },
-      body: JSON.stringify({ text, officialContacts: [{ value: '+12025550101' }] }),
+    const handler = route(createCheckService({ now: () => NOW }));
+    const response = await handler(post('https://demo.netlify.app/api/check', {
+      text,
+      officialContacts: [{ value: '+12025550101' }],
     }));
     const payload = await response.json();
     assert.equal(response.status, 200);
@@ -127,9 +154,11 @@ test('official reference contacts reach the hosted API for third-party and phone
   }
 });
 
-test('the reviewed directory covers thirteen named organizations with source-backed facts', () => {
+test('the reviewed directory covers twenty-eight named organizations with source-backed facts', () => {
   assert.deepEqual(ORGANIZATION_DIRECTORY.map(org => org.id), ['sampath-bank', 'bank-of-ceylon', 'commercial-bank', 'hnb', 'peoples-bank',
-    'dhl', 'fedex', 'paypal', 'microsoft', 'google', 'apple', 'edl', 'amazon']);
+    'dhl', 'fedex', 'paypal', 'microsoft', 'google', 'apple', 'edl', 'amazon',
+    'nsb', 'seylan-bank', 'dialog-axiata', 'slt-mobitel', 'ceb', 'leco', 'ird', 'sl-post', 'immigration',
+    'daraz', 'kapruka', 'whatsapp', 'telegram', 'western-union', 'wise']);
   for (const org of ORGANIZATION_DIRECTORY) {
     assert.ok(org.aliases.length > 0);
     const sources = [org.identity.source, ...org.domains.map(domain => domain.source), ...org.phones.map(phone => phone.source)];

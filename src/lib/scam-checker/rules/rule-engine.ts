@@ -599,6 +599,24 @@ function aliasPattern(alias: string): RegExp {
   return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'giu');
 }
 
+/**
+ * Homograph continuations for single-word proper-noun aliases.
+ *
+ * A common noun immediately after such a word means the word is being used ordinarily — "the Amazon
+ * **river**", "Apple **pie**", "a dialog **box**", "the meta **note**". This is an explicit small
+ * lexicon, deliberately not a semantic model: it can only suppress a mention when the very next word
+ * is one of these, so "the Amazon **order**", "Apple **ID**" and "Wise **transfer**" still fire.
+ * Found by the 25 Nov measurement round (review E#59): every ambiguous alias fired R-M4-23 on
+ * ordinary prose before these guards.
+ */
+const HOMOGRAPH_CONTINUATIONS: Readonly<Record<string, readonly string[]>> = {
+  amazon: ['river', 'rivers', 'rainforest', 'rainforests', 'basin'],
+  apple: ['pie', 'juice', 'tree', 'trees', 'harvest', 'fruit', 'cider', 'orchard'],
+  dialog: ['box', 'boxes', 'window', 'windows', 'opened', 'closes', 'closed'],
+  meta: ['note', 'notes', 'data', 'summary', 'discussion', 'analysis'],
+  wise: ['advice', 'decision', 'choice', 'move', 'counsel'],
+};
+
 /** v0.3-draft URL-shape evidence (R-M4-21…23). Appended after the cue-table matches. */
 function shapeMatches(text: string): RuleMatch[] {
   const candidates = parsedUrlCandidates(text);
@@ -635,9 +653,22 @@ function shapeMatches(text: string): RuleMatch[] {
   // third-party cross-references can still be flagged as evidence for review, never a verdict).
   for (const brand of REVIEWED_BRANDS) {
     for (const alias of brand.aliases) {
+      // A single-word alias whose canonical form is a proper noun is INERT when the message spells
+      // it entirely lowercase ("be wise with your money", "a dialog box", "the meta note", "the
+      // apple harvest"). That is prose, not a brand claim — and the sentence window is wide enough
+      // (160 chars) that an ordinary word sitting beside any link would otherwise manufacture
+      // R-M4-23 evidence for an unrelated host (review E#59, found by the 25 Nov language sign-off).
+      // Multi-word aliases keep case-insensitive matching: their combination ("Bank of Ceylon",
+      // "Dialog Axiata", "Amazon Pay") is not an ordinary phrase. Capitalised and ALL-CAPS mentions
+      // still fire, because smishing rarely lowercases a brand.
+      const singleWordProperNoun = !alias.includes(' ') && /[A-Z]/.test(alias);
       for (const match of text.matchAll(aliasPattern(alias))) {
+        if (singleWordProperNoun && match[0] === match[0].toLowerCase()) continue;
         const brandStart = match.index ?? 0;
         const brandEnd = brandStart + match[0].length;
+        // Homograph guard: "the Amazon river" / "Apple pie" / "a dialog box" are ordinary usage.
+        const continuation = text.slice(brandEnd).match(/^\s+([\p{L}]+)/u)?.[1].toLowerCase();
+        if (continuation && (HOMOGRAPH_CONTINUATIONS[alias.toLowerCase()] ?? []).includes(continuation)) continue;
         for (const candidate of candidates) {
           // Measure the actual link↔brand gap, not the distance from the link's START: a long
           // URL written BEFORE the brand must not hide a nearby brand (review E#57). Overlapping
