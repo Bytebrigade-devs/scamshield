@@ -15,7 +15,6 @@ import { createSummaryModel } from "@/lib/scam-checker/ui/public/summary.js";
 
 import { loadConfig as fetchConfig, loadHistory, postCheck } from "./http";
 import type { ConfigResult } from "./http";
-import { accessToken } from "./session";
 import {
   HISTORY_LIMIT,
   SENDER_MAX,
@@ -68,6 +67,11 @@ interface CheckerContextValue {
   clearHistory: () => void;
   /** Whether a verified session is present (server history) vs the tab-session list. */
   signedIn: boolean;
+  /**
+   * Sign-in state as the SERVER reports it (28 Nov 2026). `"unknown"` while the probe is in flight,
+   * `"out"` only when the server answered 401 — the one state that shows the gate.
+   */
+  session: "unknown" | "in" | "out";
   /** Cap in force right now (configured value, or the documented fallback). */
   cap: number;
 }
@@ -75,6 +79,7 @@ interface CheckerContextValue {
 const CheckerContext = createContext<CheckerContextValue | null>(null);
 
 const CONNECT_FAILED = "We couldn’t reach the checking service or read its response. Your message is still here. Please try again.";
+export const SIGN_IN_REQUIRED = "This checker needs a signed-in account. Your message is still in the editor — sign in, then submit it again.";
 export const CONFIG_UNAVAILABLE_MESSAGE = "We couldn’t load the checking service. Try connecting again before submitting your message.";
 
 export function CheckerProvider({ children }: { children: React.ReactNode }) {
@@ -91,6 +96,9 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
   // Signed-in callers read their retained server history; anonymous callers keep the tab-session
   // list. Resolved in an effect so the first client render matches the server render.
   const [signedIn, setSignedIn] = useState(false);
+  // Server-verified session state (28 Nov 2026). A check now requires an account, so the screen
+  // must know before offering the editor; `"out"` is set only by a server 401, never guessed.
+  const [session, setSession] = useState<"unknown" | "in" | "out">("unknown");
   const [check, setCheck] = useState<SubmittedCheck | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [senderError, setSenderError] = useState<string | null>(null);
@@ -132,19 +140,33 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
     if (result.ok) setHistory(result.entries.map(historyEntryFromServer).slice(0, HISTORY_LIMIT));
   }, []);
 
-  // Resolve the session once on mount: signed-in → server history; anonymous → tab-session list.
+  // Resolve the session once on mount, from the SERVER's answer rather than a client token: the
+  // history route is 401 for an anonymous caller and 200 for a verified one, so its status is the
+  // trustworthy signal (28 Nov 2026). An ambiguous failure keeps the editor; the check route still
+  // refuses an anonymous submit with 401.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const token = await accessToken();
+      const result = await loadHistory();
       if (cancelled) return;
-      setSignedIn(token !== null);
-      if (token !== null) await refreshServerHistory();
+      if (result.ok) {
+        setSession("in");
+        setSignedIn(true);
+        setHistory(result.entries.map(historyEntryFromServer).slice(0, HISTORY_LIMIT));
+        return;
+      }
+      if (result.status === 401) {
+        setSession("out");
+        setSignedIn(false);
+        return;
+      }
+      setSession("in");
+      setSignedIn(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [refreshServerHistory]);
+  }, []);
 
   const showInput = useCallback(
     (options: InputOptions = {}) => {
@@ -208,6 +230,13 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
     void postCheck(submittedText, sender.trim()).then((result) => {
       if (!result.ok) {
         setBusy(false);
+        if (result.status === 401) {
+          // The session ended between load and submit: show the gate, keep the typed text.
+          setSession("out");
+          setSignedIn(false);
+          showInput({ focus: "alert", formError: SIGN_IN_REQUIRED });
+          return;
+        }
         showInput({ focus: "alert", formError: CONNECT_FAILED });
         return;
       }
@@ -273,6 +302,7 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
       view,
       history,
       signedIn,
+      session,
       check,
       fieldError,
       senderError,
@@ -309,6 +339,7 @@ export function CheckerProvider({ children }: { children: React.ReactNode }) {
       retryConfig,
       sender,
       senderError,
+      session,
       setSender,
       setText,
       showHistory,
