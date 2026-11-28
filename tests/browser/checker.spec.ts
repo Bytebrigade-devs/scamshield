@@ -38,6 +38,16 @@ test("input screen renders and the submit button stays disabled until there is t
   await expect(submitButton(page)).toBeEnabled();
 });
 
+test("the shared app navigation reaches the checker at /checker", async ({ page }) => {
+  // Regression for the 28 Nov 2026 finding: the app's nav entry for M4 was a button that told
+  // users the checker was "not connected", and nothing in the app linked to /checker at all.
+  await page.goto("/vault");
+  const appNav = page.getByRole("navigation", { name: "Application navigation" });
+  await appNav.getByRole("link", { name: "Scam checker" }).click();
+  await expect(page).toHaveURL(/\/checker$/);
+  await expect(view(page).getByRole("heading", { name: "Check a suspicious message", exact: true })).toBeVisible();
+});
+
 test("the character counter tracks the message and blocks an over-long one", async ({ page }) => {
   await page.goto("/checker");
   const textarea = view(page).getByLabel("Message to check", { exact: true });
