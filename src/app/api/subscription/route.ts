@@ -11,15 +11,19 @@ const response = (body: unknown, status = 200) => NextResponse.json(body, { stat
 const BILLING_COLUMNS = ["price_lkr", "currency", "payment_method", "auto_renew"] as const;
 
 /**
- * True only when Postgres reports the billing columns (42703) or the ledger table (42P01) as
- * missing, i.e. the draft has not been applied to this database. A concurrency or validation
- * failure must NOT match, or a real 409 would be silently downgraded to a partial write.
+ * True only when Postgres or PostgREST reports the billing columns (42703/PGRST204) or the ledger
+ * table (42P01) as missing, i.e. the draft has not been applied to this database. A concurrency or
+ * validation failure must NOT match, or a real 409 would be silently downgraded to a partial write.
  */
 function isMissingBillingSchema(error: unknown): boolean {
   const failure = error as { code?: string | null; message?: string | null } | null;
   const code = failure?.code ?? null;
   if (code === "42703" || code === "42P01") return true;
   const message = (failure?.message ?? "").toLowerCase();
+  // PostgREST answers a column absent from its schema cache with PGRST204 ("Could not find the
+  // 'auto_renew' column … in the schema cache"), not SQLSTATE 42703. Live checkout on 28 Nov 2026
+  // hit that shape, so the retry must recognise it too — only when it names a billing column.
+  if (code === "PGRST204" && BILLING_COLUMNS.some((column) => message.includes(column))) return true;
   return message.includes("does not exist") && BILLING_COLUMNS.some((column) => message.includes(column));
 }
 
