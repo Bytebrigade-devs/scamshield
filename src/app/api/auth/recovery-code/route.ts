@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { createBudgetedLimiter, issueRecoveryCode } from "@/lib/recovery-code";
+import { authReplyTo, mailChannel, sendAuthMail } from "@/lib/auth-mail";
+import { recoveryEmail } from "@/lib/auth-email-templates";
+import { otpExpiryLabel, otpExpirySeconds } from "@/lib/auth-otp-expiry";
+import { DeliveryThrottled, createBudgetedLimiter, issueRecoveryCode } from "@/lib/recovery-code";
 import { OTP_MAX_LENGTH, OTP_MIN_LENGTH } from "@/lib/otp";
 
 export const dynamic = "force-dynamic";
@@ -24,61 +26,11 @@ const limiter = createBudgetedLimiter({ windowMs: 10 * 60_000, addressMax: 3, ca
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function mailConfig(): { apiKey: string; from: string } | null {
-  const apiKey = (process.env.RESEND_API_KEY ?? "").trim();
-  const from = (process.env.AUTH_EMAIL_FROM ?? process.env.TRIAL_EMAIL_FROM ?? "").trim();
-  return apiKey.length > 0 && from.length > 0 ? { apiKey, from } : null;
-}
-
-/** Resend when it is configured; otherwise a development-only local outbox. */
-type MailChannel = { kind: "resend"; apiKey: string; from: string } | { kind: "outbox"; dir: string };
-
-function mailChannel(): MailChannel | null {
-  const resend = mailConfig();
-  if (resend) return { kind: "resend", ...resend };
-  // Development escape hatch. Writing a reset code to disk is allowed only outside a production
-  // build AND only when explicitly requested; in production a missing sender stays a hard 503.
-  if (process.env.NODE_ENV !== "production" && (process.env.AUTH_MAIL_DRIVER ?? "").trim() === "outbox") {
-    return { kind: "outbox", dir: (process.env.AUTH_MAIL_OUTBOX ?? "").trim() || ".dev-outbox" };
-  }
-  return null;
-}
-
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) return null;
   return createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-}
-
-const SUBJECT = "Your ScamShield password reset code";
-
-async function deliver(channel: MailChannel, to: string, code: string): Promise<boolean> {
-  if (channel.kind === "resend") {
-    const result = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${channel.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: channel.from,
-        to: [to],
-        subject: SUBJECT,
-        text: `Your ScamShield password reset code is ${code}.\n\nIt can be used once and expires soon. If you did not ask to reset your password, ignore this email - your password stays unchanged.`,
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-    return result.ok;
-  }
-  // Development outbox: the code goes to a gitignored folder and the server terminal instead of an
-  // inbox, so the flow can be exercised with no mail provider. Unreachable in a production build.
-  const file = `${channel.dir}/recovery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;
-  mkdirSync(channel.dir, { recursive: true });
-  writeFileSync(
-    file,
-    `${JSON.stringify({ to, subject: SUBJECT, code, createdAt: new Date().toISOString(), note: "Development outbox: this code was NOT emailed." }, null, 2)}\n`,
-    "utf8",
-  );
-  console.warn(`[recovery-code] DEV OUTBOX (never in production) - code ${code} for ${to} written to ${file}`);
-  return true;
 }
 
 export async function POST(req: NextRequest) {
@@ -115,7 +67,22 @@ export async function POST(req: NextRequest) {
         if (typeof otp !== "string" || !shape.test(otp)) throw new Error("recovery-code-unavailable");
         return otp;
       },
-      sendCode: (address, code) => deliver(channel!, address, code),
+      sendCode: async (address, code) => {
+        const mail = recoveryEmail(code, otpExpiryLabel());
+        const result = await sendAuthMail(channel!, {
+          to: address,
+          subject: mail.subject,
+          text: mail.text,
+          html: mail.html,
+          flow: "recovery",
+          replyTo: authReplyTo(),
+        });
+        // A provider throttle is not a permanent failure: say "wait", do not say "try again now".
+        if (result.kind === "failed" && result.status === 429) {
+          throw new DeliveryThrottled(result.retryAfterSeconds ?? 60);
+        }
+        return result.kind !== "failed";
+      },
     },
     limiter,
     { email, caller },
@@ -124,12 +91,29 @@ export async function POST(req: NextRequest) {
   switch (outcome.kind) {
     case "sent":
       // `devChannel` can only appear outside a production build; it tells the UI where to look.
-      return response(channel?.kind === "outbox" ? { ok: true, devChannel: "outbox" } : { ok: true });
+      // `expiresInSeconds` is the window the email itself states, so the countdown cannot drift
+      // from the project setting. It is not a secret: the token is what grants access, not the
+      // length of its life.
+      return response({
+        ok: true,
+        expiresInSeconds: otpExpirySeconds(),
+        ...(channel?.kind === "outbox" ? { devChannel: "outbox" } : {}),
+      });
     case "rate-limited": {
       const minutes = Math.max(1, Math.round(outcome.retryAfterSeconds / 60));
       return response(
         {
           error: `Too many reset requests. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+          retryAfterSeconds: outcome.retryAfterSeconds,
+        },
+        429,
+      );
+    }
+    case "delivery-throttled": {
+      const minutes = Math.max(1, Math.round(outcome.retryAfterSeconds / 60));
+      return response(
+        {
+          error: `The email service is busy right now. Try again in about ${minutes} minute${minutes === 1 ? "" : "s"}.`,
           retryAfterSeconds: outcome.retryAfterSeconds,
         },
         429,

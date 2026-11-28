@@ -26,12 +26,28 @@ export type RecoveryOutcome =
   | { kind: "sent" }
   | { kind: "mail-not-configured" }
   | { kind: "rate-limited"; retryAfterSeconds: number }
+  | { kind: "delivery-throttled"; retryAfterSeconds: number }
   | { kind: "unavailable" };
+
+/**
+ * Thrown by `sendCode` when the provider asked us to slow down (Resend answers 429). A boolean
+ * return cannot express "this failed, but retrying in a minute will work", and flattening it into
+ * `unavailable` tells the user to retry immediately, which the provider will reject again.
+ */
+export class DeliveryThrottled extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super("delivery-throttled");
+    this.name = "DeliveryThrottled";
+  }
+}
 
 export interface RecoveryDeps {
   /** True only when both a mail sender and the service-role admin client are configured. */
   mailConfigured: boolean;
-  /** Returns the 6-digit recovery code, or null when there is no such address. May throw. */
+  /**
+   * Returns the recovery code as the project issues it (6–10 digits), or null when there is no
+   * such address. May throw.
+   */
   generateCode(email: string): Promise<string | null>;
   /** Delivers the code. Returns false on a delivery failure; the code must not be logged. */
   sendCode(email: string, code: string): Promise<boolean>;
@@ -111,7 +127,10 @@ export async function issueRecoveryCode(
   let delivered = false;
   try {
     delivered = await deps.sendCode(email, code);
-  } catch {
+  } catch (error) {
+    if (error instanceof DeliveryThrottled) {
+      return { kind: "delivery-throttled", retryAfterSeconds: error.retryAfterSeconds };
+    }
     delivered = false;
   }
   return delivered ? { kind: "sent" } : { kind: "unavailable" };

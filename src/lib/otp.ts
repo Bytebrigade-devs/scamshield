@@ -2,11 +2,13 @@
  * M2 — email one-time passcode (OTP) helpers.
  *
  * Owner decision, 21 November 2026: registration is verified with an **emailed confirmation link**
- * (`{{ .ConfirmationURL }}`), while password reset uses a **6-digit emailed code**
- * (`resetPasswordForEmail` then `verifyOtp({ type: "recovery" })`). Both are delivered by Supabase
- * Auth through the project's SMTP sender — see docs/M2-BACKEND.md.
+ * (`generateLink({ type: "signup" })`), while password reset uses an **emailed code**
+ * (`generateLink({ type: "recovery" })` then `verifyOtp({ type: "recovery" })`). Both are delivered
+ * by M2 through Resend — see docs/M2-BACKEND.md.
  *
- * Code length and expiry are project settings, so nothing here hardcodes an expiry claim.
+ * Code length remains a Supabase project setting (6-10 digits); this project issues 8, so the field
+ * accepts any length in range and never pins one. The expiry window is read from
+ * `AUTH_OTP_EXPIRY_SECONDS` in src/lib/auth-otp-expiry.ts and must match the project setting.
  *
  * Pure module: no network, no environment, no Supabase import. Backend behaviour lives in the
  * screens; these helpers only normalise input and turn error codes into usable copy.
@@ -58,4 +60,13 @@ export function otpErrorCopy(code: string | null | undefined, message: string): 
 /** A verified account that has not confirmed its email yet — route it to the code step. */
 export function isUnconfirmedEmailError(error: { code?: string | null } | null | undefined): boolean {
   return error?.code === "email_not_confirmed";
+}
+
+/**
+ * "5 minutes" for a window in seconds. Used by the email bodies and by the screens, always from the
+ * server-supplied value, so the copy cannot drift from the configured expiry.
+ */
+export function formatOtpExpiry(seconds: number): string {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
 }

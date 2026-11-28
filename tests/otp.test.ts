@@ -13,6 +13,7 @@ import {
   DEMO_OTP,
   OTP_MAX_LENGTH,
   OTP_MIN_LENGTH,
+  formatOtpExpiry,
   isUnconfirmedEmailError,
   normaliseOtp,
   otpErrorCopy,
@@ -60,4 +61,13 @@ test("the demo code is a well-formed code within the accepted range", () => {
   assert.ok(DEMO_OTP.length >= OTP_MIN_LENGTH && DEMO_OTP.length <= OTP_MAX_LENGTH);
   assert.match(DEMO_OTP, /^\d+$/);
   assert.equal(otpProblem(DEMO_OTP), null);
+});
+
+test("formatOtpExpiry phrases a window the way the emails and screens do", () => {
+  assert.equal(formatOtpExpiry(300), "5 minutes");
+  assert.equal(formatOtpExpiry(60), "1 minute");
+  assert.equal(formatOtpExpiry(900), "15 minutes");
+  assert.equal(formatOtpExpiry(5400), "90 minutes");
+  assert.equal(formatOtpExpiry(1), "1 minute", "a sub-minute window must never read '0 minutes'");
+  assert.equal(formatOtpExpiry(0), "1 minute", "zero is clamped to the shortest phrase, not an empty one");
 });

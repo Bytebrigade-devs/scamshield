@@ -26,6 +26,7 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
   const [step, setStep] = useState<"request" | "code">("request");
   const [requestedEmail, setRequestedEmail] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [expiresInSeconds, setExpiresInSeconds] = useState<number | null>(null);
   const [channel, setChannel] = useState<"supabase" | "m2" | "outbox">("supabase");
   const [ready, setReady] = useState(DEMO_MODE || !reset);
   useEffect(() => {
@@ -66,26 +67,36 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
         await getSupabase().auth.signOut();
         setDone(true);
       } else {
-        // Prefer the project's own recovery mail: it is Supabase's configured sender and it is
-        // proven to deliver on this project (a reset email arrived on 21 November 2026). Today its
-        // template carries a link; once the template uses {{ .Token }} the same mail carries the
-        // code and this screen accepts it. If Supabase's call fails, M2's own route (Resend, or the
-        // development outbox) keeps the flow alive instead of dead-ending.
+        // M2's sender (Resend, or the development outbox) is tried first; when no sender is
+        // configured the route answers 503 and Supabase's own recovery mail takes over. Delivery
+        // through Supabase is therefore the fallback, not the preferred path.
         const address = value.trim();
-        let nextChannel: "supabase" | "m2" | "outbox" = "supabase";
-        const { error: supabaseError } = await getSupabase().auth.resetPasswordForEmail(address, {
-          redirectTo: window.location.origin + "/reset-password",
+        let nextChannel: "supabase" | "m2" | "outbox" = "m2";
+        const sendResponse = await fetch("/api/auth/recovery-code", {
+          method: "POST",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: address }),
         });
-        if (supabaseError) {
-          const sendResponse = await fetch("/api/auth/recovery-code", {
-            method: "POST",
-            cache: "no-store",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: address }),
+        const payload = (await sendResponse.json().catch(() => null)) as
+          { error?: string; devChannel?: string; expiresInSeconds?: number } | null;
+        if (sendResponse.status === 503) {
+          const { error: supabaseError } = await getSupabase().auth.resetPasswordForEmail(address, {
+            redirectTo: window.location.origin + "/reset-password",
           });
-          const payload = (await sendResponse.json().catch(() => null)) as { error?: string; devChannel?: string } | null;
-          if (!sendResponse.ok) throw new Error(payload?.error || supabaseError.message || "The reset email could not be sent.");
+          if (supabaseError) throw new Error(supabaseError.message);
+          nextChannel = "supabase";
+          // Supabase's own mail carries a link in the current template, so no window is known here.
+          setExpiresInSeconds(null);
+        } else if (!sendResponse.ok) {
+          throw new Error(payload?.error || "The reset code could not be sent.");
+        } else {
           nextChannel = payload?.devChannel === "outbox" ? "outbox" : "m2";
+          setExpiresInSeconds(
+            typeof payload?.expiresInSeconds === "number" && payload.expiresInSeconds > 0
+              ? payload.expiresInSeconds
+              : null,
+          );
         }
         setChannel(nextChannel);
         // A development outbox means nothing was emailed; say so instead of implying an inbox.
@@ -106,6 +117,7 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
           email={requestedEmail}
           notice={notice}
           showLinkHint={channel === "supabase" && !DEMO_MODE}
+          expiresInSeconds={expiresInSeconds}
           onVerified={() => router.push("/reset-password")}
           onBack={() => { setStep("request"); setError(""); }}
         />

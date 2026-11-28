@@ -12,7 +12,9 @@
     "test:subscription": "node --test scripts/test-subscription.cjs",
     "test:vault": "node --experimental-strip-types --test tests/vault-model.test.ts",
     "test:m2": "node --experimental-strip-types --test tests/otp.test.ts",
-    "test:recovery": "node scripts/test-recovery.cjs"
+    "test:recovery": "node scripts/test-recovery.cjs",
+    "check:resend": "node scripts/check-resend.cjs",
+    "verify:otp-expiry": "node scripts/check-otp-expiry.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

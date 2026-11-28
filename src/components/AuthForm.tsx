@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DEMO_MODE } from "@/lib/m2-mode";
 import { getSupabase } from "@/lib/supabase";
 import { demoSignIn } from "@/lib/demo-store";
 import { authPath } from "@/lib/checkout-path";
-import { isUnconfirmedEmailError } from "@/lib/otp";
+import { formatOtpExpiry, isUnconfirmedEmailError } from "@/lib/otp";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Alert, Card } from "@/components/ui/Card";
@@ -26,16 +26,45 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
   // that was created but not confirmed yet.
   const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  // Clearing the visible password field must not break "Resend confirmation email": Supabase's
+  // signup link generation requires the password, so the typed value is kept here until the screen
+  // is left. It is no more exposed than the input it came from — the value was already POSTed to
+  // this app's own route.
+  const passwordRef = useRef("");
 
-  async function resendConfirmation(address: string) {
+  async function resendConfirmation(address: string, currentPassword: string) {
     setResending(true);
     setError(null);
     try {
-      const { error: resendError } = await getSupabase().auth.resend({ type: "signup", email: address });
-      if (resendError) throw resendError;
-      setInfo(`A new confirmation link was sent to ${address}.`);
+      const register = await fetch("/api/auth/confirmation-link", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: address, resend: true, password: currentPassword }),
+      });
+      const payload = (await register.json().catch(() => null)) as
+        { error?: string; expiresInSeconds?: number } | null;
+      let seconds: number | null = null;
+      if (register.status === 503) {
+        const { error: resendError } = await getSupabase().auth.resend({ type: "signup", email: address });
+        if (resendError) throw resendError;
+      } else if (!register.ok) {
+        throw new Error(payload?.error || "The confirmation email could not be sent.");
+      } else if (typeof payload?.expiresInSeconds === "number" && payload.expiresInSeconds > 0) {
+        seconds = payload.expiresInSeconds;
+      }
+      const window = seconds === null ? "" : ` It expires in ${formatOtpExpiry(seconds)}.`;
+      setInfo(`A new confirmation link was sent to ${address}.${window}`);
     } catch (e) { setError(e instanceof Error ? e.message : "The confirmation email could not be sent."); }
     finally { setResending(false); }
+  }
+
+  /** One place for the "we emailed you" state, so the window and the copy cannot drift apart. */
+  function awaitConfirmation(address: string, seconds: number | null) {
+    setPassword("");
+    setConfirmEmail(address);
+    const window = seconds === null ? "" : ` It expires in ${formatOtpExpiry(seconds)}.`;
+    setInfo(`Check your email for the confirmation link.${window} Then log in.`);
   }
 
   async function submit(e: React.FormEvent) {
@@ -58,6 +87,26 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
       }
       const auth = getSupabase().auth;
       if (mode === "signup") {
+        // M2 sends the verification link through the project's configured sender (Resend). When no
+        // sender is configured the route answers 503 and Supabase's own confirmation mail is used.
+        const register = await fetch("/api/auth/confirmation-link", {
+          method: "POST",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (register.status !== 503) {
+          const payload = (await register.json().catch(() => null)) as
+            { error?: string; expiresInSeconds?: number } | null;
+          if (!register.ok) throw new Error(payload?.error || "The account could not be created.");
+          awaitConfirmation(
+            email.trim(),
+            typeof payload?.expiresInSeconds === "number" && payload.expiresInSeconds > 0
+              ? payload.expiresInSeconds
+              : null,
+          );
+          return;
+        }
         const { data, error: signUpError } = await auth.signUp({
           email,
           password,
@@ -65,17 +114,15 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
         });
         if (signUpError) throw signUpError;
         if (!data.session) {
-          // Confirmation is required: the emailed link activates the account.
-          setPassword("");
-          setConfirmEmail(email.trim());
-          setInfo("Check your email for the confirmation link, then log in.");
+          // Confirmation is required: the emailed link activates the account. Supabase's own mailer
+          // delivered this one, so the window is the project setting and is not reported here.
+          awaitConfirmation(email.trim(), null);
           return;
         }
       } else {
         const { error: signInError } = await auth.signInWithPassword({ email, password });
         if (signInError) {
           if (isUnconfirmedEmailError(signInError)) {
-            setPassword("");
             setConfirmEmail(email.trim());
             setInfo("This account is not confirmed yet. Use the link we emailed you, or send it again below.");
             return;
@@ -113,7 +160,7 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
             autoComplete={isSignup ? "new-password" : "current-password"}
             hint={isSignup ? "At least 8 characters." : undefined}
             error={passwordError}
-            value={password} onChange={(e) => setPassword(e.target.value)}
+            value={password} onChange={(e) => { setPassword(e.target.value); passwordRef.current = e.target.value; }}
           />
           {!isSignup && <Link href="/forgot-password" className="link inline-block text-sm">Forgot password?</Link>}
           {DEMO_MODE && !isSignup && <Button variant="secondary" block onClick={() => { demoSignIn("demo@scamshield.test"); router.push("/account/subscription"); }}>Use demo account</Button>}
@@ -128,7 +175,7 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
           {confirmEmail && !DEMO_MODE && (
             <Button
               variant="secondary" block disabled={busy} loading={resending} loadingLabel="Sending…"
-              onClick={() => void resendConfirmation(confirmEmail)}
+              onClick={() => void resendConfirmation(confirmEmail, passwordRef.current)}
             >
               Resend confirmation email
             </Button>

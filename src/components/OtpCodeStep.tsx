@@ -1,27 +1,36 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DEMO_MODE } from "@/lib/m2-mode";
 import { getSupabase } from "@/lib/supabase";
-import { DEMO_OTP, OTP_MAX_LENGTH, normaliseOtp, otpErrorCopy, otpProblem } from "@/lib/otp";
+import { DEMO_OTP, OTP_MAX_LENGTH, formatOtpExpiry, normaliseOtp, otpErrorCopy, otpProblem } from "@/lib/otp";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Alert } from "@/components/ui/Card";
 
+/** mm:ss for the countdown. Cosmetic only — Supabase enforces the real deadline. */
+const mmss = (total: number): string =>
+  `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+
 /**
  * Email OTP entry for password reset only. Registration is verified with an emailed link
- * (owner decision, 21 November 2026); only recovery uses a 6-digit code.
+ * (owner decision, 21 November 2026); only recovery uses a code.
  *
- * Backend: the code is issued by `POST /api/auth/recovery-code` (service-role admin API plus the
- * project's own mail sender), and `verifyOtp({ type: "recovery" })` exchanges it for the session
- * that `/reset-password` uses to set the new password. Demo mode: no request leaves the browser and
- * the fixed demo code is shown in the field hint.
+ * Backend: the code is issued by `POST /api/auth/recovery-code` (service-role admin API plus Resend),
+ * and `verifyOtp({ type: "recovery" })` exchanges it for the session that `/reset-password` uses to
+ * set the new password. Demo mode: no request leaves the browser and the fixed demo code is shown in
+ * the field hint.
  *
- * The copy never states an exact expiry: that is a project setting, not something this form knows.
+ * Expiry: Supabase enforces it — the code is dead once the project's email OTP window passes and
+ * `verifyOtp` answers `otp_expired`, which this form turns into usable copy. The countdown below is
+ * therefore a courtesy driven by the window the server reports, not a gate: if the countdown and the
+ * project setting ever disagree, the still-valid code must keep working. That is why reaching zero
+ * warns and offers a new code instead of disabling Continue.
  */
 export function OtpCodeStep({
   email,
   notice,
   showLinkHint = false,
+  expiresInSeconds = null,
   onVerified,
   onBack,
 }: {
@@ -30,6 +39,8 @@ export function OtpCodeStep({
   notice?: string | null;
   /** True when the recovery mail may carry a link instead of a code (template not switched yet). */
   showLinkHint?: boolean;
+  /** The window the server stated for this code, in seconds. Null when unknown or in demo mode. */
+  expiresInSeconds?: number | null;
   onVerified: () => void;
   onBack: () => void;
 }) {
@@ -38,6 +49,22 @@ export function OtpCodeStep({
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [resending, setResending] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(expiresInSeconds ?? null);
+  const [deadline, setDeadline] = useState<number | null>(() =>
+    typeof expiresInSeconds === "number" && expiresInSeconds > 0 ? Date.now() + expiresInSeconds * 1000 : null,
+  );
+
+  useEffect(() => {
+    if (deadline === null) return;
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setRemaining(left);
+      if (left === 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  const expired = remaining === 0;
 
   async function verify(event: React.FormEvent) {
     event.preventDefault();
@@ -82,12 +109,21 @@ export function OtpCodeStep({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const payload = (await resendResponse.json().catch(() => null)) as { error?: string; devChannel?: string } | null;
+      const payload = (await resendResponse.json().catch(() => null)) as
+        { error?: string; devChannel?: string; expiresInSeconds?: number } | null;
       if (!resendResponse.ok) throw new Error(payload?.error || "A new code could not be sent.");
+      // A fresh code restarts the clock from the window the server reports.
+      if (typeof payload?.expiresInSeconds === "number" && payload.expiresInSeconds > 0) {
+        setRemaining(payload.expiresInSeconds);
+        setDeadline(Date.now() + payload.expiresInSeconds * 1000);
+      }
+      const window = typeof payload?.expiresInSeconds === "number"
+        ? ` It expires in ${formatOtpExpiry(payload.expiresInSeconds)}.`
+        : "";
       // Never claim an email went out when the development outbox carried the code.
       setInfo(payload?.devChannel === "outbox"
-        ? `A new code was written to the development outbox for ${email}. Nothing was emailed.`
-        : `A new code was sent to ${email}.`);
+        ? `A new code was written to the development outbox for ${email}. Nothing was emailed.${window}`
+        : `A new code was sent to ${email}.${window}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "A new code could not be sent. Please retry.");
     } finally {
@@ -104,9 +140,15 @@ export function OtpCodeStep({
           : "Enter the code we emailed to choose a new password."}
       </p>
       <p className="mt-2 text-sm text-muted">
-        {notice ? `Written for ${email}.` : `Sent to ${email}.`} Codes are single use; request a new one if it expires.
+        {notice ? `Written for ${email}.` : `Sent to ${email}.`} Codes are single use.
       </p>
       {notice && <p className="mt-2 text-sm text-muted">{notice}</p>}
+      {remaining !== null && remaining > 0 && (
+        <p className="mt-2 text-sm text-muted">This code expires in {mmss(remaining)}.</p>
+      )}
+      {expired && (
+        <Alert tone="danger">This code has expired. Send a new code below, then enter it here.</Alert>
+      )}
       {showLinkHint && (
         <p className="mt-2 text-sm text-muted">
           If your email contains a link instead of a code, open the link — it takes you straight to the new-password
