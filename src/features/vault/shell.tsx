@@ -26,7 +26,7 @@ export function VaultShell({ children }: { children: ReactNode }) {
       <nav aria-label="Application navigation" className="primary-nav">
         <button onClick={() => vault.notify("The shared overview will connect when the other modules are integrated.")}><LayoutGrid size={19} />Overview</button>
         <Link href="/vault" className="module-selected" onClick={() => setMenu(false)}><LockKeyhole size={19} />Password vault</Link>
-        <button onClick={() => vault.notify("The scam checker belongs to Module 4 and is not connected in this branch.")}><ShieldCheck size={19} />Scam checker</button>
+        <Link href="/checker" onClick={() => setMenu(false)}><ShieldCheck size={19} />Scam checker</Link>
       </nav>
       <div className="nav-divider" /><p className="nav-caption">Password vault</p>
       <nav aria-label="Vault navigation" className="section-nav">{sections.map(({ href, label, Icon }) => {

@@ -112,8 +112,9 @@ could not be confirmed — it never pretends the quota was reached.
 - **No live observation yet.** The repository suite (673 tests) and the in-memory Supabase double prove the
   reservation and settlement call shapes. Whether production buckets actually move is an owner-run
   observation: a few checks, then a read of `checker_quota_buckets` and `checker_usage_reservations`.
-- **The demo identity shares one quota.** Anonymous checks run as the labelled demo subject; with durable
-  counting they share its trial allowance instead of each instance having its own.
+- **The demo identity shares one quota.** *Superseded later by "Checks require a signed-in account" below:* anonymous
+  checks ran as the labelled demo subject, so with durable counting they shared its trial allowance instead of
+  each instance having its own.
 
 ## The gate follows the verified plan — 27 November 2026
 
@@ -147,3 +148,36 @@ never reaches `context`, so a caller cannot claim a plan.
 battery returned 24/24 completed and persisted. **Not covered:** provider spend is still unreserved (X-09 open)
 and the burst guard is still per process; both are listed as limitations in the module workspace's
 `M4-KNOWN-LIMITATIONS.md`.
+
+## Checks require a signed-in account — 28 November 2026
+
+**Owner instruction:** *"user can still check messages even without logging — fix that."* This **reverses
+decision D3** (20 Nov 2026), which gave a headerless request the labelled demo trial. The reversal is deliberate
+and is recorded as such, not quietly edited.
+
+**Server first, and that is the whole guarantee.** `ui/check-route.ts` now refuses a request with no
+`Authorization` header with **`401 { error: "sign-in-required" }`** — before `resolveContext`, before the
+provider call, before any quota reservation and before any usage event. An anonymous caller cannot obtain a
+verdict, consume a unit, or write a row.
+
+**The screen follows the server, not the other way round.** `/checker` decides whether to show the editor from
+the **server's** answer to `GET /api/history` (401 anonymous, 200 verified) — a client-side token check would be a
+claim, not a fact. Three states:
+
+| Session probe | Screen |
+|---|---|
+| 200 | editor (and the account's read-only history) |
+| **401** | **sign-in gate**: one heading, one reason, one `/login` action, no editor in the DOM |
+| other failure | editor stays; the route still refuses an anonymous submit |
+
+**A session that dies mid-submit** returns 401 too. The editor keeps the typed text and the gate explains the
+refusal (`SIGN_IN_REQUIRED`), so nothing a user wrote is lost.
+
+**What is gone:** the public anonymous demo. There is no path to a verdict without an account, and the demo
+allowance question (L-05) is moot rather than answered.
+
+**What is proven:** `node --test` covers the refusal directly — 401 body, provider calls **0**, usage events
+**0**, history rows **0**. Browser coverage checks the gate renders and the editor is absent, then exercises the
+signed-in screen against a stubbed session and a payload captured from the real rules-only service
+(`tests/browser/fixtures/check-limited.json`). **Not proven here:** a real signed-in browser session (the test
+harness cannot sign in); that remains an owner-run observation.

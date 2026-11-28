@@ -5,10 +5,12 @@
  * behaviour is testable under plain `node --test` — no bundler, no path aliases, no Supabase — and
  * so there is exactly one implementation of the admission rules.
  *
- * Admission (owner decision D3, 20 Nov 2026): a request with no `Authorization` header runs under
- * the labelled demo subject — that is the public rules-only demo. A caller who *claims* an identity
- * gets real enforcement and is never silently downgraded to the demo path. A refusal never reaches
- * the provider. Nothing here reads the environment, holds a key, or knows about a host.
+ * Admission (owner instruction, 28 November 2026): **a check requires a signed-in account.** A request
+ * with no `Authorization` header is refused with `401 sign-in-required` before the provider, the quota or
+ * any event, so an anonymous caller can never obtain a verdict. This reverses the labelled public demo
+ * path that decision D3 introduced on 20 Nov 2026 — see `docs/m4-check-boundary.md`. A caller who claims
+ * an identity gets real enforcement and is never silently downgraded. A refusal never reaches the
+ * provider. Nothing here reads the environment, holds a key, or knows about a host.
  */
 
 import { DEFAULT_LIMITS, TAXONOMY_VERSION } from '../boundary/check-boundary.ts';
@@ -69,13 +71,17 @@ export function createCheckApiRoute(options: CheckRouteOptions): (request: Reque
     const record = body as Record<string, unknown>;
     try {
       // Requests without a header run under the labelled demo subject. A caller claiming identity
-      // gets real enforcement; their resolved subject also keys the feedback report.
-      const hasAuthorization = request.headers.get('authorization') !== null;
+      // Requests without a header are REFUSED (owner instruction, 28 Nov 2026). This reverses D3's
+      // labelled public demo path: a check now requires a signed-in account. The refusal happens
+      // before the provider call, the quota reservation and the event, so an anonymous caller can
+      // never obtain a verdict or consume a unit.
+      if (request.headers.get('authorization') === null) return json(401, { error: 'sign-in-required' });
+
       let subjectKey: string | undefined;
       /** Passed to the service so a completed analysis is persisted AND quota-gated for the caller. */
       let context: CheckSubjectContext | undefined;
 
-      if (hasAuthorization) {
+      {
         let decision: M2SubscriptionDecision | null = null;
         try {
           decision = await resolveContext(request);
