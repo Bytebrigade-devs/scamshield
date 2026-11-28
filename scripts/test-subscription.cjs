@@ -78,7 +78,14 @@ function routeHarness(current = null, signedIn = true, readFailure = false, fail
       if (table === 'subscriptions') {
         subscriptionAttempts += 1;
         if (subscriptionAttempts === 1) {
-          if (failures.missingBillingColumns) return { data: null, error: { code: '42703', message: 'column "price_lkr" of relation "subscriptions" does not exist' } };
+          if (failures.missingBillingColumns) {
+            // Live PostgREST (28 Nov 2026) reports a column absent from its schema cache as
+            // PGRST204; `missingBillingColumns: 'pgrst204'` exercises that shape, while `true`
+            // keeps the SQLSTATE 42703 shape the first harness used.
+            return failures.missingBillingColumns === 'pgrst204'
+              ? { data: null, error: { code: 'PGRST204', message: "Could not find the 'auto_renew' column of 'subscriptions' in the schema cache" } }
+              : { data: null, error: { code: '42703', message: 'column "price_lkr" of relation "subscriptions" does not exist' } };
+          }
           if (failures.subscriptionFailure) return { data: null, error: failures.subscriptionFailure };
         }
       }
@@ -211,6 +218,29 @@ test('checkout still succeeds when the billing draft has not been applied', asyn
   assert.equal('price_lkr' in subscriptionWrites[1].value, false);
   assert.equal('payment_method' in subscriptionWrites[1].value, false);
   assert.equal(subscriptionWrites[1].value.billing_cycle, 'monthly', 'access itself is unaffected');
+});
+
+test('checkout degrades when PostgREST reports the missing billing column as PGRST204', async () => {
+  // Live Supabase (28 November 2026) answers a column absent from its schema cache with PGRST204
+  // ("Could not find the 'auto_renew' column ... in the schema cache"), not SQLSTATE 42703. Before
+  // this case the retry never ran against the real project, and a live checkout answered 409.
+  const api = routeHarness(null, true, false, { missingBillingColumns: 'pgrst204' });
+  const response = await api.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success', paymentMethod: 'debit_card' });
+  assert.equal(response.status, 200, 'the PostgREST shape must not 409 the checkout');
+  assert.equal(response.body.billingRecorded, false);
+  const subscriptionWrites = api.writes.filter(write => write.table === 'subscriptions');
+  assert.equal(subscriptionWrites.length, 2, 'one attempt with the billing columns, one without');
+  assert.equal(subscriptionWrites[0].value.price_lkr, 990);
+  assert.equal('price_lkr' in subscriptionWrites[1].value, false);
+  assert.equal(subscriptionWrites[1].value.billing_cycle, 'monthly', 'access itself is unaffected');
+
+  // A PGRST204 that names some other column is a real failure, not a missing migration.
+  const genuine = routeHarness(null, true, false, {
+    subscriptionFailure: { code: 'PGRST204', message: "Could not find the 'some_other_column' column of 'subscriptions' in the schema cache" },
+  });
+  const failed = await genuine.request('POST', { plan: 'guardian', billingCycle: 'monthly', scenario: 'success' });
+  assert.equal(failed.status, 409);
+  assert.equal(genuine.writes.filter(write => write.table === 'subscriptions').length, 1, 'not retried');
 });
 
 test('a returning subscriber still checks out when the billing draft has not been applied', async () => {

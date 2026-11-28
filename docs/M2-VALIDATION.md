@@ -49,7 +49,7 @@ no tokens, links or passwords printed):
   /api/subscription` returned Sentinel for A and Guardian for B, each with `canRunCheck: true` and
   matching `user_id`; no token → 401 `Log in to manage your subscription.` The configured database
   therefore has the M2 schema, the select-only policy and the revoked browser grants in place.
-- Live subscription write path (one throwaway confirmed account, deleted afterwards): no
+- Live subscription write path, pre-merge (one throwaway confirmed account, deleted afterwards): no
   subscription initially (`canRunCheck: false`); `PUT` allocated the Sentinel trial with
   `billing_cycle: null` and exactly 7 days between `started_at` and `renews_at`; a second `PUT`
   answered 409; `POST` replaced the trial with Guardian monthly, active, `mocked: true`; `GET`
@@ -66,9 +66,25 @@ file's test structure was also repaired: the expiry-window and Reply-To groups h
 inside two unrelated signup tests, so they only ran as nested subtests and their parent assertions
 sat in the wrong scope. They are now independent tests.
 
-Other local results: `pnpm test:subscription` 28 passed; `pnpm test:m2` 6 passed;
-`pnpm test:vault` 6 passed; `pnpm typecheck` passed; ESLint clean; `pnpm build` passed on
-Next.js 16.4.6 with 16 routes (both auth routes dynamic).
+Other local results on the merged tree (`origin/main` at 5c8b5d8): `pnpm test:subscription` **35**
+passed (the 34 from main plus the PGRST204 case below); `pnpm test:m2` 6 passed; `pnpm test:vault` 6
+passed; `pnpm test:checker` 13/13 once a production build exists (its CSS guard skips with "no
+production build found" otherwise); `pnpm typecheck` and ESLint clean; `pnpm build` passed on
+Next.js 16.4.6 with **18 routes** (both auth routes and `/api/history` dynamic).
+
+### Merged main — billing retry fixed — 28 November 2026
+
+Merging `origin/main` brought the M2 billing ledger and the M4 checker (137 files). The merged tree
+passed the suites, but the first live purchase answered **409**. With
+`docs/m2-billing-schema-draft.sql` unapplied, PostgREST reports a missing column as **PGRST204**
+("Could not find the 'auto_renew' column of 'subscriptions' in the schema cache"), not SQLSTATE
+`42703`; `isMissingBillingSchema` only recognised 42703/42P01, so the access-only retry never ran.
+It now treats a PGRST204 that names one of the four billing columns as the missing-migration case;
+a PGRST204 naming any other column still fails 409. A regression test pins both.
+
+Re-run on the rebuilt production app: `POST /api/subscription` → **200**, Guardian active,
+`priceLkr: 990`, `billingRecorded: false`, `paymentRecorded: false` (the ledger table is also
+unapplied), `GET` → 200 monthly / 15 daily checks, `DELETE` → cancelled with the same `renews_at`.
 
 Not run: an actually delivered auth email, which needs a verified sending domain, and a browser
 walkthrough of the backend-mode screens, because signup cannot complete while that domain is
