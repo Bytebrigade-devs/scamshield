@@ -59,7 +59,7 @@ no tokens, links or passwords printed):
   an unknown plan answered 400. `emailSent` was `false` because `TRIAL_EMAIL_FROM` is not set, so
   the trial-start email was not attempted.
 
-Test suite: `pnpm test:recovery` reports **38 passed, 0 failed** — the previous 35 plus three
+Test suite: `pnpm test:recovery` reports **39 passed, 0 failed** — the previous 38 plus the admin-outage case from S1 below. The earlier 35 were the previous round plus three
 regression cases (resend for an unknown address, resend with a wrong password, resend without an
 anon key) and the unknown-address case rewritten around the real `generateLink` behaviour. The
 file's test structure was also repaired: the expiry-window and Reply-To groups had been inserted
@@ -91,6 +91,41 @@ walkthrough of the backend-mode screens, because signup cannot complete while th
 missing. The full OTP expiry wait was run and **failed** (the window is longer than the declared
 300 s), so the project setting must be corrected before the email copy and countdown can be
 trusted.
+
+### PR #81 review round — 28 November 2026
+
+Review: **CHANGES REQUESTED**, 2 blocking + 4 should-fix. Fixed in this round unless noted.
+
+- **B1 — the recovery contract is now measured, not assumed.** For a random address,
+  `generateLink({ type: "recovery" })` answered **404 `user_not_found`** ("User with this email not
+  found") and a following `listUsers` showed **no new row**. Unlike the signup variant, recovery
+  does not create an account, so "unknown address = sent, nothing created" holds against the live
+  project. No code gate was needed; this bullet is the evidence the review asked for.
+- **B2 — signup no longer dead-ends on a 502.** The client fallback to Supabase's mailer now runs on
+  **502 as well as 503**, for signup, resend and password recovery. A configured-but-unverified
+  Resend sender therefore falls back to the project's mailer (subject to its SMTP setup and rate
+  limits) instead of looping on "could not be sent". A fresh signup still deletes its account
+  before Supabase's `signUp` recreates it, so no unusable row is left.
+- **S1 — recovery admin failures are honest.** `generateLink` is treated as "no such address" only
+  for a **404**. Any other status, a missing status or a thrown call now returns 502
+  (`unavailable`), not the old fake `sent`. New test: 500 and an unknown-shape failure both answer
+  502 and send nothing; `pnpm test:recovery` is now **39/39**.
+- **S3 — the enumeration claim is narrowed** to the resend path in the route header; the signup
+  path still returns 409, exactly as the code does.
+- **S4 — limiter scope documented** in both route headers and `docs/M2-BACKEND.md`: the budget is
+  per warm instance (N instances → N × budget) and the caller key reads the left-most
+  `x-forwarded-for` entry, so it is a backstop, not a control; the per-address budget is the real
+  anti-abuse bound.
+- **Notes:** `.env.example` now comments out `AUTH_MAIL_DRIVER`/`AUTH_MAIL_OUTBOX` so the safe
+  default is explicit; the no-same-origin-check rationale is in both route headers (a JSON body
+  forces a CORS preflight the server never grants); the three files missing a trailing newline now
+  have one.
+- **S2 is still open and cannot be closed from this repository.** The live `verify:otp-expiry` run
+  shows the project's window is longer than 300 s. Only the Supabase project setting
+  (`mailer_otp_expiry`) or the deployed `AUTH_OTP_EXPIRY_SECONDS` can fix it, and no Management API
+  credential exists in this workspace. Set Authentication → Email → Email OTP Expiration to 300
+  seconds, then run `pnpm verify:otp-expiry` and replace this line with the pass. Until then the
+  "5 minutes" copy is a known-wrong claim.
 
 ## Confirmation link for signup, emailed code for password reset — 21 November 2026
 

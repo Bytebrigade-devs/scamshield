@@ -20,7 +20,11 @@ const response = (body: unknown, status = 200) =>
  * an unknown address, and never contains the code. See src/lib/recovery-code.ts for the rules.
  *
  * Unauthenticated by necessity (this is account recovery); abuse is bounded by the per-address and
- * per-caller limiter below, which is in memory per process.
+ * per-caller limiter below. The budget is in memory per process, so N warm instances give N × the
+ * budget; the caller key reads the left-most `x-forwarded-for` entry and is a backstop, not a
+ * control. The per-address budget is the real anti-abuse bound. No same-origin check is needed:
+ * these routes take a JSON body, which a cross-site page cannot send without a CORS preflight this
+ * server never grants.
  */
 const limiter = createBudgetedLimiter({ windowMs: 10 * 60_000, addressMax: 3, callerMax: 20 });
 
@@ -57,8 +61,14 @@ export async function POST(req: NextRequest) {
       mailConfigured: channel !== null && admin !== null,
       generateCode: async (address) => {
         const { data, error } = await admin!.auth.admin.generateLink({ type: "recovery", email: address });
-        // An unknown address and an admin failure are deliberately indistinguishable here.
-        if (error) return null;
+        if (error) {
+          // GoTrue answers 404 `user_not_found` for an address with no account (verified live on
+          // 28 November 2026) and creates nothing, so that case stays indistinguishable from a
+          // send. Every other failure — 5xx, a bad key, a network error — must not be reported as
+          // "sent": throw, so the caller answers 502 instead of implying an email went out.
+          if ((error as { status?: number }).status === 404) return null;
+          throw new Error("recovery-code-unavailable");
+        }
         // The SDK nests the code under `properties`; the flat REST shape is accepted too. The length
         // is a project setting — this project issues 8 digits, the Supabase default is 6 — so it is
         // never pinned to one value (verified against the live project, 21 November 2026).

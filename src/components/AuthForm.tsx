@@ -45,7 +45,10 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
       const payload = (await register.json().catch(() => null)) as
         { error?: string; expiresInSeconds?: number } | null;
       let seconds: number | null = null;
-      if (register.status === 503) {
+      // 502 means M2 tried its own sender and failed. For a resend the account still exists and is
+      // unconfirmed, so Supabase's resend can deliver through the project's mailer — the same
+      // recovery path as a 503 "not configured" answer.
+      if (register.status === 502 || register.status === 503) {
         const { error: resendError } = await getSupabase().auth.resend({ type: "signup", email: address });
         if (resendError) throw resendError;
       } else if (!register.ok) {
@@ -95,7 +98,7 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
-        if (register.status !== 503) {
+        if (register.status !== 502 && register.status !== 503) {
           const payload = (await register.json().catch(() => null)) as
             { error?: string; expiresInSeconds?: number } | null;
           if (!register.ok) throw new Error(payload?.error || "The account could not be created.");
@@ -107,6 +110,10 @@ export default function AuthForm({ mode, next = null }: { mode: "signup" | "logi
           );
           return;
         }
+        // 502 means M2 created the account, then its own sender refused or failed, and the route
+        // deleted it again. 503 means no sender is configured. In both cases Supabase's signUp can
+        // create the account and deliver the confirmation through the project's mailer, so a
+        // misconfigured Resend sender does not dead-end signup.
         const { data, error: signUpError } = await auth.signUp({
           email,
           password,

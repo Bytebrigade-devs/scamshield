@@ -114,6 +114,8 @@ function routeHarness(options = {}) {
   const {
     env = {}, otp = '246810', otpShape = 'properties', userFound = true,
     resendOk = true, resendStatus = null, resendMessage = null,
+    // A non-404 failure is a real admin/network outage; it must not be reported as "sent".
+    generateFailure = null,
   } = options;
   const sent = [];
   const generated = [];
@@ -148,7 +150,8 @@ function routeHarness(options = {}) {
           admin: {
             generateLink: async ({ type, email }) => {
               generated.push([type, email]);
-              if (!userFound) return { data: null, error: { message: 'User not found' } };
+              if (generateFailure) return { data: null, error: generateFailure };
+              if (!userFound) return { data: null, error: { status: 404, code: 'user_not_found', message: 'User with this email not found' } };
               // The SDK nests the code under `properties`; the flat REST shape must work too.
               return otpShape === 'flat'
                 ? { data: { email_otp: otp }, error: null }
@@ -191,6 +194,19 @@ test('route: an unknown address is indistinguishable and sends nothing', async (
   assert.equal(result.status, 200);
   assert.deepEqual(plain(result.body), { ok: true, expiresInSeconds: 300 });
   assert.equal(api.sent.length, 0);
+});
+
+test('route: an admin outage is reported as unavailable, never as a fake send', async () => {
+  for (const failure of [
+    { status: 500, message: 'database error' },
+    { code: 'unexpected_failure', message: 'fetch failed' },
+  ]) {
+    const api = routeHarness({ generateFailure: failure });
+    const result = await api.request({ email: 'user@example.test' });
+    assert.equal(result.status, 502, JSON.stringify(failure));
+    assert.match(result.body.error, /could not be issued/);
+    assert.equal(api.sent.length, 0, 'nothing is emailed when no code was generated');
+  }
 });
 
 test('route: missing sender configuration is a 503 with the reason, not a fake success', async () => {

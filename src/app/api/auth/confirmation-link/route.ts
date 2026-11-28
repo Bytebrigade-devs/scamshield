@@ -26,7 +26,8 @@ const response = (body: unknown, status = 200) =>
  * resend must therefore never reach it for an address the caller does not control. The route first
  * proves the credentials with `signInWithPassword`: GoTrue answers `email_not_confirmed` only when
  * the account exists AND the password is correct. An unknown address or a wrong password both get
- * the same content-free `200 {ok:true}` and no mail, so this endpoint cannot enumerate accounts.
+ * the same content-free `200 {ok:true}` and no mail, so a resend cannot enumerate accounts. The
+ * signup path still answers 409 for an existing address, as ordinary signup forms do.
  *
  * Body: `{ email, password }` to register, or `{ email, resend: true, password }` to re-send the
  * link for an account that already exists but is not confirmed yet. The password is required in
@@ -35,6 +36,12 @@ const response = (body: unknown, status = 200) =>
 // The confirmation link is a weaker lever than a reset code — it only activates an account whose
 // password the requester already set — so its address budget is 5 rather than the recovery route's
 // 3. With a five-minute window, users legitimately ask for the link several times in a row.
+//
+// The budget is in memory per process, so N warm instances give N × the budget. The caller key
+// reads the left-most `x-forwarded-for` entry, which a chained proxy leaves client-controlled, so
+// it is a backstop, not a control; the per-address budget is the real anti-abuse bound. There is no
+// same-origin check because these routes take a JSON body, which a cross-site page cannot send
+// without a CORS preflight this server never grants.
 const limiter = createBudgetedLimiter({ windowMs: 10 * 60_000, addressMax: 5, callerMax: 20 });
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -80,7 +80,10 @@ export default function PasswordRecovery({ reset = false }: { reset?: boolean })
         });
         const payload = (await sendResponse.json().catch(() => null)) as
           { error?: string; devChannel?: string; expiresInSeconds?: number } | null;
-        if (sendResponse.status === 503) {
+        // 502 means M2's sender was configured but refused/failed; 503 means none is configured.
+        // Either way Supabase's own recovery mail is tried, so a misconfigured Resend sender does
+        // not leave the user with no way to reset.
+        if (sendResponse.status === 502 || sendResponse.status === 503) {
           const { error: supabaseError } = await getSupabase().auth.resetPasswordForEmail(address, {
             redirectTo: window.location.origin + "/reset-password",
           });
