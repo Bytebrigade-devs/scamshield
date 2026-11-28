@@ -14,7 +14,7 @@ import { accessToken } from "./session";
 
 export type ConfigResult = { ok: true; config: CheckerConfig } | { ok: false };
 
-export type CheckResult = { ok: true; payload: CheckPayload } | { ok: false };
+export type CheckResult = { ok: true; payload: CheckPayload } | { ok: false; status?: number };
 
 export type FeedbackResult = { ok: true } | { ok: false };
 
@@ -28,7 +28,7 @@ export interface ServerHistoryRow {
 
 export type HistoryResult =
   | { ok: true; access: "full" | "read-only"; entries: ServerHistoryRow[] }
-  | { ok: false };
+  | { ok: false; status?: number };
 
 /** Authorization header for a signed-in caller, or nothing when anonymous. */
 async function authHeaders(): Promise<Record<string, string>> {
@@ -67,7 +67,7 @@ export async function postCheck(text: string, sender: string): Promise<CheckResu
       headers: { "content-type": "application/json", ...(await authHeaders()) },
       body: JSON.stringify({ text, ...(sender ? { sender } : {}) }),
     });
-    if (!response.ok) return { ok: false };
+    if (!response.ok) return { ok: false, status: response.status };
     const payload: unknown = await response.json();
     if (payload === null || typeof payload !== "object") return { ok: false };
     const body = payload as Record<string, unknown>;
@@ -101,15 +101,16 @@ export async function postFeedback(checkId: string, reasonCode: string): Promise
  * tab-session list. Server rows are read-only; the checker never deletes them.
  */
 export async function loadHistory(signal?: AbortSignal): Promise<HistoryResult> {
+  // Deliberately probed even without a client token: the SERVER decides whether this browser has a
+  // session, and its answer is what the screen trusts (sign-in gate, 28 Nov 2026).
   const headers = await authHeaders();
-  if (!headers.authorization) return { ok: false };
   try {
     const response = await fetch("/api/history", {
       cache: "no-store",
       headers,
       ...(signal ? { signal } : {}),
     });
-    if (!response.ok) return { ok: false };
+    if (!response.ok) return { ok: false, status: response.status };
     const body: unknown = await response.json();
     if (body === null || typeof body !== "object") return { ok: false };
     const record = body as Record<string, unknown>;

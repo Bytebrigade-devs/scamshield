@@ -61,17 +61,24 @@ test('a signed-in completed check forwards the verified subject and persists his
   assert.equal(rows[0].subjectKey, UUID);
 });
 
-test('an anonymous completed check persists no history (no verified subject)', async () => {
+test('an anonymous request is REFUSED before the provider and consumes nothing (sign-in required, 28 Nov 2026)', async () => {
   const persistence = createAsyncPersistence(createInMemoryPersistence());
+  let providerCalls = 0;
+  const service = createCheckService({
+    now: () => NOW,
+    live: { apiKey: 'k', baseUrl: 'https://provider.invalid/v1', model: 'm' },
+    provider: { analyze: async () => { providerCalls += 1; return { kind: 'failed', failure: 'timeout' }; } },
+    persistence,
+  });
   const handler = createCheckApiRoute({
-    service: completedService(persistence),
+    service,
     feedback: createFeedbackSupport({ subjectKey: 'demo' }),
     resolveContext: async () => ENTITLED,
   });
   const response = await post(handler); // no Authorization header
-  assert.equal(response.status, 200);
-  const result = await response.json();
-  assert.equal(result.outcome.analysisStatus, 'completed');
-  assert.equal(result.persistedCheckId, undefined);
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { error: 'sign-in-required' });
+  assert.equal(providerCalls, 0, 'the provider is never reached for an anonymous caller');
+  assert.equal((await service.listEvents()).length, 0, 'no usage event is emitted');
   assert.equal((await persistence.history.listOwned(UUID, NOW)).length, 0);
 });

@@ -1,0 +1,192 @@
+{
+  "outcome": {
+    "kind": "analysed",
+    "analysisStatus": "limited",
+    "analysisMode": "rules_only",
+    "category": "unknown_other",
+    "candidates": {
+      "urls": [],
+      "emails": [],
+      "phones": []
+    },
+    "rules": {
+      "matches": [
+        {
+          "ruleId": "R-M4-02",
+          "excerpt": "OTP",
+          "start": 70,
+          "end": 73,
+          "contextNote": "secret"
+        },
+        {
+          "ruleId": "R-M4-08",
+          "excerpt": "account number",
+          "start": 83,
+          "end": 97,
+          "contextNote": "credential"
+        }
+      ]
+    },
+    "reply": null,
+    "limitations": [
+      "AI analysis was not completed: this result is based on local rules only and draws no safety conclusion."
+    ]
+  },
+  "providerMode": "live-unconfigured",
+  "organizationVerification": {
+    "checkedAt": "2026-11-28T00:00:00.000Z",
+    "reviewWindowDays": 90,
+    "organizations": [],
+    "unmatchedContacts": [
+      {
+        "kind": "website",
+        "value": null,
+        "status": "not-provided",
+        "matches": []
+      },
+      {
+        "kind": "phone",
+        "value": null,
+        "status": "not-provided",
+        "matches": []
+      }
+    ],
+    "notice": "Matching official contact details does not authenticate the sender or prove the message is safe."
+  },
+  "linkInspection": {
+    "checkedAt": "2026-11-28T00:00:00.000Z",
+    "unicodeVersion": "18.0.0",
+    "findings": [],
+    "limitations": [
+      "Offline hostname comparison only: submitted links were not opened, resolved through DNS, or checked for redirects, content or reputation.",
+      "A reviewed hostname match does not authenticate the sender or prove that a message, page or payment is safe. Unlisted hosts are unconfirmed, not known fakes.",
+      "Lookalike comparison is limited to Unicode 18 Latin, Greek, Cyrillic, Common and Inherited scripts; it is not comprehensive spoof detection.",
+      "Regex properties, IDNA and NFD normalization use the Node.js runtime Unicode data (17.0, ICU 78.3); only confusable mappings and script ranges are pinned to Unicode 18.0.0. Newer runtime-unassigned characters are not inspectable."
+    ],
+    "truncated": false
+  },
+  "guidanceResources": {
+    "checkedAt": "2026-11-28T00:00:00.000Z",
+    "resources": [
+      {
+        "id": "lk-cert-report",
+        "purpose": "reporting",
+        "title": "Sri Lanka CERT incident reporting",
+        "region": "LK",
+        "scope": "Sri Lanka cyber-security incident reporting and assistance; not a bank or payment-reversal hotline.",
+        "source": {
+          "url": "https://cert.gov.lk/report_incident",
+          "title": "Sri Lanka CERT — Report Incident",
+          "context": "Sri Lanka incident-reporting portal and urgent cyber-security assistance shortcode 101. Personal financial scams and social-media incidents must use the portal, not cert@cert.gov.lk. Not a bank payment-reversal service.",
+          "reviewedAt": "2026-10-31"
+        },
+        "url": "https://cert.gov.lk/report_incident",
+        "phone": "101",
+        "status": "current"
+      },
+      {
+        "id": "ftc-recovery",
+        "purpose": "recovery",
+        "title": "Steps after sharing information or sending money",
+        "region": "US",
+        "scope": "US guidance; general account/payment precautions can help elsewhere. Local reporting and legal remedies differ.",
+        "source": {
+          "url": "https://consumer.ftc.gov/articles/what-do-if-you-were-scammed",
+          "title": "FTC — What To Do if You Were Scammed",
+          "context": "US consumer guidance: immediately contact the payment provider, ask about reversal/refund, change exposed passwords and enable two-factor authentication. Recovery is not guaranteed; US legal remedies are not asserted for Sri Lanka.",
+          "reviewedAt": "2026-10-31"
+        },
+        "url": "https://consumer.ftc.gov/articles/what-do-if-you-were-scammed",
+        "status": "current"
+      },
+      {
+        "id": "ftc-phishing",
+        "purpose": "security",
+        "title": "Recognize and avoid phishing",
+        "region": "US",
+        "scope": "US guidance; do not assume US reporting channels or shortcodes apply in Sri Lanka.",
+        "source": {
+          "url": "https://consumer.ftc.gov/articles/how-recognize-and-avoid-phishing-scams",
+          "title": "FTC — How To Recognize and Avoid Phishing Scams",
+          "context": "Use a website or number independently known to be real, not contact details in the message. If a link may have downloaded harmful software, update security software and scan.",
+          "reviewedAt": "2026-10-31"
+        },
+        "url": "https://consumer.ftc.gov/articles/how-recognize-and-avoid-phishing-scams",
+        "status": "current"
+      }
+    ],
+    "actions": [
+      {
+        "id": "contact-payment-provider",
+        "text": "If you sent money, contact the bank, card issuer or payment service you actually used immediately through its trusted app or the number on your card. Report the suspected scam and ask whether the payment can be stopped or reversed; recovery is not guaranteed.",
+        "exposures": [
+          "paid"
+        ],
+        "priority": 10,
+        "resourceIds": [
+          "ftc-recovery"
+        ]
+      },
+      {
+        "id": "protect-exposed-information",
+        "text": "If you shared a password, change it through the service’s trusted app or independently reached website, change reused passwords, and enable two-factor authentication. If you shared an OTP, PIN or card/bank details, contact the relevant provider immediately through an independently trusted channel.",
+        "exposures": [
+          "shared"
+        ],
+        "priority": 20,
+        "resourceIds": [
+          "ftc-recovery"
+        ]
+      },
+      {
+        "id": "close-suspect-page",
+        "text": "If you clicked, close the page and do not enter information, approve prompts or download anything. Clicking alone does not prove an account was compromised. If anything downloaded or installed, update trusted security software and run a scan.",
+        "exposures": [
+          "clicked"
+        ],
+        "priority": 30,
+        "resourceIds": [
+          "ftc-phishing"
+        ]
+      },
+      {
+        "id": "verify-independently",
+        "text": "Do not reply, follow the message’s links, call its numbers, or share codes or money. Check the claim using an app you already trust or contact details obtained independently of the message.",
+        "exposures": [
+          "received",
+          "clicked",
+          "shared",
+          "paid"
+        ],
+        "priority": 40,
+        "resourceIds": [
+          "ftc-phishing"
+        ]
+      },
+      {
+        "id": "report-lk-incident",
+        "text": "In Sri Lanka, keep the message and transaction references for your report, then use Sri Lanka CERT’s incident portal for scam-related assistance. Reporting does not replace contacting your payment provider urgently if money or banking details were involved.",
+        "exposures": [
+          "received",
+          "clicked",
+          "shared",
+          "paid"
+        ],
+        "priority": 60,
+        "resourceIds": [
+          "lk-cert-report"
+        ]
+      }
+    ],
+    "limitations": [
+      "Resources are reviewed offline, not live-verified. Organization relevance is not sender authentication or proof of fraud. Regional availability and reporting procedures can differ.",
+      "General contact and head-office numbers are not dedicated fraud hotlines. Contact the provider you actually used for payment, which may differ from the organization named in the message."
+    ],
+    "fallback": "If a reviewed resource is missing or outdated, use an official app you already trust, the number printed on your card or statement, or an official channel you independently obtained. Do not use contact details from the suspicious message or assume an old contact is current."
+  },
+  "limits": {
+    "inputCharCap": 2000,
+    "burstMax": 5,
+    "burstWindowMs": 60000
+  }
+}
