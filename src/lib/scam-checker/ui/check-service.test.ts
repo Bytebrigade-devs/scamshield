@@ -417,6 +417,33 @@ test('rejected outcomes emit no event; accepted checks get distinct ids', async 
   assert.notEqual(events[0].event_id, events[1].event_id);
 });
 
+// L-08 regression (28 November 2026): event ids came from a counter that lives inside one
+// service instance, so every fresh instance re-presented `evt-1`, `evt-2`, … Ids that already
+// exist are dropped by the idempotent append, silently. A per-process counter cannot survive
+// this test:
+test('two separate service instances cannot reuse an event id (L-08)', async () => {
+  const ids: string[] = [];
+  const sink = { append: async (event: { event_id: string }) => { ids.push(event.event_id); return true; } };
+  const first = createCheckService({ events: sink });
+  const second = createCheckService({ events: sink });
+  assert.equal((await first.check(FIXTURE)).outcome.kind, 'analysed');
+  assert.equal((await second.check(FIXTURE)).outcome.kind, 'analysed');
+  assert.equal(ids.length, 2);
+  assert.notEqual(ids[0], ids[1], 'a per-instance counter would emit the same id from both instances');
+});
+
+test('an injected event-id generator is used as-is and stays distinct per check', async () => {
+  let n = 0;
+  const ids: string[] = [];
+  const service = createCheckService({
+    eventId: () => `synthetic-${++n}`,
+    events: { append: async (event) => { ids.push(event.event_id); return true; } },
+  });
+  await service.check(FIXTURE);
+  await service.check(FIXTURE);
+  assert.deepEqual(ids, ['synthetic-1', 'synthetic-2']);
+});
+
 test('an injected sink receives exactly one append per analysed check', async () => {
   const appended: unknown[] = [];
   const service = createCheckService({ events: { append: async (event) => { appended.push(event); return true; } } });
